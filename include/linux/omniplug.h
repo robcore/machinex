@@ -44,4 +44,22 @@
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 extern unsigned int min_cpus_online;
 extern unsigned int max_cpus_online;
+
+/*Alucard*/
+void cpus_hotplugging(unsigned int status);
+/*Intelliplug*/
+void intelli_plug_active_eval_fn(unsigned int status);
+/*mx hotplug*/
+void ignition(unsigned int status);
+/*MSM Sleeper*/
+void start_stop_sleeper(int enabled);
+/*Bricked*/
+int bricked_hotplug_start(void);
+void bricked_hotplug_stop(void);
+/*lazy*/
+void start_stop_lazy_plug(unsigned int enabled);
+/*blu*/
+void dyn_hp_init_exit(unsigned int enabled);
+/*userspace*/
+void uplug_start_stop(unsigned int enabled);
 #endif /* __LINUX_OMNIPLUG_H */

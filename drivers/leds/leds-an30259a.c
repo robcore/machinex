@@ -111,6 +111,7 @@ enum {
 	BATTERY_HIGH = 4,
 	BATTERY_FULL = 5,
 };
+
 static int battery_level;
 static bool booted = false;
 static bool pattern_active;
@@ -1160,7 +1161,7 @@ static struct attribute_group sec_led_attr_group = {
 };
 #endif
 
-enum mx_led_combos {
+enum {
 	NONE = 0,
 	RED,
 	GREEN,

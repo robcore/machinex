@@ -55,7 +55,6 @@ static struct cpu_hotplug {
 	unsigned int delay;
 	unsigned int down_lock_dur;
 	unsigned long int idle_freq;
-	unsigned int bricked_enabled;
 	struct mutex bricked_hotplug_mutex;
 	struct mutex bricked_cpu_mutex;
 } hotplug = {
@@ -63,13 +62,13 @@ static struct cpu_hotplug {
 	.delay = MSM_MPDEC_DELAY,
 	.down_lock_dur = DEFAULT_DOWN_LOCK_DUR,
 	.idle_freq = MSM_MPDEC_IDLE_FREQ,
-	.bricked_enabled = HOTPLUG_ENABLED,
 };
 
+static unsigned int bricked_enabled = HOTPLUG_ENABLED;
 bool brickenabled;
 bool is_bricked_enabled(void)
 {
-	if (hotplug.bricked_enabled > 0)
+	if (bricked_enabled > 0)
 		brickenabled = true;
 	else
 		brickenabled = false;
@@ -149,7 +148,7 @@ static int mp_decision(void) {
 	u64 current_time;
 	u64 this_time = 0;
 
-	if (!hotplug.bricked_enabled)
+	if (bricked_enabled)
 		return MSM_MPDEC_DISABLED;
 
 	current_time = ktime_to_ms(ktime_get());
@@ -235,7 +234,7 @@ static void bricked_hotplug_work(struct work_struct *work) {
 	mutex_unlock(&hotplug.bricked_cpu_mutex);
 
 out:
-	if (hotplug.bricked_enabled)
+	if (bricked_enabled)
 		queue_delayed_work(hotplug_wq, &hotplug_work,
 					msecs_to_jiffies(hotplug.delay));
 	return;
@@ -257,10 +256,13 @@ static struct power_suspend bricked_suspend_data =
 };
 
 
-static int bricked_hotplug_start(void)
+int bricked_hotplug_start(void)
 {
 	int cpu, ret = 0;
 	struct down_lock *dl;
+
+	bricked_enabled = 1;
+	state = MSM_MPDEC_IDLE;
 
 	hotplug_wq = alloc_workqueue("bricked_hotplug", WQ_HIGHPRI | WQ_FREEZABLE, 0);
 	if (!hotplug_wq) {
@@ -280,7 +282,7 @@ static int bricked_hotplug_start(void)
 
 	register_power_suspend(&bricked_suspend_data);
 
-	if (hotplug.bricked_enabled)
+	if (bricked_enabled)
 		queue_delayed_work(hotplug_wq, &hotplug_work,
 					msecs_to_jiffies(hotplug.startdelay));
 
@@ -288,15 +290,17 @@ static int bricked_hotplug_start(void)
 err_dev:
 	destroy_workqueue(hotplug_wq);
 err_out:
-	hotplug.bricked_enabled = 0;
+	bricked_enabled = 0;
 	return ret;
 }
 
-static void bricked_hotplug_stop(void)
+void bricked_hotplug_stop(void)
 {
 	int cpu;
 	struct down_lock *dl;
 
+	bricked_enabled = 0;
+	state = MSM_MPDEC_DISABLED;
 	unregister_power_suspend(&bricked_suspend_data);
 	for_each_possible_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
@@ -322,7 +326,6 @@ static ssize_t show_##file_name						\
 show_one(startdelay, startdelay);
 show_one(delay, delay);
 show_one(down_lock_duration, down_lock_dur);
-show_one(bricked_enabled, bricked_enabled);
 
 #define define_one_twts(file_name, arraypos)				\
 static ssize_t show_##file_name						\
@@ -450,49 +453,16 @@ static ssize_t store_idle_freq(struct device *dev,
 	return count;
 }
 
-static ssize_t store_bricked_enabled(struct device *dev,
-				struct device_attribute *bricked_hotplug_attrs,
-				const char *buf, size_t count)
-{
-	int input;
-	int ret;
-
-	ret = sscanf(buf, "%u", &input);
-	if (ret != 1)
-		return -EINVAL;
-
-	sanitize_min_max(input, 0, 1);
-
-	if (input == hotplug.bricked_enabled)
-		return count;
-
-	hotplug.bricked_enabled = input;
-
-	if (!hotplug.bricked_enabled) {
-		state = MSM_MPDEC_DISABLED;
-		bricked_hotplug_stop();
-		pr_info(MPDEC_TAG": Disabled\n");
-	} else {
-		state = MSM_MPDEC_IDLE;
-		bricked_hotplug_start();
-		pr_info(MPDEC_TAG": Enabled\n");
-	}
-
-	return count;
-}
-
 static DEVICE_ATTR(startdelay, 0644, show_startdelay, store_startdelay);
 static DEVICE_ATTR(delay, 0644, show_delay, store_delay);
 static DEVICE_ATTR(down_lock_duration, 0644, show_down_lock_duration, store_down_lock_duration);
 static DEVICE_ATTR(idle_freq, 0644, show_idle_freq, store_idle_freq);
-static DEVICE_ATTR(enabled, 0644, show_bricked_enabled, store_bricked_enabled);
 
 static struct attribute *bricked_hotplug_attrs[] = {
 	&dev_attr_startdelay.attr,
 	&dev_attr_delay.attr,
 	&dev_attr_down_lock_duration.attr,
 	&dev_attr_idle_freq.attr,
-	&dev_attr_enabled.attr,
 	&dev_attr_twts_threshold_0.attr,
 	&dev_attr_twts_threshold_1.attr,
 	&dev_attr_twts_threshold_2.attr,
@@ -541,7 +511,7 @@ static int bricked_hotplug_probe(struct platform_device *pdev)
 		goto err_dev;
 	}
 
-	if (hotplug.bricked_enabled) {
+	if (bricked_enabled) {
 		ret = bricked_hotplug_start();
 		if (ret != 0)
 			goto err_dev;
@@ -561,7 +531,7 @@ static struct platform_device bricked_hotplug_device = {
 
 static int bricked_hotplug_remove(struct platform_device *pdev)
 {
-	if (hotplug.bricked_enabled)
+	if (bricked_enabled)
 		bricked_hotplug_stop();
 
 	return 0;
@@ -609,4 +579,3 @@ module_exit(msm_mpdec_exit);
 MODULE_AUTHOR("Dennis Rassmann <showp1984@gmail.com>");
 MODULE_DESCRIPTION("Bricked Hotplug Driver");
 MODULE_LICENSE("GPLv2");
-

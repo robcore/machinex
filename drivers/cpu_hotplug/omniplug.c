@@ -17,8 +17,7 @@
  */
 
 /*
- * MX Hotplug - A hotplugging driver that plugs cores based on
- * nr_running requests and load averages.
+ * Omniplug - A central framework for common hotplug driver variables.
  */
 
 #include <linux/kernel.h>
@@ -36,11 +35,108 @@
 #include <linux/omniboost.h>
 #include <linux/omniplug.h>
 
+enum {
+	MX_HOTPLUG = 0,
+	INTELLI_HOTPLUG = 1,
+	ALUCARD_HOTPLUG = 2,
+	BRICKED_HOTPLUG = 3,
+	MSM_SLEEPER = 4,
+	LAZYPLUG = 5,
+	BLU_PLUG = 6,
+	UPLUG = 7,
+	DISABLED = 8,
+};
+
+unsigned int hotplug_driver = DISABLED;
 unsigned int min_cpus_online = DEFAULT_MIN_CPUS_ONLINE;
 unsigned int max_cpus_online = DEFAULT_MAX_CPUS_ONLINE;
 
+mx_show_one(hotplug_driver);
 mx_show_one(min_cpus_online);
 mx_show_one(max_cpus_online);
+
+static ssize_t store_hotplug_driver(struct kobject *kobj,
+				     struct kobj_attribute *attr,
+				     const char *buf, size_t count)
+{
+	int ret;
+	unsigned int previous_driver, val;
+
+	ret = sscanf(buf, "%u", &val);
+	if (ret != 1)
+		return -EINVAL;
+
+	sanitize_min_max(val, MX_HOTPLUG, UPLUG);
+
+	if (val == hotplug_driver)
+		return count;
+
+	previous_driver = hotplug_driver;
+
+	switch (previous_driver) {
+	case MX_HOTPLUG:
+		ignition(0);
+		break;
+	case INTELLI_HOTPLUG:
+		intelli_plug_active_eval_fn(0);
+		break;
+	case ALUCARD_HOTPLUG:
+		cpus_hotplugging(0);
+		break;
+	case BRICKED_HOTPLUG:
+		bricked_hotplug_stop();
+		break;
+	case MSM_SLEEPER:
+		start_stop_sleeper(0);
+		break;
+	case LAZYPLUG:
+		start_stop_lazy_plug(0);
+		break;
+	case BLU_PLUG:
+		dyn_hp_init_exit(0);
+		break;
+	case UPLUG:
+		uplug_start_stop(0);
+		break;
+	case DISABLED:
+		break;
+	default:
+		break;
+	}
+
+	hotplug_driver = val;
+	switch (hotplug_driver) {
+	case MX_HOTPLUG:
+		ignition(1);
+		break;
+	case INTELLI_HOTPLUG:
+		intelli_plug_active_eval_fn(1);
+		break;
+	case ALUCARD_HOTPLUG:
+		cpus_hotplugging(1);
+		break;
+	case BRICKED_HOTPLUG:
+		bricked_hotplug_start();
+		break;
+	case MSM_SLEEPER:
+		start_stop_sleeper(1);
+		break;
+	case LAZYPLUG:
+		start_stop_lazy_plug(1);
+		break;
+	case BLU_PLUG:
+		dyn_hp_init_exit(1);
+		break;
+	case UPLUG:
+		uplug_start_stop(1);
+		break;
+	case DISABLED:
+		break;
+	default:
+		break;
+	}
+	return count;
+}
 
 static ssize_t store_min_cpus_online(struct kobject *kobj,
 				     struct kobj_attribute *attr,
@@ -88,10 +184,12 @@ static ssize_t store_max_cpus_online(struct kobject *kobj,
 	return count;
 }
 
+MX_ATTR_RW(hotplug_driver);
 MX_ATTR_RW(max_cpus_online);
 MX_ATTR_RW(min_cpus_online);
 
 static struct attribute *omniplug_attributes[] = {
+	&hotplug_driver_attr.attr,
 	&min_cpus_online_attr.attr,
 	&max_cpus_online_attr.attr,
 	NULL,
@@ -113,6 +211,7 @@ static int omniplug_init(void)
 		pr_info("%s group create failed!\n", __FUNCTION__);
 		return -ENOMEM;
 	}
+
 	return 0;
 }
 

@@ -767,7 +767,7 @@ static void intelli_plug_stop(void)
 	mutex_destroy(&(intellisleep_mutex));
 }
 
-static void intelli_plug_active_eval_fn(unsigned int status)
+void intelli_plug_active_eval_fn(unsigned int status)
 {
 	int ret = 0;
 	if (status) {

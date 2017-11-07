@@ -359,7 +359,7 @@ static struct notifier_block mx_nb = {
 	.notifier_call = mx_omniboost_notifier,
 };
 
-static void ignition(unsigned int status)
+void ignition(unsigned int status)
 {
 	if (status) {
 		struct sched_param param = { .sched_priority = MAX_RT_PRIO - 1 };
@@ -401,29 +401,7 @@ static void ignition(unsigned int status)
 	}
 }
 
-mx_show_one(mx_hotplug_active);
 mx_show_one(cpus_boosted);
-
-static ssize_t store_mx_hotplug_active(struct kobject *kobj,
-					 struct kobj_attribute *attr,
-					 const char *buf, size_t count)
-{
-	int ret;
-	int input;
-
-	ret = sscanf(buf, "%d", &input);
-	if (ret < 0)
-		return ret;
-
-	sanitize_min_max(input, 0, 1);
-
-	if (input == mxread())
-		return count;
-
-	ignition(input);
-
-	return count;
-}
 
 static ssize_t store_cpus_boosted(struct kobject *kobj,
 				     struct kobj_attribute *attr,
@@ -443,11 +421,9 @@ static ssize_t store_cpus_boosted(struct kobject *kobj,
 	return count;
 }
 
-MX_ATTR_RW(mx_hotplug_active);
 MX_ATTR_RW(cpus_boosted);
 
 static struct attribute *mx_hotplug_attributes[] = {
-	&mx_hotplug_active_attr.attr,
 	&cpus_boosted_attr.attr,
 	NULL,
 };

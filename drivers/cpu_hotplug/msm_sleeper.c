@@ -173,8 +173,9 @@ static struct power_suspend sleeper_suspend_data =
 	.resume = sleeper_resume,
 };
 
-static void start_stop_sleeper(int enabled)
+void start_stop_sleeper(int enabled)
 {
+	msm_sleeper_enabled = enabled;
 
 	if (enabled) {
 		sleeper_wq = alloc_workqueue("msm_sleeper_wq",

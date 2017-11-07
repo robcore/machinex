@@ -53,16 +53,15 @@ static struct delayed_work alucard_hotplug_work;
 
 static struct hotplug_tuners {
 	unsigned int hotplug_sampling_rate;
-	unsigned int hotplug_enable;
 } hotplug_tuners_ins = {
 	.hotplug_sampling_rate = 30,
-	.hotplug_enable = 0,
 };
 
+static unsigned int alucard_hotplug_enabled;
 bool alucard_enabled;
 bool is_alucard_enabled(void)
 {
-	if (hotplug_tuners_ins.hotplug_enable > 0)
+	if (alucard_hotplug_enabled > 0)
 		alucard_enabled = true;
 	else
 		alucard_enabled = false;
@@ -157,7 +156,7 @@ static void hotplug_work_fn(struct work_struct *work)
 	HOTPLUG_STATUS hotplug_onoff[NR_CPUS] = {IDLE, IDLE, IDLE, IDLE};
 	int delay;
 
-	if (!is_display_on())
+	if (!is_display_on() || !alucard_hotplug_enabled)
 		return;
 
 	hardplug_all_cpus();
@@ -372,7 +371,6 @@ static ssize_t show_##file_name						\
 }
 
 show_one(hotplug_sampling_rate, hotplug_sampling_rate);
-show_one(hotplug_enable, hotplug_enable);
 
 #define show_pcpu_param(file_name, var_name, num_core)		\
 static ssize_t show_##file_name		\
@@ -490,8 +488,10 @@ define_one_global_rw(hotplug_rate_3_0);
 define_one_global_rw(hotplug_rate_3_1);
 define_one_global_rw(hotplug_rate_4_0);
 
-static void cpus_hotplugging(unsigned int status) {
+void cpus_hotplugging(unsigned int status) {
 	int ret = 0;
+
+	alucard_hotplug_enabled = status;
 
 	if (status) {
 		ret = hotplug_start();
@@ -500,8 +500,6 @@ static void cpus_hotplugging(unsigned int status) {
 	} else {
 		hotplug_stop();
 	}
-
-	hotplug_tuners_ins.hotplug_enable = status;
 }
 
 /* hotplug_sampling_rate */
@@ -526,33 +524,10 @@ static ssize_t store_hotplug_sampling_rate(struct kobject *a,
 	return count;
 }
 
-/* hotplug_enable */
-static ssize_t store_hotplug_enable(struct kobject *a, struct attribute *b,
-				  const char *buf, size_t count)
-{
-	int input;
-	int ret;
-
-	ret = sscanf(buf, "%u", &input);
-	if (ret != 1)
-		return -EINVAL;
-
-	sanitize_min_max(input, 0, 1);
-
-	if (hotplug_tuners_ins.hotplug_enable == input)
-		return count;
-
-	cpus_hotplugging(input);
-
-	return count;
-}
-
 define_one_global_rw(hotplug_sampling_rate);
-define_one_global_rw(hotplug_enable);
 
 static struct attribute *alucard_hotplug_attributes[] = {
 	&hotplug_sampling_rate.attr,
-	&hotplug_enable.attr,
 	&hotplug_freq_1_1.attr,
 	&hotplug_freq_2_0.attr,
 	&hotplug_freq_2_1.attr,
@@ -635,16 +610,12 @@ static int __init alucard_hotplug_init(void)
 		pcpu_info->down_rate = hotplug_rate[cpu][DOWN_INDEX];
 	}
 
-	if (hotplug_tuners_ins.hotplug_enable > 0) {
-		hotplug_start();
-	}
-
 	return ret;
 }
 
 static void __exit alucard_hotplug_exit(void)
 {
-	if (hotplug_tuners_ins.hotplug_enable > 0) {
+	if (alucard_hotplug_enabled > 0) {
 		hotplug_stop();
 	}
 

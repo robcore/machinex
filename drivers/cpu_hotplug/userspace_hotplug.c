@@ -12,9 +12,11 @@
 static cpumask_t uplug_mask;
 static unsigned int uplug_enabled;
 
-static void uplug_start_stop(unsigned int enabled)
+void uplug_start_stop(unsigned int enabled)
 {
 	unsigned int cpu;
+
+	uplug_enabled = enabled;
 	if (enabled) {
 		for_each_nonboot_cpu(cpu) {
 			if (cpu_out_of_range_hp(cpu))
@@ -40,27 +42,6 @@ static void uplug_start_stop(unsigned int enabled)
 				cpu_up(cpu);
 		}
 	}
-}
-
-mx_show_one(uplug_enabled);
-
-static ssize_t store_uplug_enabled(struct kobject *kobj,
-		struct kobj_attribute *attr, const char *buf, size_t count)
-{
-	unsigned int val;
-
-	sscanf(buf, "%u\n", &val);
-
-	sanitize_min_max(val, 0, 1);
-
-	if (val == uplug_enabled)
-		return count;
-
-	uplug_enabled = val;
-
-	uplug_start_stop(uplug_enabled);
-
-	return count;
 }
 
 static ssize_t show_uplug_list(struct kobject *kobj,
@@ -195,7 +176,6 @@ static ssize_t store_cpu3(struct kobject *kobj,
 	return count;
 }
 
-MX_ATTR_RW(uplug_enabled);
 MX_ATTR_RO(uplug_list);
 MX_ATTR_RO(uplug_mask);
 MX_ATTR_RW(cpu1);
@@ -204,7 +184,6 @@ MX_ATTR_RW(cpu3);
 
 static struct attribute *uplug_attrs[] =
 {
-	&uplug_enabled_attr.attr,
 	&uplug_list_attr.attr,
 	&uplug_mask_attr.attr,
 	&cpu1_attr.attr,

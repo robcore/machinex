@@ -529,10 +529,11 @@ static struct power_suspend lazy_suspend_data =
 	.resume = lazy_resume,
 };
 
-static void start_stop_lazy_plug(unsigned int enabled)
+void start_stop_lazy_plug(unsigned int enabled)
 {
 	int rc;
 
+	lazyplug_active = enabled;
 	if (enabled) {
 		rc = input_register_handler(&lazyplug_input_handler);
 
@@ -555,41 +556,6 @@ static void start_stop_lazy_plug(unsigned int enabled)
 			input_unregister_handler(&lazyplug_input_handler);
 	}
 }
-
-static int set_lazyplug_active(const char *buf, const struct kernel_param *kp)
-{
-	unsigned int val;
-
-	if (sscanf(buf, "%u", &val) != 1)
-		return -EINVAL;
-
-	sanitize_min_max(val, 0, 1);
-
-	if (val == lazyplug_active)
-		return 0;
-
-	lazyplug_active = val;
-	start_stop_lazy_plug(lazyplug_active);
-
-	return 0;
-}
-
-static int get_lazyplug_active(char *buf, const struct kernel_param *kp)
-{
-	ssize_t ret;
-
-	ret = sprintf(buf, "%u\n", lazyplug_active);
-
-	return ret;
-}
-
-static const struct kernel_param_ops param_ops_lazyplug_active = {
-	.set = set_lazyplug_active,
-	.get = get_lazyplug_active,
-};
-
-module_param_cb(lazyplug_active, &param_ops_lazyplug_active, NULL, 0644);
-
 
 int __init lazyplug_init(void)
 {

@@ -233,9 +233,9 @@ static struct power_suspend blu_suspend_data =
 };
 
 
-static void dyn_hp_init_exit(unsigned int enabled)
+void dyn_hp_init_exit(unsigned int enabled)
 {
-
+	blu_plug_enabled = enabled;
 	if (enabled) {
 		dyn_workq = alloc_workqueue("dyn_hotplug_workqueue", WQ_HIGHPRI | WQ_FREEZABLE, 0);
 		if (!dyn_workq)
@@ -321,31 +321,6 @@ static ssize_t store_up_timer_cnt(struct kobject *kobj,
 	return count;
 }
 
-static ssize_t show_blu_plug_enabled(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-        return sprintf(buf, "%u\n", blu_plug_enabled);
-}
-
-static ssize_t store_blu_plug_enabled(struct kobject *kobj,
-		struct kobj_attribute *attr, const char *buf, size_t count)
-{
-	int val;
-
-	sscanf(buf, "%d\n", &val);
-
-	sanitize_min_max(val, 0, 1);
-
-	if (val == blu_plug_enabled)
-		return count;
-
-	blu_plug_enabled = val;
-
-	dyn_hp_init_exit(blu_plug_enabled);
-
-	return count;
-}
-
 #define BLU_ATTR(_name) \
 static struct kobj_attribute _name##_attr = \
 	__ATTR(_name, 0644, show_##_name, store_##_name)
@@ -353,14 +328,12 @@ static struct kobj_attribute _name##_attr = \
 BLU_ATTR(up_threshold);
 BLU_ATTR(down_timer_cnt);
 BLU_ATTR(up_timer_cnt);
-BLU_ATTR(blu_plug_enabled);
 
 static struct attribute *blu_attrs[] =
 {
 	&up_threshold_attr.attr,
 	&down_timer_cnt_attr.attr,
 	&up_timer_cnt_attr.attr,
-	&blu_plug_enabled_attr.attr,
 	NULL,
 };
 
