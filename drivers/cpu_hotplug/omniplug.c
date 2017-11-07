@@ -179,6 +179,8 @@ static ssize_t store_max_cpus_online(struct kobject *kobj,
 	return count;
 }
 
+store_one_clamp(cpus_boosted, 0, 4);
+
 MX_ATTR_RW(hotplug_driver);
 MX_ATTR_RW(max_cpus_online);
 MX_ATTR_RW(min_cpus_online);
