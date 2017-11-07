@@ -93,9 +93,6 @@ static ssize_t store_hotplug_driver(struct kobject *kobj,
 	case LAZYPLUG:
 		start_stop_lazy_plug(0);
 		break;
-	case BLU_PLUG:
-		dyn_hp_init_exit(0);
-		break;
 	case UPLUG:
 		uplug_start_stop(0);
 		break;
@@ -124,9 +121,6 @@ static ssize_t store_hotplug_driver(struct kobject *kobj,
 		break;
 	case LAZYPLUG:
 		start_stop_lazy_plug(1);
-		break;
-	case BLU_PLUG:
-		dyn_hp_init_exit(1);
 		break;
 	case UPLUG:
 		uplug_start_stop(1);
