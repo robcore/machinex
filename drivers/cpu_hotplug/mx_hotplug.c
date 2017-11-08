@@ -44,18 +44,18 @@ static DEFINE_RWLOCK(mxhp_lock);
 static DEFINE_MUTEX(mx_mutex);
 
 static bool hotplug_suspended;
-static struct workqueue_struct *transmission;
-static struct delayed_work gearbox;
-static struct task_struct *mx_hp_engine;
+static struct workqueue_struct *mx_hp_engine;
+static struct delayed_work motor;
+static struct task_struct *transmission;
 
-static unsigned long sixthgear = 1051ul;
-static unsigned long thirdgear = 535ul;
-static unsigned long secondgear = 449ul;
-static unsigned long firstgear = 345ul;
-static unsigned long sixthgear_rpm = 65ul;
-static unsigned long thirdgear_rpm = 50ul;
-static unsigned long secondgear_rpm = 35ul;
-static unsigned long firstgear_rpm = 20ul;
+static unsigned long sixthgear = 1031ul;
+static unsigned long thirdgear = 515ul;
+static unsigned long secondgear = 429ul;
+static unsigned long firstgear = 325ul;
+static unsigned long sixthgear_rpm = 60ul;
+static unsigned long thirdgear_rpm = 45ul;
+static unsigned long secondgear_rpm = 30ul;
+static unsigned long firstgear_rpm = 15ul;
 
 static unsigned long sampling_rate = MX_SAMPLE_RATE;
 unsigned long air_to_fuel;
@@ -207,7 +207,7 @@ static void release_brakes(void)
 	mutex_unlock(&mx_mutex);
 }
 
-static int __ref machinex_hotplug_engine(void *data)
+static int __ref mx_gearbox(void *data)
 {
 	ktime_t delta;
 
@@ -262,7 +262,7 @@ purge:
 	goto again;
 }
 
-static void shift_gears(struct work_struct *work)
+static void mx_motor(struct work_struct *work)
 {
 	unsigned long flags;
 
@@ -285,9 +285,9 @@ static void shift_gears(struct work_struct *work)
 	last_fuelcheck = ktime_get();
 	clutch = true;
 	mutex_unlock(&mx_mutex);
-	wake_up_process(mx_hp_engine);
+	wake_up_process(transmission);
 out:
-	queue_delayed_work_on(0, transmission, &gearbox, sampling_rate);
+	queue_delayed_work_on(0, mx_hp_engine, &motor, sampling_rate);
 }
 
 void fuel_injector(void)
@@ -309,7 +309,7 @@ void fuel_injector(void)
 	mutex_unlock(&mx_mutex);
 
 	if (should_boost)
-		mod_delayed_work_on(0, transmission, &gearbox, 0);
+		mod_delayed_work_on(0, mx_hp_engine, &motor, 0);
 }
 	
 
@@ -318,7 +318,7 @@ static void mx_hotplug_suspend(struct power_suspend *h)
 	mutex_lock(&mx_mutex);
 	hotplug_suspended = true;
 	mutex_unlock(&mx_mutex);
-	cancel_delayed_work_sync(&gearbox);
+	cancel_delayed_work_sync(&motor);
 }
 
 static void mx_hotplug_resume(struct power_suspend *h)
@@ -327,7 +327,7 @@ static void mx_hotplug_resume(struct power_suspend *h)
 	hotplug_suspended = false;
 	mutex_unlock(&mx_mutex);
 	release_brakes();
-	queue_delayed_work_on(0, transmission, &gearbox, sampling_rate);
+	queue_delayed_work_on(0, mx_hp_engine, &motor, sampling_rate);
 }
 
 static struct power_suspend mx_suspend_data =
@@ -364,38 +364,38 @@ void ignition(unsigned int status)
 		struct sched_param param = { .sched_priority = MAX_RT_PRIO - 1 };
 
 		mxget();
-		mx_hp_engine = kthread_create(machinex_hotplug_engine,
-						  NULL, "mxhp_engine");
-		if (IS_ERR(mx_hp_engine)) {
+		transmission = kthread_create(mx_gearbox,
+						  NULL, "mx_transmission");
+		if (IS_ERR(transmission)) {
 			pr_err("MX Hotplug: Failed to create bound kthread! Driver is broken!\n");
 			mxput();
 			return;
 		}
-		kthread_bind(mx_hp_engine, 0);
-		sched_setscheduler_nocheck(mx_hp_engine, SCHED_FIFO, &param);
-		get_task_struct(mx_hp_engine);
-		wake_up_process(mx_hp_engine);
-		transmission = create_singlethread_workqueue("transmission_q");
-		if (!transmission) {
+		kthread_bind(transmission, 0);
+		sched_setscheduler_nocheck(transmission, SCHED_FIFO, &param);
+		get_task_struct(transmission);
+		wake_up_process(transmission);
+		mx_hp_engine = create_singlethread_workqueue("mx_engine");
+		if (!mx_hp_engine) {
 			pr_err("MX HOTPLUG: Failed to allocate hotplug workqueue\n");
 			mxput();
-			kthread_stop(mx_hp_engine);
-			put_task_struct(mx_hp_engine);
+			kthread_stop(transmission);
+			put_task_struct(transmission);
 			return;
 		}
 
-		INIT_DELAYED_WORK(&gearbox, shift_gears);
-		queue_delayed_work_on(0, transmission, &gearbox, sampling_rate);
+		INIT_DELAYED_WORK(&motor, mx_motor);
+		queue_delayed_work_on(0, mx_hp_engine, &motor, sampling_rate);
 		register_power_suspend(&mx_suspend_data);
 		register_omniboost(&mx_nb);
 	} else {
 		mxput();
 		unregister_omniboost(&mx_nb);
 		unregister_power_suspend(&mx_suspend_data);
-		cancel_delayed_work_sync(&gearbox);
-		destroy_workqueue(transmission);
-		kthread_stop(mx_hp_engine);
-		put_task_struct(mx_hp_engine);
+		cancel_delayed_work_sync(&motor);
+		destroy_workqueue(mx_hp_engine);
+		kthread_stop(transmission);
+		put_task_struct(transmission);
 		release_brakes();
 	}
 }
