@@ -200,7 +200,7 @@ static void hit_the_brakes(void)
 	}
 }
 
-static void release_brakes(void)
+static void release_clutch(void)
 {
 	mutex_lock(&mx_mutex);
 	clutch = false;
@@ -326,7 +326,7 @@ static void mx_hotplug_resume(struct power_suspend *h)
 	mutex_lock(&mx_mutex);
 	hotplug_suspended = false;
 	mutex_unlock(&mx_mutex);
-	release_brakes();
+	release_clutch();
 	queue_delayed_work_on(0, mx_hp_engine, &motor, sampling_rate);
 }
 
@@ -396,7 +396,7 @@ void ignition(unsigned int status)
 		destroy_workqueue(mx_hp_engine);
 		kthread_stop(transmission);
 		put_task_struct(transmission);
-		release_brakes();
+		release_clutch();
 	}
 }
 
