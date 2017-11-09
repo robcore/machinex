@@ -13,7 +13,7 @@
  *
  */
 
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <linux/module.h>
 #include <linux/wait.h>
 
@@ -31,7 +31,7 @@ static enum {
 } fb_state;
 
 /* tell userspace to stop drawing, wait for it to stop */
-static void stop_drawing_early_suspend(struct early_suspend *h)
+static void stop_drawing_power_suspend(struct power_suspend *h)
 {
 	int ret;
 	unsigned long irq_flags;
@@ -47,12 +47,12 @@ static void stop_drawing_early_suspend(struct early_suspend *h)
 				 fb_state == FB_STATE_STOPPED_DRAWING,
 				 HZ);
 	if (unlikely(fb_state != FB_STATE_STOPPED_DRAWING))
-		pr_warning("stop_drawing_early_suspend: timeout waiting for "
+		pr_warning("stop_drawing_power_suspend: timeout waiting for "
 			   "userspace to stop drawing\n");
 }
 
 /* tell userspace to start drawing */
-static void start_drawing_late_resume(struct early_suspend *h)
+static void start_drawing_power_resume(struct power_suspend *h)
 {
 	unsigned long irq_flags;
 
@@ -64,10 +64,9 @@ static void start_drawing_late_resume(struct early_suspend *h)
 	wake_up(&fb_state_wq);
 }
 
-static struct early_suspend stop_drawing_early_suspend_desc = {
-	.level = EARLY_SUSPEND_LEVEL_STOP_DRAWING,
-	.suspend = stop_drawing_early_suspend,
-	.resume = start_drawing_late_resume,
+static struct power_suspend stop_drawing_power_suspend_desc = {
+	.suspend = stop_drawing_power_suspend,
+	.resume = start_drawing_power_resume,
 };
 
 static ssize_t wait_for_fb_sleep_show(struct kobject *kobj,
@@ -138,7 +137,7 @@ static ssize_t wait_for_fb_status_show(struct kobject *kobj,
 	return ret;
 }
 
-#define power_ro_attr(_name)				\
+#define local_power_ro_attr(_name)				\
 	static struct kobj_attribute _name##_attr = {	\
 		.attr	= {				\
 			.name = __stringify(_name),	\
@@ -148,9 +147,9 @@ static ssize_t wait_for_fb_status_show(struct kobject *kobj,
 		.store	= NULL,				\
 	}
 
-power_ro_attr(wait_for_fb_sleep);
-power_ro_attr(wait_for_fb_wake);
-power_ro_attr(wait_for_fb_status);
+local_power_ro_attr(wait_for_fb_sleep);
+local_power_ro_attr(wait_for_fb_wake);
+local_power_ro_attr(wait_for_fb_status);
 
 static struct attribute *g[] = {
 	&wait_for_fb_sleep_attr.attr,
@@ -176,16 +175,8 @@ static int __init android_power_init(void)
 		return ret;
 	}
 
-	register_early_suspend(&stop_drawing_early_suspend_desc);
+	register_power_suspend(&stop_drawing_power_suspend_desc);
 	return 0;
 }
 
-static void  __exit android_power_exit(void)
-{
-	unregister_early_suspend(&stop_drawing_early_suspend_desc);
-	sysfs_remove_group(power_kobj, &attr_group);
-}
-
 module_init(android_power_init);
-module_exit(android_power_exit);
-

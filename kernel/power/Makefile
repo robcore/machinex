@@ -15,5 +15,6 @@ obj-$(CONFIG_MAGIC_SYSRQ)	+= poweroff.o
 obj-$(CONFIG_WAKEUP_REASON)	+= wakeup_reason.o
 obj-$(CONFIG_QUICK_WAKEUP)	+= quickwakeup.o
 obj-$(CONFIG_PROMETHEUS)	+= prometheus.o
+obj-$(CONFIG_FB_EARLYSUSPEND)	+= fbearlysuspend.o
 obj-$(CONFIG_STATE_NOTIFIER)		+= state_notifier.o
 obj-$(CONFIG_ADAPTIVE_TUNING)	+= adaptive_tuning.o

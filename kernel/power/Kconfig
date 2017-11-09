@@ -338,6 +338,14 @@ config PROMETHEUS
 	A continuously updated powersuspend that will link
 	to the PM_SUSPEND subsystem if conditions allow.
 
+config FB_EARLYSUSPEND
+	bool "Sysfs interface"
+	depends on PROMETHEUS
+	---help---
+	  Register power suspend handler that notifies and waits for
+	  user-space through sysfs when user-space should stop drawing
+	  to the screen and notifies user-space when it should resume.
+
 config PROACTIVE_SUSPEND
 	bool "Proactive Suspend"
 	depends on SUSPEND
