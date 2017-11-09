@@ -187,7 +187,7 @@ struct sec_bat_info {
 	struct delayed_work cable_work;
 	struct delayed_work measure_work;
 	struct delayed_work otg_work;
-	struct power_suspend bat_power_suspend;
+	struct notifier_block bat_proactive_suspend;
 	struct sec_temperature_spec tspec;
 	struct proc_dir_entry *entry;
 
@@ -2975,6 +2975,27 @@ static void sec_bat_power_resume(struct power_suspend *handle)
 	info->is_esus_state = false;
 
 	return;
+}
+
+static int sec_bat_notify(struct notifier_block *nfb,
+					unsigned long action,
+					void *ignored)
+{
+	struct sec_bat_info *info =
+		container_of(nfb, struct sec_bat_info, pm_notify);
+
+	switch (action) {
+	case PM_PROACTIVE_SUSPEND:
+		info->is_esus_state = true;
+		return NOTIFY_OK;
+	case PM_PROACTIVE_RESUME:
+		info->is_esus_state = false;
+		return NOTIFY_OK;
+	default:
+		return NOTIFY_DONE;
+	}
+
+	return NOTIFY_DONE;
 }
 
 static int __init sec_bat_current_boot_mode(char *mode)
