@@ -629,7 +629,7 @@ static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
 		return error;
 
 	if (pm_autosleep_state() > PM_SUSPEND_ON ||
-		!report_state()) {
+		report_shallow() == SHALLOW_AWAKE) {
 		error = -EBUSY;
 		goto out;
 	}
@@ -751,8 +751,9 @@ static ssize_t autosleep_store(struct kobject *kobj,
 	suspend_state_t state = decode_state(buf, n);
 	int error;
 
-	if (state == PM_SUSPEND_ON
-	    && strcmp(buf, "off") && strcmp(buf, "off\n") || !report_state())
+	if ((state == PM_SUSPEND_ON
+	    && strcmp(buf, "off") && strcmp(buf, "off\n")) ||
+			report_shallow() == SHALLOW_AWAKE)
 		return -EINVAL;
 
 	if (state == PM_SUSPEND_MEM)

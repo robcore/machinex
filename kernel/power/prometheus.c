@@ -31,7 +31,7 @@
 #include "power.h"
 
 #define VERSION 6
-#define VERSION_MIN 2
+#define VERSION_MIN 3
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -70,6 +70,34 @@ unsigned int report_state(void)
 	currstate = ps_state;
 	spin_unlock_irqrestore(&ps_state_lock, flg);
 	return currstate;
+}
+
+unsigned int report_shallow(void)
+{
+	unsigned long flags;
+	unsigned int tmp;
+	spin_lock_irqsave(&ps_state_lock, flags);
+	tmp = shallow_suspended;
+	spin_unlock_irqrestore(&ps_state_lock, flags);
+	return tmp;
+}
+
+static void set_shallow_suspend(void)
+{
+	unsigned long flags;
+	spin_lock_irqsave(&ps_state_lock, flags);
+	if (shallow_suspended == SHALLOW_AWAKE)
+		shallow_suspended = SHALLOW_SUSPENDED;
+	spin_unlock_irqrestore(&ps_state_lock, flags);
+}
+
+static void set_shallow_resume(void)
+{
+	unsigned long flags;
+	spin_lock_irqsave(&ps_state_lock, flags);
+	if (shallow_suspended == SHALLOW_SUSPENDED)
+		shallow_suspended = SHALLOW_AWAKE;
+	spin_unlock_irqrestore(&ps_state_lock, flags);
 }
 
 bool prometheus_disabled_oom __read_mostly = false;
@@ -143,6 +171,7 @@ static void power_suspend(struct work_struct *work)
 		sys_sync();
 		wake_unlock(&prsynclock);
 	}
+	set_shallow_suspend();
 	pr_info("[PROMETHEUS] Shallow Suspend Completed.\n");
 	mutex_unlock(&prometheus_mtx);
 }
@@ -176,6 +205,7 @@ static void power_resume(struct work_struct *work)
 			pos->resume(pos);
 		}
 	}
+	set_shallow_resume();
 	pr_info("[PROMETHEUS] Resume Completed.\n");
 	mutex_unlock(&prometheus_mtx);
 

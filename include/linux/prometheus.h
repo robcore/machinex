@@ -104,6 +104,11 @@ enum {
 	POWER_SUSPEND_ACTIVE = 1,
 };
 
+enum {
+	SHALLOW_SUSPENDED = 0,
+	SHALLOW_AWAKE = 1,
+};
+
 void prometheus_panel_beacon(unsigned int new_state);
 bool prometheus_sec_jack(void);
 bool android_os_ws(void);
@@ -114,4 +119,6 @@ void intelli_suspend_booster(void);
 extern void cpufreq_hardlimit_suspend(void);
 extern void cpufreq_hardlimit_resume(void);
 extern unsigned int report_state(void);
+extern unsigned int shallow_suspended;
+extern unsigned int report_shallow(void);
 #endif
