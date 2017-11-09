@@ -32,6 +32,7 @@
 #include <linux/compiler.h>
 #include <linux/moduleparam.h>
 #include <linux/display_state.h>
+#include <linux/prometheus.h>
 
 #include "power.h"
 
@@ -605,7 +606,7 @@ static int enter_state(suspend_state_t state)
 		sys_sync();
 		pr_cont("done.\n");
 	}
-
+	prometheus_proactive_beacon(POWER_SUSPEND_ACTIVE);
 #ifdef CONFIG_PROACTIVE_SUSPEND
 	error = proactive_suspend(state);
 	if (error)
@@ -632,6 +633,7 @@ Profin:
 	proactive_resume();
 Unlock:
 	mutex_unlock(&pm_mutex);
+	prometheus_proactive_beacon(POWER_SUSPEND_INACTIVE);
 	return error;
 }
 

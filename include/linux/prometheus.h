@@ -104,7 +104,18 @@ enum {
 	POWER_SUSPEND_ACTIVE = 1,
 };
 
+enum {
+	PANEL_SUSPEND_INACTIVE = 0,
+	PANEL_SUSPEND_ACTIVE = 1,
+};
+
+enum {
+	PANEL_MODE = 0,
+	PROACTIVE_MODE = 1,
+};
+
 void prometheus_panel_beacon(unsigned int new_state);
+void prometheus_proactive_beacon(unsigned int new_state);
 bool prometheus_sec_jack(void);
 bool android_os_ws(void);
 

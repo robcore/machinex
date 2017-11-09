@@ -31,7 +31,7 @@
 #include "power.h"
 
 #define VERSION 6
-#define VERSION_MIN 2
+#define VERSION_MIN 3
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -41,8 +41,13 @@ struct work_struct power_suspend_work;
 struct work_struct power_resume_work;
 static void power_suspend(struct work_struct *work);
 static void power_resume(struct work_struct *work);
+struct work_struct panel_suspend_work;
+struct work_struct panel_resume_work;
+static void panel_suspend(struct work_struct *work);
+static void panel_resume(struct work_struct *work);
 /* Yank555.lu : Current powersuspend ps_state (screen on / off) */
 static unsigned int ps_state = POWER_SUSPEND_INACTIVE;
+static unsigned int panel_state = PANEL_SUSPEND_INACTIVE;
 /* Robcore: Provide an option to sync the system on panel suspend
  * accompanied by a wakelock to ensure stability
  * at the cost of battery life
@@ -56,6 +61,7 @@ extern unsigned int limit_screen_off_cpus;
 extern unsigned int limit_screen_on_cpus;
 static bool bootcomplete;
 bool prometheus_override = false;
+static unsigned int mode = PANEL_MODE;
 
 /*
  * 0 means screen on (resume)
@@ -69,6 +75,17 @@ unsigned int report_state(void)
 
 	spin_lock_irqsave(&ps_state_lock, flg);
 	currstate = ps_state;
+	spin_unlock_irqrestore(&ps_state_lock, flg);
+	return currstate;
+}
+
+unsigned int report_panel_state(void)
+{
+	unsigned long flg;
+	unsigned int currstate;
+
+	spin_lock_irqsave(&ps_state_lock, flg);
+	currstate = panel_state;
 	spin_unlock_irqrestore(&ps_state_lock, flg);
 	return currstate;
 }
@@ -102,7 +119,7 @@ void unregister_power_suspend(struct power_suspend *handler)
 }
 EXPORT_SYMBOL(unregister_power_suspend);
 
-static void power_suspend(struct work_struct *work)
+static void panel_suspend(struct work_struct *work)
 {
 	struct power_suspend *pos;
 	unsigned int counter;
@@ -119,6 +136,7 @@ static void power_suspend(struct work_struct *work)
 	cancel_work_sync(&power_resume_work);
 	pr_info("[PROMETHEUS] Entering Suspend\n");
 	mutex_lock(&prometheus_mtx);
+
 	prometheus_override = true;
 	if (!report_state()) {
 		mutex_unlock(&prometheus_mtx);
@@ -151,7 +169,7 @@ static void power_suspend(struct work_struct *work)
 	mutex_unlock(&prometheus_mtx);
 }
 
-static void power_resume(struct work_struct *work)
+static void panel_resume(struct work_struct *work)
 {
 	struct power_suspend *pos;
 
@@ -182,12 +200,191 @@ static void power_resume(struct work_struct *work)
 	}
 	pr_info("[PROMETHEUS] Resume Completed.\n");
 	mutex_unlock(&prometheus_mtx);
+}
 
+static void panel_down(void)
+{
+	unsigned int counter;
+	int error;
+	unsigned int nrwl;
+
+	if (poweroff_charging || (unlikely(system_state != SYSTEM_RUNNING)) ||
+		(unlikely(system_is_restarting()))) {
+		pr_info("[PROMETHEUS] Cannot Suspend! Unsupported System"
+				"State!\n");
+		return;
+	}
+
+	mutex_lock(&prometheus_mtx);
+
+	prometheus_override = true;
+	if (!report_panel_state()) {
+		mutex_unlock(&prometheus_mtx);
+		prometheus_override = false;
+		pr_info("[PROMETHEUS] Suspend Aborted! Screen on!\n");
+		return;
+	}
+
+	intelli_suspend_booster();
+	cpufreq_hardlimit_suspend();
+
+	pr_info("[PROMETHEUS] Suspending\n");
+	prometheus_override = false;
+
+	if (limit_screen_off_cpus)
+		lock_screen_off_cpus(0);
+
+	if (sync_on_panel_suspend) {
+		wake_lock(&prsynclock);
+		pr_info("[PROMETHEUS] Syncing\n");
+		sys_sync();
+		wake_unlock(&prsynclock);
+	}
+	mutex_unlock(&prometheus_mtx);
+	pr_info("[PROMETHEUS] Shallow Suspend Completed.\n");
+}
+static void panel_up(void)
+{
+	if ((poweroff_charging)) {
+		pr_info("[PROMETHEUS] Cannot Resume! Unsupported System"
+				"State!\n");
+		return;
+	}
+
+	pr_info("[PROMETHEUS] Entering Resume\n");
+	mutex_lock(&prometheus_mtx);
+	if (report_panel_state()) {
+		mutex_unlock(&prometheus_mtx);
+		return;
+	}
+
+	if (limit_screen_off_cpus)
+		unlock_screen_off_cpus();
+
+	cpufreq_hardlimit_resume();
+	mutex_unlock(&prometheus_mtx);
+	pr_info("[PROMETHEUS] Resume Completed.\n");
 }
 
 void prometheus_panel_beacon(unsigned int new_state)
 {
 	unsigned long irqflags;
+
+	if (likely(bootcomplete))
+		pr_info("[PROMETHEUS] Panel Requests %s.\n", new_state == POWER_SUSPEND_ACTIVE ? "Suspend" : "Resume");
+
+	if (mode == PROACTIVE_MODE) {
+		spin_lock_irqsave(&ps_state_lock, irqflags);
+		if (panel_state != new_state) {
+			if (!panel_state && new_state) {
+				panel_state = new_state;
+				pr_info("[PROMETHEUS] Suspend State Activated.\n");
+				panel_down();
+			} else if (panel_state && !new_state) {
+				panel_state = new_state;
+				pr_info("[PROMETHEUS] Resume State Activated.\n");
+				panel_up();
+			}
+		} else {
+			if (likely(bootcomplete))
+				pr_info("[PROMETHEUS] Request Ignored, no change\n");
+			else
+				bootcomplete = true;
+		}
+		spin_unlock_irqrestore(&ps_state_lock, irqflags);
+		return;
+	}
+
+	spin_lock_irqsave(&ps_state_lock, irqflags);
+	if (ps_state != new_state) {
+		if (!ps_state && new_state) {
+			ps_state = new_state;
+			pr_info("[PROMETHEUS] Suspend State Activated.\n");
+			queue_work_on(0, pwrsup_wq, &panel_suspend_work);
+		} else if (ps_state && !new_state) {
+			ps_state = new_state;
+			pr_info("[PROMETHEUS] Resume State Activated.\n");
+			queue_work_on(0, pwrsup_wq, &panel_resume_work);
+		}
+	} else {
+		if (likely(bootcomplete))
+			pr_info("[PROMETHEUS] Request Ignored, no change\n");
+		else
+			bootcomplete = true;
+	}
+	spin_unlock_irqrestore(&ps_state_lock, irqflags);
+}
+EXPORT_SYMBOL(prometheus_panel_beacon);
+
+static void power_suspend(struct work_struct *work)
+{
+	struct power_suspend *pos;
+	unsigned int counter;
+	int error;
+	unsigned int nrwl;
+
+	if (poweroff_charging || (unlikely(system_state != SYSTEM_RUNNING)) ||
+		(unlikely(system_is_restarting()))) {
+		pr_info("[PROMETHEUS] Cannot Suspend! Unsupported System"
+				"State!\n");
+		return;
+	}
+
+	cancel_work_sync(&power_resume_work);
+	pr_info("[PROMETHEUS] Entering Suspend\n");
+	mutex_lock(&prometheus_mtx);
+
+	if (!report_state()) {
+		mutex_unlock(&prometheus_mtx);
+		pr_info("[PROMETHEUS] Suspend Aborted! Screen on!\n");
+		return;
+	}
+
+	pr_info("[PROMETHEUS] Suspending\n");
+	list_for_each_entry_reverse(pos, &power_suspend_handlers, link) {
+		if (pos->suspend != NULL) {
+			pos->suspend(pos);
+		}
+	}
+	pr_info("[PROMETHEUS] Shallow Suspend Completed.\n");
+	mutex_unlock(&prometheus_mtx);
+}
+
+static void power_resume(struct work_struct *work)
+{
+	struct power_suspend *pos;
+
+	if ((poweroff_charging)) {
+		pr_info("[PROMETHEUS] Cannot Resume! Unsupported System"
+				"State!\n");
+		return;
+	}
+
+	cancel_work_sync(&power_suspend_work);
+	pr_info("[PROMETHEUS] Entering Resume\n");
+	mutex_lock(&prometheus_mtx);
+	if (report_state()) {
+		mutex_unlock(&prometheus_mtx);
+		return;
+	}
+
+	pr_info("[PROMETHEUS] Resuming\n");
+	list_for_each_entry(pos, &power_suspend_handlers, link) {
+		if (pos->resume != NULL) {
+			pos->resume(pos);
+		}
+	}
+	pr_info("[PROMETHEUS] Resume Completed.\n");
+	mutex_unlock(&prometheus_mtx);
+
+}
+
+void prometheus_proactive_beacon(unsigned int new_state)
+{
+	unsigned long irqflags;
+
+	if (mode == PANEL_MODE)
+		return;
 
 	if (likely(bootcomplete))
 		pr_info("[PROMETHEUS] Panel Requests %s.\n", new_state == POWER_SUSPEND_ACTIVE ? "Suspend" : "Resume");
@@ -211,9 +408,33 @@ void prometheus_panel_beacon(unsigned int new_state)
 	}
 	spin_unlock_irqrestore(&ps_state_lock, irqflags);
 }
-EXPORT_SYMBOL(prometheus_panel_beacon);
+EXPORT_SYMBOL(prometheus_proactive_beacon);
 
 // ------------------------------------------ sysfs interface ------------------------------------------
+
+static ssize_t prometheus_mode_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+        return sprintf(buf, "%u\n", mode);
+}
+
+static ssize_t prometheus_mode_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int val;
+
+	sscanf(buf, "%d\n", &val);
+
+	sanitize_min_max(val, 0, 1);
+
+	mode = val;
+	return count;
+}
+
+static struct kobj_attribute prometheus_mode_attribute =
+	__ATTR(prometheus_mode, 0644,
+		prometheus_mode_show,
+		prometheus_mode_store);
 
 static ssize_t prometheus_sync_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -252,6 +473,7 @@ static struct kobj_attribute prometheus_version_attribute =
 
 static struct attribute *prometheus_attrs[] =
 {
+	&prometheus_mode_attribute.attr,
 	&prometheus_sync_attribute.attr,
 	&prometheus_version_attribute.attr,
 	NULL,
@@ -298,6 +520,8 @@ static int prometheus_init(void)
 		return -ENOMEM;
 	}
 
+	INIT_WORK(&panel_suspend_work, panel_suspend);
+	INIT_WORK(&panel_resume_work, panel_resume);
 	INIT_WORK(&power_suspend_work, power_suspend);
 	INIT_WORK(&power_resume_work, power_resume);
 
