@@ -113,4 +113,5 @@ extern bool prometheus_override;
 void intelli_suspend_booster(void);
 extern void cpufreq_hardlimit_suspend(void);
 extern void cpufreq_hardlimit_resume(void);
+extern unsigned int report_state(void);
 #endif

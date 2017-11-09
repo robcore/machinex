@@ -20,6 +20,7 @@
 #include <linux/fake_dvfs.h>
 #include <linux/sysfs_helpers.h>
 #include <linux/display_state.h>
+#include <linux/powersuspend.h>
 
 #include "power.h"
 
@@ -627,7 +628,8 @@ static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
 	if (error)
 		return error;
 
-	if (pm_autosleep_state() > PM_SUSPEND_ON) {
+	if (pm_autosleep_state() > PM_SUSPEND_ON ||
+		!report_state()) {
 		error = -EBUSY;
 		goto out;
 	}
@@ -639,8 +641,6 @@ static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
 
 		error = pm_suspend(state);
 	} else if (state == PM_SUSPEND_MAX) {
-		if (is_display_on())
-			sweep2sleep_pwrtrigger();
 		error = hibernate();
 	} else {
 		error = -EINVAL;
@@ -752,7 +752,7 @@ static ssize_t autosleep_store(struct kobject *kobj,
 	int error;
 
 	if (state == PM_SUSPEND_ON
-	    && strcmp(buf, "off") && strcmp(buf, "off\n"))
+	    && strcmp(buf, "off") && strcmp(buf, "off\n") || !report_state())
 		return -EINVAL;
 
 	if (state == PM_SUSPEND_MEM)

@@ -54,7 +54,6 @@ extern int poweroff_charging;
 extern bool mx_is_cable_attached(void);
 extern unsigned int limit_screen_off_cpus;
 extern unsigned int limit_screen_on_cpus;
-static bool bootcomplete;
 bool prometheus_override = false;
 
 /*
@@ -105,9 +104,6 @@ EXPORT_SYMBOL(unregister_power_suspend);
 static void power_suspend(struct work_struct *work)
 {
 	struct power_suspend *pos;
-	unsigned int counter;
-	int error;
-	unsigned int nrwl;
 
 	if (poweroff_charging || (unlikely(system_state != SYSTEM_RUNNING)) ||
 		(unlikely(system_is_restarting()))) {
@@ -189,9 +185,6 @@ void prometheus_panel_beacon(unsigned int new_state)
 {
 	unsigned long irqflags;
 
-	if (likely(bootcomplete))
-		pr_info("[PROMETHEUS] Panel Requests %s.\n", new_state == POWER_SUSPEND_ACTIVE ? "Suspend" : "Resume");
-
 	spin_lock_irqsave(&ps_state_lock, irqflags);
 	if (ps_state != new_state) {
 		if (!ps_state && new_state) {
@@ -203,11 +196,6 @@ void prometheus_panel_beacon(unsigned int new_state)
 			pr_info("[PROMETHEUS] Resume State Activated.\n");
 			queue_work_on(0, pwrsup_wq, &power_resume_work);
 		}
-	} else {
-		if (likely(bootcomplete))
-			pr_info("[PROMETHEUS] Request Ignored, no change\n");
-		else
-			bootcomplete = true;
 	}
 	spin_unlock_irqrestore(&ps_state_lock, irqflags);
 }
