@@ -525,6 +525,20 @@ static unsigned int custom_b_dt2 = 0;
 static unsigned int custom_b_dt3 = 0;
 static unsigned int custom_b_dt4 = 0;
 static unsigned int custom_b_brightness = 0;
+static unsigned  bln_notification;
+static bool bln_is_on;
+
+static void bln_on(void)
+{
+	cypress_bln_control(1);
+	bln_is_on = true;
+}
+
+static void bln_off(void)
+{
+	cypress_bln_control(0);
+	bln_is_on = false;
+}
 
 static void an30259a_start_led_pattern(unsigned int mode)
 {
@@ -532,6 +546,10 @@ static void an30259a_start_led_pattern(unsigned int mode)
 	struct i2c_client *client;
 	struct work_struct *reset = 0;
 	client = b_client;
+
+	if (current_led_mode == MISSED_NOTI && mode != MISSED_NOTI &&
+		bln_is_on)
+		bln_off();
 
 	if (battery_level == BATTERY_FULL && mode == CHARGING)
 		mode = FULLY_CHARGED;
@@ -658,6 +676,9 @@ static void an30259a_start_led_pattern(unsigned int mode)
 			return;
 		}
 		pr_info("LED Missed Notifications Pattern on\n");
+		if (bln_notification)
+			bln_on();
+
 		if (breathing_leds) {
 			leds_on(LED_B, true, true, led_dynamic_current);
 			leds_set_slope_mode(client, LED_B,
@@ -1348,6 +1369,29 @@ static ssize_t store_##name		\
 	return count;				\
 }
 
+static ssize_t show_bln_notification(struct kobject *kobj, 
+				struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%u\n", bln_notification);
+}
+
+static ssize_t store_bln_notification(struct kobject *kobj,
+			   struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int input, ret;
+
+	ret = sscanf(buf, "%d", &input);
+	if (ret != 1)
+		return -EINVAL;
+
+	if (input == bln_notification)
+		return count;
+	bln_notification = input;
+
+	return count;
+}
+MX_ATTR_RW(bln_notification);
+
 static ssize_t show_breathing_leds(struct kobject *kobj, 
 				struct kobj_attribute *attr, char *buf)
 {
@@ -1642,6 +1686,7 @@ static struct attribute_group cust_led_b_attr_group = {
 };
 
 static struct attribute *mx_custom_leds_attrs[] = {
+	&bln_notification_attr.attr,
 	&breathing_leds_attr.attr,
 	&inhale_attr.attr,
 	&exhale_attr.attr,

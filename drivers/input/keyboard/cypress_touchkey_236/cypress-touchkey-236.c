@@ -137,6 +137,7 @@ static void cypress_touchkey_power_resume(struct power_suspend *h);
 
 static int touchkey_led_status;
 static int touchled_cmd_reversed;
+struct cypress_touchkey_info *tkey_info;
 
 static struct pm_gpio tkey_int = {
 	.direction	= PM_GPIO_DIR_IN,
@@ -709,8 +710,6 @@ static void cypress_touchkey_glove_work(struct work_struct *work)
 	return;
 }
 
-struct cypress_touchkey_info *tkey_info;
-
 int touchkey_glovemode(int value)
 {
 
@@ -980,6 +979,16 @@ static int cypress_touchkey_led_off(struct cypress_touchkey_info *dev_info)
 				"[Touchkey] i2c write error [%d]\n", ret);
 	}
 	return ret;
+}
+
+void cypress_bln_control(unsigned int onoff)
+{
+	struct cypress_touchkey_info *info = tkey_info;
+
+		if (onoff)
+			cypress_touchkey_led_on(info);
+		else
+			cypress_touchkey_led_off(info);
 }
 
 static ssize_t touch_version_read(struct device *dev,
@@ -1517,6 +1526,7 @@ static int cypress_touchkey_probe(struct i2c_client *client,
 		goto err_input_dev_alloc;
 	}
 
+	i2c_set_clientdata(client, info);
 	info->client = client;
 	info->input_dev = input_dev;
 	info->pdata = client->dev.platform_data;
@@ -1554,8 +1564,6 @@ static int cypress_touchkey_probe(struct i2c_client *client,
 			ret);
 		goto err_reg_input_dev;
 	}
-
-	i2c_set_clientdata(client, info);
 
 	if (info->pdata->gpio_led_en) {
 		ret = gpio_request(info->pdata->gpio_led_en,

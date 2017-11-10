@@ -243,5 +243,6 @@ static inline void ledtrig_cpu(enum cpu_led_event evt)
 	return;
 }
 #endif
+extern void cypress_bln_control(unsigned int onoff);
 
 #endif		/* __LINUX_LEDS_H_INCLUDED */
