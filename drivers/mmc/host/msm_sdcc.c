@@ -5133,7 +5133,7 @@ store_polling(struct device *dev, struct device_attribute *attr,
 	}
 #ifdef CONFIG_PROACTIVE_SUSPEND
 	host->polling_enabled = mmc->caps & MMC_CAP_NEEDS_POLL;
-#elif defined (CONFIG_POWERSUSPEND)
+#else
 	host->polling_enabled = mmc->caps & MMC_CAP_NEEDS_POLL;
 #endif
 	spin_unlock_irqrestore(&host->lock, flags);
@@ -5284,7 +5284,7 @@ static int msmsdcc_early_notify(struct notifier_block *nfb,
 
 	return NOTIFY_DONE;
 }
-#elif defined (CONFIG_POWERSUSPEND)
+#else
 static void msmsdcc_power_suspend(struct power_suspend *h)
 {
 	struct msmsdcc_host *host =
@@ -6517,7 +6517,7 @@ msmsdcc_probe(struct platform_device *pdev)
 #ifdef CONFIG_PROACTIVE_SUSPEND
 	host->pm_notify.notifier_call = msmsdcc_early_notify;
 	register_pm_notifier(&host->pm_notify);
-#elif defined (CONFIG_POWERSUSPEND)
+#else
 	host->power_suspend.suspend = msmsdcc_power_suspend;
 	host->power_suspend.resume  = msmsdcc_power_resume;
 //	host->power_suspend.level   = POWER_SUSPEND_LEVEL_DISABLE_FB;
@@ -6780,7 +6780,7 @@ static int msmsdcc_remove(struct platform_device *pdev)
 	mmc_free_host(mmc);
 #ifdef CONFIG_PROACTIVE_SUSPEND
 	unregister_pm_notifier(&host->pm_notify);
-#elif defined (CONFIG_POWERSUSPEND)
+#else
 	unregister_power_suspend(&host->power_suspend);
 #endif
 	pm_runtime_disable(&(pdev)->dev);

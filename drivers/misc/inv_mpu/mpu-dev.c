@@ -115,9 +115,7 @@ struct mpu_private_data {
 #ifdef CONFIG_PROACTIVE_SUSPEND
 	struct notifier_block pm_notify
 #else
-#ifdef CONFIG_POWERSUSPEND
 	struct power_suspend power_suspend;
-#endif
 #endif
 	int gyro_bias[3];
 };
@@ -1152,7 +1150,6 @@ static int mpu_dev_pm_callback(struct notifier_block *nfb,
 	return NOTIFY_DONE;
 }
 #else
-#ifdef CONFIG_POWERSUSPEND
 void mpu_dev_power_suspend(struct power_suspend *h)
 {
 	struct mpu_private_data *mpu =
@@ -1215,7 +1212,6 @@ void mpu_dev_power_resume(struct power_suspend *h)
 	mutex_unlock(&mpu->mutex);
 	mpu_early_notifier_callback(mpu, PM_POST_SUSPEND, NULL);
 }
-#endif
 #endif
 
 
@@ -2628,12 +2624,10 @@ int mpu_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 		mpu->pm_notify.notifier_call = mpu_dev_pm_callback;
 		register_pm_notifier(&mpu->pm_notify);
 #else
-#ifdef CONFIG_POWERSUSPEND
 //		mpu->power_suspend.level = POWER_SUSPEND_LEVEL_DISABLE_FB + 1;
 		mpu->power_suspend.suspend = mpu_dev_power_suspend;
 		mpu->power_suspend.resume = mpu_dev_power_resume;
 		register_power_suspend(&mpu->power_suspend);
-#endif
 #endif
 	return res;
 

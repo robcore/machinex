@@ -1143,9 +1143,7 @@ static int audio_release(struct inode *inode, struct file *file)
 #ifdef CONFIG_PROACTIVE_SUSPEND
 	unregister_pm_notifier(&audio->suspend_ctl.pm_notify);
 #else
-#ifdef CONFIG_POWERSUSPEND
 	unregister_power_suspend(&audio->suspend_ctl.node);
-#endif
 #endif
 	audio->opened = 0;
 	audio->out_enabled = 0;
@@ -1216,7 +1214,6 @@ static int audlpa_pm_callback(struct notifier_block *nfb,
 	return NOTIFY_DONE;
 }
 #else
-#ifdef CONFIG_POWERSUSPEND
 static void audlpa_suspend(struct power_suspend *h)
 {
 	struct audlpa_suspend_ctl *ctl =
@@ -1234,7 +1231,6 @@ static void audlpa_resume(struct power_suspend *h)
 
 	audlpa_post_event(ctl->audio, AUDIO_EVENT_RESUME, payload);
 }
-#endif
 #endif
 
 #ifdef CONFIG_DEBUG_FS
@@ -1398,13 +1394,11 @@ static int audio_open(struct inode *inode, struct file *file)
 	audio->suspend_ctl.pm_notify.notifier_call = audlpa_pm_callback;
 	register_pm_notifier(&audio->suspend_ctl.pm_notify);
 #else
-#ifdef CONFIG_POWERSUSPEND
 //	audio->suspend_ctl.node.level = POWER_SUSPEND_LEVEL_DISABLE_FB;
 	audio->suspend_ctl.node.resume = audlpa_resume;
 	audio->suspend_ctl.node.suspend = audlpa_suspend;
 	audio->suspend_ctl.audio = audio;
 	register_power_suspend(&audio->suspend_ctl.node);
-#endif
 #endif
 	for (i = 0; i < AUDLPA_EVENT_NUM; i++) {
 		e_node = kmalloc(sizeof(struct audlpa_event), GFP_KERNEL);

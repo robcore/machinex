@@ -34,13 +34,12 @@ struct audlpa_suspend_ctl {
 	struct audio *audio;
 };
 #else
-#ifdef CONFIG_POWERSUSPEND
 struct audlpa_suspend_ctl {
 	struct power_suspend node;
 	struct audio *audio;
 };
 #endif
-#endif
+
 struct codec_operations {
 	long (*ioctl)(struct file *, unsigned int, unsigned long);
 	int (*set_params)(void *);
@@ -77,9 +76,7 @@ struct audio {
 #ifdef CONFIG_PROACTIVE_SUSPEND
 	struct audlpa_suspend_ctl suspend_ctl;
 #else
-#ifdef CONFIG_POWERSUSPEND
 	struct audlpa_suspend_ctl suspend_ctl;
-#endif
 #endif
 	struct wake_lock wakelock;
 #ifdef CONFIG_DEBUG_FS

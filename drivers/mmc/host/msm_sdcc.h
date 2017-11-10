@@ -391,10 +391,8 @@ struct msmsdcc_host {
 	struct notifier_block pm_notify;
 	int polling_enabled;
 #else
-#ifdef CONFIG_POWERSUSPEND
 	struct power_suspend power_suspend;
 	int polling_enabled;
-#endif
 #endif
 	struct tasklet_struct 	dma_tlet;
 
