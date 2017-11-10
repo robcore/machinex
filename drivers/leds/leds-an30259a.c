@@ -530,15 +530,23 @@ static bool bln_is_on;
 
 static void bln_on(void)
 {
+	unsigned int ret;
+
 	wake_lock(&ledlock);
-	cypress_bln_control(1);
-	bln_is_on = true;
+	ret = cypress_bln_control(1);
+	if (ret)
+		bln_is_on = true;
+	wake_unlock(&ledlock);
 }
 
 static void bln_off(void)
 {
-	cypress_bln_control(0);
-	bln_is_on = false;
+	unsigned int ret;
+
+	wake_lock(&ledlock);
+	ret = cypress_bln_control(0);
+	if (!ret)
+		bln_is_on = false;
 	wake_unlock(&ledlock);
 }
 

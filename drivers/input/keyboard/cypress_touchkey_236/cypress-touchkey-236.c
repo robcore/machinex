@@ -990,14 +990,16 @@ static int cypress_touchkey_led_off(struct cypress_touchkey_info *dev_info)
 	return ret;
 }
 
-void cypress_bln_control(unsigned int onoff)
+unsigned int cypress_bln_control(unsigned int onoff)
 {
 	struct cypress_touchkey_info *info = tkey_info;
 
-		if (onoff)
-			cypress_touchkey_led_on(info);
-		else
-			cypress_touchkey_led_off(info);
+	if (onoff)
+		cypress_touchkey_led_on(info);
+	else
+		cypress_touchkey_led_off(info);
+
+	return onoff;
 }
 
 static ssize_t touch_version_read(struct device *dev,
