@@ -96,8 +96,6 @@ struct power_suspend {
 
 void register_power_suspend(struct power_suspend *handler);
 void unregister_power_suspend(struct power_suspend *handler);
-extern int prometheus_register_notifier(struct notifier_block *nb);
-extern int prometheus_unregister_notifier(struct notifier_block *nb);
 
 enum {
 	POWER_SUSPEND_INACTIVE = 0,
@@ -119,6 +117,5 @@ void intelli_suspend_booster(void);
 extern void cpufreq_hardlimit_suspend(void);
 extern void cpufreq_hardlimit_resume(void);
 extern unsigned int report_state(void);
-extern unsigned int shallow_suspended;
 extern unsigned int report_shallow(void);
 #endif

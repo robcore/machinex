@@ -55,6 +55,7 @@ extern bool mx_is_cable_attached(void);
 extern unsigned int limit_screen_off_cpus;
 extern unsigned int limit_screen_on_cpus;
 bool prometheus_override = false;
+static unsigned int shallow_suspended = SHALLOW_AWAKE;
 
 /*
  * 0 means screen on (resume)
