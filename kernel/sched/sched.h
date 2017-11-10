@@ -1100,16 +1100,15 @@ struct sched_group {
 	unsigned long cpumask[0];
 };
 
-static inline struct cpumask *sched_group_cpus(struct sched_group *sg)
+static inline struct cpumask *sched_group_span(struct sched_group *sg)
 {
 	return to_cpumask(sg->cpumask);
 }
 
 /*
- * cpumask masking which cpus in the group are allowed to iterate up the domain
- * tree.
+ * See build_balance_mask().
  */
-static inline struct cpumask *sched_group_mask(struct sched_group *sg)
+static inline struct cpumask *group_balance_mask(struct sched_group *sg)
 {
 	return to_cpumask(sg->sgc->cpumask);
 }
@@ -1120,7 +1119,7 @@ static inline struct cpumask *sched_group_mask(struct sched_group *sg)
  */
 static inline unsigned int group_first_cpu(struct sched_group *group)
 {
-	return cpumask_first(sched_group_cpus(group));
+	return cpumask_first(sched_group_span(group));
 }
 
 extern int group_balance_cpu(struct sched_group *sg);
@@ -1699,6 +1698,7 @@ static inline void __add_nr_running(struct rq *rq, unsigned count)
 			rq->rd->overload = true;
 #endif
 	}
+
 	sched_update_tick_dependency(rq);
 }
 
@@ -1886,6 +1886,7 @@ static inline void set_dl_cpu_capacity(int cpu, bool request,
 static inline void sched_rt_avg_update(struct rq *rq, u64 rt_delta)
 {
 	rq->rt_avg += rt_delta * arch_scale_freq_capacity(NULL, cpu_of(rq));
+	sched_avg_update(rq);
 }
 #else
 static inline void sched_rt_avg_update(struct rq *rq, u64 rt_delta) { }
@@ -2044,27 +2045,35 @@ static inline int double_lock_balance(struct rq *this_rq, struct rq *busiest)
 static inline void double_unlock_balance(struct rq *this_rq, struct rq *busiest)
 	__releases(busiest->lock)
 {
-	if (this_rq != busiest)
-		raw_spin_unlock(&busiest->lock);
+	raw_spin_unlock(&busiest->lock);
 	lock_set_subclass(&this_rq->lock.dep_map, 0, _RET_IP_);
 }
 
 static inline void double_lock(spinlock_t *l1, spinlock_t *l2)
 {
- if (l1 > l2)
- swap(l1, l2);
+	if (l1 > l2)
+		swap(l1, l2);
 
- spin_lock(l1);
- spin_lock_nested(l2, SINGLE_DEPTH_NESTING);
+	spin_lock(l1);
+	spin_lock_nested(l2, SINGLE_DEPTH_NESTING);
+}
+
+static inline void double_lock_irq(spinlock_t *l1, spinlock_t *l2)
+{
+	if (l1 > l2)
+		swap(l1, l2);
+
+	spin_lock_irq(l1);
+	spin_lock_nested(l2, SINGLE_DEPTH_NESTING);
 }
 
 static inline void double_raw_lock(raw_spinlock_t *l1, raw_spinlock_t *l2)
 {
- if (l1 > l2)
- swap(l1, l2);
+	if (l1 > l2)
+		swap(l1, l2);
 
- raw_spin_lock(l1);
- raw_spin_lock_nested(l2, SINGLE_DEPTH_NESTING);
+	raw_spin_lock(l1);
+	raw_spin_lock_nested(l2, SINGLE_DEPTH_NESTING);
 }
 
 /*
