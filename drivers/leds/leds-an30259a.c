@@ -530,14 +530,18 @@ static bool bln_is_on;
 
 static void bln_on(void)
 {
+	wake_lock(&ledlock);
 	cypress_bln_control(1);
 	bln_is_on = true;
+	wake_unlock(&ledlock);
 }
 
 static void bln_off(void)
 {
+	wake_lock(&ledlock);
 	cypress_bln_control(0);
 	bln_is_on = false;
+	wake_unlock(&ledlock);
 }
 
 static void an30259a_start_led_pattern(unsigned int mode)
