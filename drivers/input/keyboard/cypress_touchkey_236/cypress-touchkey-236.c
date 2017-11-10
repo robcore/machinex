@@ -35,6 +35,7 @@
 #include <linux/mfd/pm8xxx/pm8921.h>
 #include "../../../../arch/arm/mach-msm/board-8064.h"
 #include <linux/cpufreq.h>
+#include <linux/suspend.h>
 
 #define CYPRESS_GEN		0X00
 #define CYPRESS_FW_VER		0X01
@@ -96,7 +97,11 @@ struct cypress_touchkey_info {
 	struct i2c_client			*client;
 	struct cypress_touchkey_platform_data	*pdata;
 	struct input_dev			*input_dev;
+#ifdef CONFIG_PROACTIVE_SUSPEND
+	struct notifier_block pm_notify;
+#else
 	struct power_suspend			power_suspend;
+#endif
 	char			phys[32];
 	unsigned char			keycode[NUM_OF_KEY];
 	u8			sensitivity[NUM_OF_KEY];
@@ -130,7 +135,11 @@ struct cypress_touchkey_info {
 #endif
 };
 
-#ifdef CONFIG_POWERSUSPEND
+#ifdef CONFIG_PROACTIVE_SUSPEND
+static int cypress_pm_callback(struct notifier_block *nfb,
+					unsigned long action,
+					void *ignored);
+#else
 static void cypress_touchkey_power_suspend(struct power_suspend *h);
 static void cypress_touchkey_power_resume(struct power_suspend *h);
 #endif
@@ -1615,8 +1624,10 @@ static int cypress_touchkey_probe(struct i2c_client *client,
 				client->irq, ret);
 		goto err_req_irq;
 	}
-
-#ifdef CONFIG_POWERSUSPEND
+#ifdef CONFIG_PROACTIVE_SUSPEND
+	info->pm_notify.notifier_call = cypress_pm_callback;
+	register_pm_notifier(&info->pm_notify);
+#else
 	info->power_suspend.suspend = cypress_touchkey_power_suspend;
 	info->power_suspend.resume = cypress_touchkey_power_resume;
 	register_power_suspend(&info->power_suspend);
@@ -2018,7 +2029,29 @@ static int cypress_touchkey_resume(struct device *dev)
 }
 #endif
 
-#ifdef CONFIG_POWERSUSPEND
+#ifdef CONFIG_PROACTIVE_SUSPEND
+static int cypress_pm_callback(struct notifier_block *nfb,
+					unsigned long action,
+					void *ignored)
+{
+	struct cypress_touchkey_info *info;
+	info = container_of(nfb, struct cypress_touchkey_info, pm_notify);
+
+	switch (action) {
+	case PM_PROACTIVE_SUSPEND:
+		cypress_touchkey_suspend(&info->client->dev);
+		return NOTIFY_OK;
+	case PM_PROACTIVE_RESUME:
+		cypress_touchkey_resume(&info->client->dev);
+		return NOTIFY_OK;
+	default:
+		return NOTIFY_DONE;
+	}
+
+	return NOTIFY_DONE;
+}
+
+#else
 static void cypress_touchkey_power_suspend(struct power_suspend *h)
 {
 	struct cypress_touchkey_info *info;
