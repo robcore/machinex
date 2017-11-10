@@ -25,9 +25,7 @@
 #include <linux/interrupt.h>
 #include <linux/workqueue.h>
 #include <linux/gpio.h>
-#ifdef CONFIG_PROACTIVE_SUSPEND
-#include <linux/suspend.h>
-#else
+#ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
 #endif
 #include <linux/wakelock.h>
@@ -403,9 +401,7 @@ struct ssp_data {
 	void (*report_sensor_data[SENSOR_MAX])(struct ssp_data *,
 		struct sensor_value *);
 
-#ifdef CONFIG_PROACTIVE_SUSPEND
-	struct notifier_block pm_notify;
-#else
+#ifdef CONFIG_POWERSUSPEND
 	struct power_suspend power_suspend;
 #endif
 
