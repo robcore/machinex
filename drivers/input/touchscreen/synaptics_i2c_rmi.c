@@ -4021,8 +4021,6 @@ static int synaptics_rmi4_suspend(struct device *dev)
 			synaptics_rmi4_release_all_finger(rmi4_data);
 			rmi4_data->board->power(false);
 			rmi4_data->touch_stopped = true;
-		} else {
-			pr_debug("rmi-couldn't do the thing");
 		}
 	}
 	mutex_unlock(&rmi4_data->input_dev->mutex);
@@ -4058,8 +4056,6 @@ static int synaptics_rmi4_resume(struct device *dev)
 			}
 			enable_irq(rmi4_data->i2c_client->irq);
 
-			pr_debug("rmi-couldn't do the thing");
-		} else {
 			pr_debug("rmi-couldn't do the thing");
 		}
 	}
