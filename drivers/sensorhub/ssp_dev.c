@@ -17,7 +17,11 @@
 /* ssp mcu device ID */
 #define DEVICE_ID			0x55
 
-#ifdef CONFIG_POWERSUSPEND
+#ifdef CONFIG_PROACTIVE_SUSPEND
+static int ssp_pm_callback(struct notifier_block *nfb,
+					unsigned long action,
+					void *ignored);
+#else
 static void ssp_power_suspend(struct power_suspend *handler);
 static void ssp_power_resume(struct power_suspend *handler);
 #endif
@@ -343,7 +347,10 @@ static int ssp_probe(struct i2c_client *client,
 		goto err_symlink_create;
 	}
 
-#ifdef CONFIG_POWERSUSPEND
+#ifdef CONFIG_PROACTIVE_SUSPEND
+	data->pm_notify.notifier_call = ssp_pm_callback;
+	register_pm_notifier(&data->pm_notify);
+#else
 	data->power_suspend.suspend = ssp_power_suspend;
 	data->power_suspend.resume = ssp_power_resume;
 	register_power_suspend(&data->power_suspend);
@@ -415,7 +422,9 @@ static void ssp_shutdown(struct i2c_client *client)
 
 	ssp_enable(data, false);
 
-#ifdef CONFIG_POWERSUSPEND
+#ifdef CONFIG_PROACTIVE_SUSPEND
+	unregister_pm_notifier(&data->pm_notify);
+#else
 	unregister_power_suspend(&data->power_suspend);
 #endif
 
@@ -445,7 +454,48 @@ exit:
 	kfree(data);
 }
 
-#ifdef CONFIG_POWERSUSPEND
+#ifdef CONFIG_PROACTIVE_SUSPEND
+static int ssp_pm_callback(struct notifier_block *nfb,
+					unsigned long action,
+					void *ignored)
+{
+	struct ssp_data *data;
+	data = container_of(nfb, struct ssp_data, pm_notify);
+
+	switch (action) {
+	case PM_PROACTIVE_SUSPEND:
+		func_dbg();
+		disable_debug_timer(data);
+
+#ifdef CONFIG_SENSORS_SSP_SENSORHUB
+		/* give notice to user that AP goes to sleep */
+		ssp_sensorhub_report_notice(data, MSG2SSP_AP_STATUS_SLEEP);
+		ssp_sleep_mode(data);
+#else
+		if (atomic_read(&data->aSensorEnable) > 0)
+			ssp_sleep_mode(data);
+#endif
+		return NOTIFY_OK;
+	case PM_PROACTIVE_RESUME:
+		func_dbg();
+		enable_debug_timer(data);
+#ifdef CONFIG_SENSORS_SSP_SENSORHUB
+		/* give notice to user that AP goes to sleep */
+		ssp_sensorhub_report_notice(data, MSG2SSP_AP_STATUS_WAKEUP);
+		ssp_resume_mode(data);
+#else
+		if (atomic_read(&data->aSensorEnable) > 0)
+			ssp_resume_mode(data);
+#endif
+		return NOTIFY_OK;
+	default:
+		return NOTIFY_DONE;
+	}
+
+	return NOTIFY_DONE;
+}
+#endif
+#if 0
 static void ssp_power_suspend(struct power_suspend *handler)
 {
 	struct ssp_data *data;
@@ -482,8 +532,8 @@ static void ssp_power_resume(struct power_suspend *handler)
 #endif
 }
 
-#else /* CONFIG_POWERSUSPEND */
-
+#endif /* CONFIG_POWERSUSPEND */
+#if 0
 static int ssp_suspend(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
