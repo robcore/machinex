@@ -52,7 +52,9 @@
 #include <linux/delay.h>
 #include <linux/input.h>
 #include <linux/workqueue.h>
-#ifdef CONFIG_POWERSUSPEND
+#ifdef CONFIG_PROACTIVE_SUSPEND
+#include <linux/suspend.h>
+#else
 #include <linux/powersuspend.h>
 #endif
 #include "bmp18x.h"
@@ -96,7 +98,9 @@ struct bmp18x_data {
 	u32	temp_measurement_period;
 	u32	last_temp_measurement;
 	s32	b6; /* calculated temperature correction coefficient */
-#ifdef CONFIG_POWERSUSPEND
+#ifdef CONFIG_PROACTIVE_SUSPEND
+	struct notifier_block pm_notify;
+#else
 	struct power_suspend power_suspend;
 #endif
 	struct input_dev	*input;
@@ -104,8 +108,11 @@ struct bmp18x_data {
 	u32					delay;
 	u32					enable;
 };
-
-#ifdef CONFIG_POWERSUSPEND
+#ifdef CONFIG_PROACTIVE_SUSPEND
+static int bmp18x_pm_callback(struct notifier_block *nfb,
+					unsigned long action,
+					void *ignored);
+#else
 static void bmp18x_power_suspend(struct power_suspend *h);
 static void bmp18x_power_resume(struct power_suspend *h);
 #endif
@@ -621,8 +628,10 @@ int bmp18x_probe(struct device *dev, struct bmp18x_data_bus *data_bus)
 	INIT_DELAYED_WORK(&data->work, bmp18x_work_func);
 	data->delay  = BMP_DELAY_DEFAULT;
 	data->enable = 0;
-
-#ifdef CONFIG_POWERSUSPEND
+#ifdef CONFIG_PROACTIVE_SUSPEND
+	data->pm_notify.notifier_call = bmp18x_pm_callback;
+	register_pm_notifier(&data->pm_notify);
+#else
 /*	data->power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN + 1;
 */
 	data->power_suspend.suspend = bmp18x_power_suspend;
@@ -647,7 +656,9 @@ EXPORT_SYMBOL(bmp18x_probe);
 int bmp18x_remove(struct device *dev)
 {
 	struct bmp18x_data *data = dev_get_drvdata(dev);
-#ifdef CONFIG_POWERSUSPEND
+#ifdef CONFIG_PROACTIVE_SUSPEND
+	unregister_pm_notifier(&data->pm_notify);
+#else
 	unregister_power_suspend(&data->power_suspend);
 #endif
 	sysfs_remove_group(&dev->kobj, &bmp18x_attr_group);
@@ -681,7 +692,35 @@ int bmp18x_enable(struct device *dev)
 EXPORT_SYMBOL(bmp18x_enable);
 #endif
 
-#ifdef CONFIG_POWERSUSPEND
+#ifdef CONFIG_PROACTIVE_SUSPEND
+static int bmp18x_pm_callback(struct notifier_block *nfb,
+					unsigned long action,
+					void *ignored)
+{
+	struct bmp18x_data *data =
+		container_of(nfb, struct bmp18x_data, pm_notify);
+
+	switch (action) {
+	case PM_PROACTIVE_SUSPEND:
+		if (data->enable) {
+			cancel_delayed_work_sync(&data->work);
+			(void) bmp18x_disable(data->dev);
+		}
+		return NOTIFY_OK;
+	case PM_PROACTIVE_RESUME:
+		if (data->enable) {
+			(void) bmp18x_enable(data->dev);
+			schedule_delayed_work(&data->work,
+						msecs_to_jiffies(data->delay));
+		}
+		return NOTIFY_OK;
+	default:
+		return NOTIFY_DONE;
+	}
+
+	return NOTIFY_DONE;
+}
+#else
 static void bmp18x_power_suspend(struct power_suspend *h)
 {
 	struct bmp18x_data *data =
