@@ -404,17 +404,11 @@ static int task_get_unused_fd_flags(struct binder_proc *proc, int flags)
 static void task_fd_install(
 	struct binder_proc *proc, unsigned int fd, struct file *file)
 {
-	struct files_struct *files = proc->files;
-	struct fdtable *fdt;
-
-	if (files == NULL)
-		return;
-
-	spin_lock(&files->file_lock);
-	fdt = files_fdtable(files);
-	BUG_ON(fdt->fd[fd] != NULL);
-	rcu_assign_pointer(fdt->fd[fd], file);
-	spin_unlock(&files->file_lock);
+	if (proc->files) {
+		preempt_enable_no_resched();
+		__fd_install(proc->files, fd, file);
+		preempt_disable();
+	}
 }
 
 /*
@@ -3112,7 +3106,7 @@ static void print_binder_proc(struct seq_file *m,
 		m->count = start_pos;
 }
 
-static const char *binder_return_strings[] = {
+static const char * const binder_return_strings[] = {
 	"BR_ERROR",
 	"BR_OK",
 	"BR_TRANSACTION",
@@ -3133,7 +3127,7 @@ static const char *binder_return_strings[] = {
 	"BR_FAILED_REPLY"
 };
 
-static const char *binder_command_strings[] = {
+static const char * const binder_command_strings[] = {
 	"BC_TRANSACTION",
 	"BC_REPLY",
 	"BC_ACQUIRE_RESULT",
@@ -3153,7 +3147,7 @@ static const char *binder_command_strings[] = {
 	"BC_DEAD_BINDER_DONE"
 };
 
-static const char *binder_objstat_strings[] = {
+static const char * const binder_objstat_strings[] = {
 	"proc",
 	"thread",
 	"node",
