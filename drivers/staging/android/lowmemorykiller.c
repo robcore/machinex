@@ -563,7 +563,11 @@ static int __init lowmem_init(void)
 #endif
 	return 0;
 }
-device_initcall(lowmem_init);
+
+static void __exit lowmem_exit(void)
+{
+	unregister_shrinker(&lowmem_shrinker);
+}
 
 #ifdef CONFIG_ANDROID_LOW_MEMORY_KILLER_AUTODETECT_OOM_ADJ_VALUES
 static short lowmem_oom_adj_to_oom_score_adj(short oom_adj)
@@ -656,4 +660,8 @@ module_param_named(lmkcount, lmk_count, uint, S_IRUGO);
 #ifdef OOM_COUNT_READ
 module_param_named(oomcount, oom_count, uint, S_IRUGO);
 #endif
+
+module_init(lowmem_init);
+module_exit(lowmem_exit);
+
 MODULE_LICENSE("GPL");

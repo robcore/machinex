@@ -39,11 +39,7 @@
 #include <linux/pid_namespace.h>
 #include <linux/security.h>
 
-#ifdef CONFIG_ANDROID_BINDER_IPC_32BIT
-#define BINDER_IPC_32BIT 1
-#endif
-
-#include <uapi/linux/android/binder.h>
+#include "binder.h"
 #include "binder_trace.h"
 
 static DEFINE_MUTEX(binder_main_lock);
@@ -565,6 +561,7 @@ static int binder_update_page_range(struct binder_proc *proc, int allocate,
 {
 	void *page_addr;
 	unsigned long user_page_addr;
+	struct vm_struct tmp_area;
 	struct page **page;
 	struct mm_struct *mm;
 
@@ -607,11 +604,10 @@ static int binder_update_page_range(struct binder_proc *proc, int allocate,
 				proc->pid, page_addr);
 			goto err_alloc_page_failed;
 		}
-		ret = map_kernel_range_noflush((unsigned long)page_addr,
-					PAGE_SIZE, PAGE_KERNEL, page);
-		flush_cache_vmap((unsigned long)page_addr,
-				(unsigned long)page_addr + PAGE_SIZE);
-		if (ret != 1) {
+		tmp_area.addr = page_addr;
+		tmp_area.size = PAGE_SIZE + PAGE_SIZE /* guard page? */;
+		ret = map_vm_area(&tmp_area, PAGE_KERNEL, page);
+		if (ret) {
 			pr_err("binder: %d: binder_alloc_buf failed to map page at %pK in kernel\n",
 			       proc->pid, page_addr);
 			goto err_map_kernel_failed;
@@ -1827,7 +1823,7 @@ static int binder_thread_write(struct binder_proc *proc,
 			if (get_user(cookie, (binder_uintptr_t __user *)ptr))
 				return -EFAULT;
 
-			ptr += sizeof(cookie);
+			ptr += sizeof(void *);
 			list_for_each_entry(w, &proc->delivered_death, entry) {
 				struct binder_ref_death *tmp_death = container_of(w, struct binder_ref_death, work);
 				if (tmp_death->cookie == cookie) {
