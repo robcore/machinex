@@ -730,7 +730,7 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		}
 		if (!booted) {
 			pr_info("LED Powering Pattern ON\n");
-			leds_on(LED_R, true, true, 0xEA);
+			leds_on(LED_R, true, true, 0xE2);
 			leds_on(LED_G, true, true, 0xE2);
 			leds_on(LED_B, true, true, 0xFF);
 			leds_set_slope_mode(client, LED_R,
