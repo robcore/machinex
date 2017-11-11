@@ -664,7 +664,6 @@ static int binder_update_page_range(struct binder_proc *proc, int allocate,
 				proc->pid, page_addr);
 			goto err_alloc_page_failed;
 		}
-
 		ret = map_kernel_range_noflush((unsigned long)page_addr,
 					PAGE_SIZE, PAGE_KERNEL, page);
 		flush_cache_vmap((unsigned long)page_addr,
