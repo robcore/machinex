@@ -213,6 +213,7 @@ static int __ref mx_gearbox(void *data)
 
 again:
 	set_current_state(TASK_INTERRUPTIBLE);
+wakeup:
 	if (kthread_should_stop()) {
 		inject_nos(false, true);
 		return 0;
@@ -225,9 +226,8 @@ again:
 		!clutch || hotplug_suspended) {
 		mutex_unlock(&mx_mutex);
 		schedule();
-		mutex_lock(&mx_mutex);
+		goto wakeup;
 	}
-
 
 	set_current_state(TASK_RUNNING);
 
