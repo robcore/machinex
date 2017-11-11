@@ -48,7 +48,6 @@ static struct workqueue_struct *mx_hp_engine;
 static struct delayed_work motor;
 static struct task_struct *transmission;
 
-#if 0
 static unsigned long sixthgear = 1221ul;
 static unsigned long thirdgear = 595ul;
 static unsigned long secondgear = 489ul;
@@ -57,7 +56,7 @@ static unsigned long sixthgear_rpm = 70ul;
 static unsigned long thirdgear_rpm = 60ul;
 static unsigned long secondgear_rpm = 40ul;
 static unsigned long firstgear_rpm = 25ul;
-#else
+#if 0
 static unsigned long sixthgear = 1321ul;
 static unsigned long thirdgear = 1095ul;
 static unsigned long secondgear = 889ul;
