@@ -52,10 +52,10 @@ static unsigned long sixthgear = 1011ul;
 static unsigned long thirdgear = 495ul;
 static unsigned long secondgear = 409ul;
 static unsigned long firstgear = 305ul;
-static unsigned long sixthgear_rpm = 55ul;
-static unsigned long thirdgear_rpm = 40ul;
-static unsigned long secondgear_rpm = 25ul;
-static unsigned long firstgear_rpm = 10ul;
+static unsigned long sixthgear_rpm = 60ul;
+static unsigned long thirdgear_rpm = 45ul;
+static unsigned long secondgear_rpm = 30ul;
+static unsigned long firstgear_rpm = 15ul;
 
 static unsigned long sampling_rate = MX_SAMPLE_RATE;
 unsigned long air_to_fuel;
