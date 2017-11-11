@@ -48,6 +48,7 @@ static struct workqueue_struct *mx_hp_engine;
 static struct delayed_work motor;
 static struct task_struct *transmission;
 
+#if 0
 static unsigned long sixthgear = 1221ul;
 static unsigned long thirdgear = 595ul;
 static unsigned long secondgear = 489ul;
@@ -56,7 +57,16 @@ static unsigned long sixthgear_rpm = 70ul;
 static unsigned long thirdgear_rpm = 60ul;
 static unsigned long secondgear_rpm = 40ul;
 static unsigned long firstgear_rpm = 25ul;
-
+#else
+static unsigned long sixthgear = 1321ul;
+static unsigned long thirdgear = 1095ul;
+static unsigned long secondgear = 889ul;
+static unsigned long firstgear = 795ul;
+static unsigned long sixthgear_rpm = 70ul;
+static unsigned long thirdgear_rpm = 60ul;
+static unsigned long secondgear_rpm = 40ul;
+static unsigned long firstgear_rpm = 25ul;
+#endif
 static unsigned long sampling_rate = MX_SAMPLE_RATE;
 unsigned long air_to_fuel;
 unsigned long current_rpm;
@@ -401,8 +411,61 @@ void ignition(unsigned int status)
 	}
 }
 
+mx_store_one_long(sixthgear, 100, 10000);
+mx_store_one_long(thirdgear, 100, 10000);
+mx_store_one_long(secondgear, 100, 10000);
+mx_store_one_long(firstgear, 100, 10000);
+mx_store_one_long(sixthgear_rpm, 5, 100);
+mx_store_one_long(thirdgear_rpm, 5, 100);
+mx_store_one_long(secondgear_rpm, 5, 100);
+mx_store_one_long(firstgear_rpm, 5, 100);
+
+mx_show_long(sixthgear);
+mx_show_long(thirdgear);
+mx_show_long(secondgear);
+mx_show_long(firstgear);
+mx_show_long(sixthgear_rpm);
+mx_show_long(thirdgear_rpm);
+mx_show_long(secondgear_rpm);
+mx_show_long(firstgear_rpm);
+
+MX_ATTR_RW(sixthgear);
+MX_ATTR_RW(thirdgear);
+MX_ATTR_RW(secondgear);
+MX_ATTR_RW(firstgear);
+MX_ATTR_RW(sixthgear_rpm);
+MX_ATTR_RW(thirdgear_rpm);
+MX_ATTR_RW(secondgear_rpm);
+MX_ATTR_RW(firstgear_rpm);
+
+static struct attribute *mx_hotplug_attributes[] = {
+	&sixthgear_attr.attr,
+	&thirdgear_attr.attr,
+	&secondgear_attr.attr,
+	&firstgear_attr.attr,
+	&sixthgear_rpm_attr.attr,
+	&thirdgear_rpm_attr.attr,
+	&secondgear_rpm_attr.attr,
+	&firstgear_rpm_attr.attr,
+	NULL,
+};
+
+static struct attribute_group mx_hotplug_attr_group = {
+	.attrs = mx_hotplug_attributes,
+	.name = "mx_hotplug",
+};
+
 static int mx_hotplug_init(void)
 {
+	int sysfs_result;
+
+	sysfs_result = sysfs_create_group(kernel_kobj,
+		&mx_hotplug_attr_group);
+
+	if (sysfs_result) {
+		pr_info("%s group create failed!\n", __FUNCTION__);
+		return -ENOMEM;
+	}
 	return 0;
 }
 
