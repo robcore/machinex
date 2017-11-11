@@ -235,6 +235,7 @@ print_tainted()
 extern wl_iw_extra_params_t  g_wl_iw_params;
 #endif /* defined(WL_WIRELESS_EXT) */
 
+#if 0
 #if defined(CUSTOMER_HW4) && defined(CONFIG_PARTIALSUSPEND_SLP)
 #include <linux/partialsuspend_slp.h>
 #define CONFIG_POWERSUSPEND
@@ -247,6 +248,7 @@ extern wl_iw_extra_params_t  g_wl_iw_params;
 #include <linux/powersuspend.h>
 #endif /* defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_EARLYSUSPEND) */
 #endif /* CUSTOMER_HW4 && CONFIG_PARTIALSUSPEND_SLP */
+#endif
 
 extern int dhd_get_suspend_bcn_li_dtim(dhd_pub_t *dhd);
 
@@ -441,10 +443,12 @@ typedef struct dhd_info {
 	wait_queue_head_t ctrl_wait;
 	atomic_t pend_8021x_cnt;
 	dhd_attach_states_t dhd_state;
-
+#if 0
 #if defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_EARLYSUSPEND)
 	struct power_suspend power_suspend;
 #endif /* CONFIG_POWERSUSPEND && DHD_USE_EARLYSUSPEND */
+#endif
+	struct notifier_block proactive_notify;
 
 #ifdef ARP_OFFLOAD_SUPPORT
 	u32 pend_ipaddr;
@@ -1137,7 +1141,7 @@ static int dhd_suspend_resume_helper(struct dhd_info *dhd, int val, int force)
 		DHD_OS_WAKE_UNLOCK(dhdp);
 	return ret;
 }
-
+#if 0
 #if defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_EARLYSUSPEND)
 static void dhd_early_suspend(struct power_suspend *h)
 {
@@ -1157,7 +1161,29 @@ static void dhd_late_resume(struct power_suspend *h)
 		dhd_suspend_resume_helper(dhd, 0, 0);
 }
 #endif /* CONFIG_POWERSUSPEND && DHD_USE_EARLYSUSPEND */
+#endif
 
+static int dhd_proactive_callback(struct notifier_block *nfb,
+					unsigned long action,
+					void *ignored)
+{
+	struct dhd_info *dhd = container_of(nfb, struct dhd_info, proactive_notify);
+
+	switch (action) {
+	case PM_PROACTIVE_SUSPEND:
+		if (dhd)
+			dhd_suspend_resume_helper(dhd, 1, 0);
+		return NOTIFY_OK;
+	case PM_PROACTIVE_RESUME:
+		if (dhd)
+			dhd_suspend_resume_helper(dhd, 0, 0);
+		return NOTIFY_OK;
+	default:
+		return NOTIFY_DONE;
+	}
+
+	return NOTIFY_DONE;
+}
 /*
  * Generalized timeout mechanism.  Uses spin sleep with exponential back-off until
  * the sleep time reaches one jiffy, then switches over to task delay.  Usage:
@@ -4177,13 +4203,17 @@ dhd_attach(osl_t *osh, struct dhd_bus *bus, uint bus_hdrlen)
 	}
 #endif /* CONFIG_PM_SLEEP */
 
+#if 0
 #if defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_EARLYSUSPEND)
 	dhd->power_suspend.suspend = dhd_early_suspend;
 	dhd->power_suspend.resume = dhd_late_resume;
 	register_power_suspend(&dhd->power_suspend);
 	dhd_state |= DHD_ATTACH_STATE_EARLYSUSPEND_DONE;
 #endif /* CONFIG_POWERSUSPEND && DHD_USE_EARLYSUSPEND */
-
+#endif
+	dhd->proactive_notify.notifier_call = dhd_proactive_callback;
+	register_pm_notifier(&dhd->proactive_notify);
+	dhd_state |= DHD_ATTACH_STATE_EARLYSUSPEND_DONE;
 #ifdef ARP_OFFLOAD_SUPPORT
 	dhd->pend_ipaddr = 0;
 	if (!dhd_inetaddr_notifier_registered) {
@@ -5987,13 +6017,18 @@ void dhd_detach(dhd_pub_t *dhdp)
 		dhd_inet6addr_notifier_registered = FALSE;
 		unregister_inet6addr_notifier(&dhd_inet6addr_notifier);
 	}
+#if 0
 #if defined(CONFIG_POWERSUSPEND) && defined(DHD_USE_EARLYSUSPEND)
 	if (dhd->dhd_state & DHD_ATTACH_STATE_EARLYSUSPEND_DONE) {
 		if (dhd->power_suspend.suspend)
 			unregister_power_suspend(&dhd->power_suspend);
 	}
 #endif /* CONFIG_POWERSUSPEND && DHD_USE_EARLYSUSPEND */
-
+#endif
+	if (dhd->dhd_state & DHD_ATTACH_STATE_EARLYSUSPEND_DONE) {
+		if (dhd->proactive_notify.notifier_call)
+			unregister_pm_notifier(&dhd->proactive_notify);
+	}
 #if defined(WL_WIRELESS_EXT)
 	if (dhd->dhd_state & DHD_ATTACH_STATE_WL_ATTACH) {
 		/* Detatch and unlink in the iw */
