@@ -74,6 +74,7 @@ static ktime_t last_fuelcheck;
 static ktime_t last_boost;
 static bool clutch;
 static bool should_boost;
+
 static unsigned int mxread(void)
 {
 	unsigned int ret;
@@ -247,8 +248,8 @@ again:
 		goto purge;
 	}
 
-	air_to_fuel = READ_ONCE(avg_nr_running());
-	current_rpm = READ_ONCE(all_cpu_load());
+	air_to_fuel = avg_nr_running();
+	current_rpm = all_cpu_load();
 	if (air_to_fuel >= sixthgear ||
 		current_rpm >= sixthgear_rpm) {
 		inject_nos(false, false);
