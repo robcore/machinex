@@ -238,7 +238,6 @@ again:
 		mutex_lock(&mx_mutex);
 	}
 
-
 	set_current_state(TASK_RUNNING);
 
 	if (should_boost) {
