@@ -2860,7 +2860,7 @@ static void binder_deferred_release(struct binder_proc *proc)
 
 	if (context->binder_context_mgr_node &&
 	    context->binder_context_mgr_node->proc == proc)
-		binder_context_mgr_node = NULL;
+		context->binder_context_mgr_node = NULL;
 
 	threads = 0;
 	active_transactions = 0;
