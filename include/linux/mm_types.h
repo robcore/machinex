@@ -11,6 +11,7 @@
 #include <linux/completion.h>
 #include <linux/cpumask.h>
 #include <linux/page-flags-layout.h>
+#include <linux/workqueue.h>
 #include <asm/page.h>
 #include <asm/mmu.h>
 
@@ -467,6 +468,7 @@ struct mm_struct {
 	 * a different node than Make PTE Scan Go Now.
 	 */
 	int first_nid;
+	struct work_struct async_put_work;
 };
 
 /* first nid will either be a valid NID or one of these values */

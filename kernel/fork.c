@@ -12,6 +12,7 @@
  */
 
 #include <linux/slab.h>
+#include <linux/sched.h>
 #include <linux/init.h>
 #include <linux/unistd.h>
 #include <linux/module.h>
@@ -782,7 +783,7 @@ static void mmput_async_fn(struct work_struct *work)
 	struct mm_struct *mm = container_of(work, struct mm_struct,
 					    async_put_work);
 
-	__mmput(mm);
+	mmput(mm);
 }
 
 void mmput_async(struct mm_struct *mm)
