@@ -3066,7 +3066,7 @@ static void binder_vma_close(struct vm_area_struct *vma)
 	binder_defer_work(proc, BINDER_DEFERRED_PUT_FILES);
 }
 
-static int binder_vm_fault(struct vm_fault *vmf)
+static int binder_vm_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 {
 	return VM_FAULT_SIGBUS;
 }
@@ -3312,7 +3312,6 @@ static int binder_node_release(struct binder_node *node, int refs)
 
 static void binder_deferred_release(struct binder_proc *proc)
 {
-	struct binder_transaction *t;
 	struct binder_context *context = proc->context;
 	struct rb_node *n;
 	int threads, nodes, incoming_refs, outgoing_refs, buffers,
@@ -3359,14 +3358,8 @@ static void binder_deferred_release(struct binder_proc *proc)
 	while ((n = rb_first(&proc->alloc.allocated_buffers))) {
 		struct binder_buffer *buffer = rb_entry(n, struct binder_buffer,
 							rb_node);
-		t = buffer->transaction;
-		if (t) {
-			t->buffer = NULL;
-			buffer->transaction = NULL;
-			pr_err("release proc %d, transaction %d, not freed\n",
-			       proc->pid, t->debug_id);
-			/*BUG();*/
-		}
+		/* Transaction should already have been freed */
+		BUG_ON(buffer->transaction);
 
 		binder_free_buf(proc, buffer);
 		buffers++;
