@@ -776,6 +776,24 @@ int mmput(struct mm_struct *mm)
 }
 EXPORT_SYMBOL_GPL(mmput);
 
+#ifdef CONFIG_MMU
+static void mmput_async_fn(struct work_struct *work)
+{
+	struct mm_struct *mm = container_of(work, struct mm_struct,
+					    async_put_work);
+
+	__mmput(mm);
+}
+
+void mmput_async(struct mm_struct *mm)
+{
+	if (atomic_dec_and_test(&mm->mm_users)) {
+		INIT_WORK(&mm->async_put_work, mmput_async_fn);
+		schedule_work(&mm->async_put_work);
+	}
+}
+#endif
+
 /**
  * set_mm_exe_file - change a reference to the mm's executable file
  *
@@ -835,7 +853,7 @@ struct mm_struct *get_task_mm(struct task_struct *task)
 		if (task->flags & PF_KTHREAD)
 			mm = NULL;
 		else
-			atomic_inc(&mm->mm_users);
+			mmget(mm);
 	}
 	task_unlock(task);
 	return mm;
@@ -1024,7 +1042,7 @@ static int copy_mm(unsigned long clone_flags, struct task_struct *tsk)
 	vmacache_flush(tsk);
 
 	if (clone_flags & CLONE_VM) {
-		atomic_inc(&oldmm->mm_users);
+		mmget(oldmm);
 		mm = oldmm;
 		goto good_mm;
 	}

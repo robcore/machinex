@@ -616,7 +616,7 @@ void start_secondary(void *unused)
 	struct device_node *l2_cache;
 	int i, base;
 
-	atomic_inc(&init_mm.mm_count);
+	mmgrab(&init_mm);
 	current->active_mm = &init_mm;
 
 	smp_store_cpu_info(cpu);
