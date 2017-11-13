@@ -105,7 +105,7 @@ ENTRY(debug_ll_addr)
 		addruart r2, r3, ip
 		str	r2, [r0]
 		str	r3, [r1]
-		mov	pc, lr
+		ret	lr
 ENDPROC(debug_ll_addr)
 #endif
 
@@ -132,7 +132,7 @@ ENTRY(debug_ll_addr)
 		mov	r2, #0
 		str	r2, [r0]
 		str	r2, [r1]
-		mov	pc, lr
+		ret	lr
 ENDPROC(debug_ll_addr)
 
 #endif
