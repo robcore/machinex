@@ -48,14 +48,14 @@ static struct workqueue_struct *mx_hp_engine;
 static struct delayed_work motor;
 static struct task_struct *transmission;
 
-static unsigned long sixthgear = 1201ul;
-static unsigned long thirdgear = 575ul;
-static unsigned long secondgear = 469ul;
-static unsigned long firstgear = 355ul;
-static unsigned long sixthgear_rpm = 70ul;
-static unsigned long thirdgear_rpm = 60ul;
-static unsigned long secondgear_rpm = 40ul;
-static unsigned long firstgear_rpm = 25ul;
+static unsigned long sixthgear = 1000ul;
+static unsigned long thirdgear = 300ul;
+static unsigned long secondgear = 200ul;
+static unsigned long firstgear = 100ul;
+static unsigned long sixthgear_rpm = 65ul;
+static unsigned long thirdgear_rpm = 50ul;
+static unsigned long secondgear_rpm = 35ul;
+static unsigned long firstgear_rpm = 20ul;
 #if 0
 static unsigned long sixthgear = 1321ul;
 static unsigned long thirdgear = 1095ul;
@@ -247,8 +247,8 @@ again:
 		goto purge;
 	}
 
-	air_to_fuel = avg_nr_running();
-	current_rpm = all_cpu_load();
+	WRITE_ONCE(air_to_fuel, avg_nr_running());
+	WRITE_ONCE(current_rpm, all_cpu_load());
 	if (air_to_fuel >= sixthgear ||
 		current_rpm >= sixthgear_rpm) {
 		inject_nos(false, false);
