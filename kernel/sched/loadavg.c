@@ -29,6 +29,8 @@ unsigned long all_cpu_load(void)
 
 	tmp = 0;
 	online_count = 0;
+
+	get_online_cpus();
 	for_each_online_cpu(cpu) {
 		if (cpu_out_of_range(cpu))
 			break;
@@ -37,6 +39,7 @@ unsigned long all_cpu_load(void)
 		tmp += this_cpu_load(cpu);
 		online_count++;
 	}
+	put_online_cpus();
 
 	return tmp / online_count;
 }
@@ -110,11 +113,17 @@ unsigned long avg_nr_running(void)
 {
 	unsigned long ave_nr_running, sum = 0;
 	unsigned int seqcnt, i;
+	struct nr_stats_s *stats;
+	struct rq *q;
 
+	get_online_cpus();
 	for_each_online_cpu(i) {
-		struct nr_stats_s *stats = &per_cpu(runqueue_stats, i);
-		struct rq *q = cpu_rq(i);
-
+		if (cpu_out_of_range(i))
+			break;
+		if (!cpu_online(i))
+			continue;
+		stats = &per_cpu(runqueue_stats, i);
+		q = cpu_rq(i);
 		/*
 		 * Update average to avoid reading stalled value if there were
 		 * no run-queue changes for a long time. On the other hand if
@@ -129,7 +138,7 @@ unsigned long avg_nr_running(void)
 			ave_nr_running = do_avg_nr_running(q);
 		sum += ave_nr_running;
 	}
-
+	put_online_cpus();
 	return sum;
 }
 EXPORT_SYMBOL(avg_nr_running);
