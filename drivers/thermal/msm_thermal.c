@@ -34,10 +34,14 @@
 #include <mach/cpufreq.h>
 #include <linux/sysfs_helpers.h>
 #include <linux/display_state.h>
+#include <linux/reboot.h>
 #include "../../arch/arm/mach-msm/acpuclock.h"
 
-static int enabled;
 #define MAX_IDX 14
+#define SHUTOFF_TEMP 85
+
+static int enabled;
+
 static struct msm_thermal_data msm_thermal_info = {
 	.poll_ms = 320,
 	.limit_temp_degC = 65,
@@ -46,6 +50,7 @@ static struct msm_thermal_data msm_thermal_info = {
 	.core_limit_temp_degC = 75,
 	.core_temp_hysteresis_degC = 10,
 };
+
 
 static int limit_idx[NR_CPUS];
 static int thermal_limit_low[NR_CPUS];
@@ -457,6 +462,12 @@ static int msm_thermal_get_freq_table(void)
 	return 0;
 }
 
+static void check_poweroff(unsigned int tp)
+{
+	if (unlikely(tp > SHUTOFF_TEMP))
+		orderly_poweroff(true);
+}
+
 static long evaluate_temp(unsigned int cpu)
 {
 	struct tsens_device tsens_dev;
@@ -473,6 +484,7 @@ static long evaluate_temp(unsigned int cpu)
 				KBUILD_MODNAME, tsens_dev.sensor_num);
 		return -EINVAL;
 	}
+	check_poweroff(temp);
 	return temp;
 }
 
