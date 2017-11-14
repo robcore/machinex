@@ -887,10 +887,8 @@ static ssize_t synaptics_rmi4_f01_reset_store(struct device *dev,
 		return -EINVAL;
 
 	retval = synaptics_rmi4_reset_device(rmi4_data);
-	if (retval < 0) {
-		pr_debug("rmi-couldn't do the thing");
+	if (retval < 0)
 		return retval;
-	}
 
 	return count;
 }
@@ -1083,7 +1081,6 @@ static int synaptics_rmi4_i2c_read(struct synaptics_rmi4_data *rmi4_data,
 	mutex_lock(&(rmi4_data->rmi4_io_ctrl_mutex));
 
 	if (rmi4_data->touch_stopped) {
-		pr_debug("rmi-couldn't do the thing");
 		retval = 0;
 		goto exit;
 	}
@@ -1097,12 +1094,10 @@ static int synaptics_rmi4_i2c_read(struct synaptics_rmi4_data *rmi4_data,
 			retval = length;
 			break;
 		}
-		pr_debug("rmi-couldn't do the thing");
 		msleep(20);
 	}
 
 	if (retry == SYN_I2C_RETRY_TIMES) {
-		pr_debug("rmi-couldn't do the thing");
 		retval = -EIO;
 	}
 
@@ -1140,7 +1135,6 @@ static int synaptics_rmi4_i2c_write(struct synaptics_rmi4_data *rmi4_data,
 	mutex_lock(&(rmi4_data->rmi4_io_ctrl_mutex));
 
 	if (rmi4_data->touch_stopped) {
-		pr_debug("rmi-couldn't do the thing");
 		retval = 0;
 		goto exit;
 	}
@@ -1157,12 +1151,10 @@ static int synaptics_rmi4_i2c_write(struct synaptics_rmi4_data *rmi4_data,
 			retval = length;
 			break;
 		}
-		pr_debug("rmi-couldn't do the thing");
 		msleep(20);
 	}
 
 	if (retry == SYN_I2C_RETRY_TIMES) {
-		pr_debug("rmi-couldn't do the thing");
 		retval = -EIO;
 	}
 
