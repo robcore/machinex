@@ -550,7 +550,7 @@ static int __ref do_freq_control(void)
 		set_thermal_policy(cpu, resolve_max_freq[cpu]);
 	}
 	put_online_cpus();
-	return hotplug_check_needed;
+	return sanitize_min_max(hotplug_check_needed, 0, 1);
 }
 
 static void __ref do_core_control(void)
@@ -615,12 +615,12 @@ static void __ref check_temp(struct work_struct *work)
 	ret = do_freq_control();
 	if (msm_thermal_info.limit_temp_degC <
 		msm_thermal_info.core_limit_temp_degC) {
-		if (ret <= 0)
+		if (!ret)
 			goto reschedule;
 		else if (ret > 0)
 			do_core_control();
 	} else {
-		if (ret >= 0)
+		if (ret > 0)
 			do_core_control();
 	}
 reschedule:
