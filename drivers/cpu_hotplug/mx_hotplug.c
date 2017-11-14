@@ -304,6 +304,9 @@ void fuel_injector(void)
 {
 	ktime_t delta;
 
+	if (!mxread() || hotplug_suspended)
+		return;
+
 	if (!mutex_trylock(&mx_mutex))
 		return;
 
@@ -349,9 +352,6 @@ static struct power_suspend mx_suspend_data =
 static int mx_omniboost_notifier(struct notifier_block *self, unsigned long val,
 		void *v)
 {
-	if (!mxread() || hotplug_suspended)
-		return NOTIFY_OK;
-
 	switch (val) {
 	case BOOST_ON:
 		fuel_injector();
