@@ -410,6 +410,25 @@ void ignition(unsigned int status)
 	}
 }
 
+static ssize_t store_external_fuel_injection(struct kobject *kobj,
+					 struct kobj_attribute *attr,
+					 const char *buf, size_t count)
+{
+	int ret;
+	int input;
+
+	ret = sscanf(buf, "%d", &input);
+	if (ret < 0)
+		return ret;
+
+	sanitize_min_max(input, 0, 1);
+
+	if (input)
+		fuel_injector();
+
+	return count;
+}
+
 mx_store_one_long(sixthgear, 100, 10000);
 mx_store_one_long(thirdgear, 100, 10000);
 mx_store_one_long(secondgear, 100, 10000);
@@ -428,6 +447,7 @@ mx_show_long(thirdgear_rpm);
 mx_show_long(secondgear_rpm);
 mx_show_long(firstgear_rpm);
 
+MX_ATTR_WO(external_fuel_injection);
 MX_ATTR_RW(sixthgear);
 MX_ATTR_RW(thirdgear);
 MX_ATTR_RW(secondgear);
@@ -438,6 +458,7 @@ MX_ATTR_RW(secondgear_rpm);
 MX_ATTR_RW(firstgear_rpm);
 
 static struct attribute *mx_hotplug_attributes[] = {
+	&external_fuel_injection_attr.attr,
 	&sixthgear_attr.attr,
 	&thirdgear_attr.attr,
 	&secondgear_attr.attr,
