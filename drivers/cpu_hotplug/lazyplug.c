@@ -74,6 +74,7 @@
 #include <linux/display_state.h>
 #include <linux/powersuspend.h>
 #include <linux/omniplug.h>
+#include <linux/omniboost.h>
 
 
 //#define DEBUG_LAZYPLUG
@@ -440,78 +441,32 @@ void lazyplug_enter_lazy(bool enter)
 static void lazyplug_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
 {
+
+}
+static int lazy_omniboost_notifier(struct notifier_block *self, unsigned long val,
+		void *v)
+{
 	if (!is_display_on() || !lazyplug_active)
-		return;
+		return NOTIFY_OK;
 
-	if (lazyplug_active && touch_boost_active) {
-		idle_count = 0;
-		queue_delayed_work_on(0, lazyplug_wq, &lazyplug_boost,
-			msecs_to_jiffies(10));
+	switch (val) {
+	case BOOST_ON:
+		if (lazyplug_active && touch_boost_active) {
+			idle_count = 0;
+			queue_delayed_work_on(0, lazyplug_wq, &lazyplug_boost,
+				msecs_to_jiffies(10));
+		}
+		break;
+	case BOOST_OFF:
+		break;
+	default:
+		break;
 	}
+	return NOTIFY_OK;
 }
 
-static int lazyplug_input_connect(struct input_handler *handler,
-		struct input_dev *dev, const struct input_device_id *id)
-{
-	struct input_handle *handle;
-	int error;
-
-	handle = kzalloc(sizeof(struct input_handle), GFP_KERNEL);
-	if (!handle)
-		return -ENOMEM;
-
-	handle->dev = dev;
-	handle->handler = handler;
-	handle->name = "lazyplug";
-
-	error = input_register_handle(handle);
-	if (error)
-		goto err2;
-
-	error = input_open_device(handle);
-	if (error)
-		goto err1;
-	pr_info("%s found and connected!\n", dev->name);
-	return 0;
-err1:
-	input_unregister_handle(handle);
-err2:
-	kfree(handle);
-	return error;
-}
-
-static void lazyplug_input_disconnect(struct input_handle *handle)
-{
-	input_close_device(handle);
-	input_unregister_handle(handle);
-	kfree(handle);
-}
-
-static const struct input_device_id lazyplug_ids[] = {
-	{
-		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |
-			 INPUT_DEVICE_ID_MATCH_ABSBIT,
-		.evbit = { BIT_MASK(EV_ABS) },
-		.absbit = { [BIT_WORD(ABS_MT_POSITION_X)] =
-			    BIT_MASK(ABS_MT_POSITION_X) |
-			    BIT_MASK(ABS_MT_POSITION_Y) },
-	}, /* multi-touch touchscreen */
-	{
-		.flags = INPUT_DEVICE_ID_MATCH_KEYBIT |
-			 INPUT_DEVICE_ID_MATCH_ABSBIT,
-		.keybit = { [BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH) },
-		.absbit = { [BIT_WORD(ABS_X)] =
-			    BIT_MASK(ABS_X) | BIT_MASK(ABS_Y) },
-	}, /* touchpad */
-	{ },
-};
-
-static struct input_handler lazyplug_input_handler = {
-	.event          = lazyplug_input_event,
-	.connect        = lazyplug_input_connect,
-	.disconnect     = lazyplug_input_disconnect,
-	.name           = "lazyplug_handler",
-	.id_table       = lazyplug_ids,
+static struct notifier_block lazy_nb = {
+	.notifier_call = lazy_omniboost_notifier,
 };
 
 static void lazy_suspend(struct power_suspend * h)
@@ -535,8 +490,6 @@ void start_stop_lazy_plug(unsigned int enabled)
 
 	lazyplug_active = enabled;
 	if (enabled) {
-		rc = input_register_handler(&lazyplug_input_handler);
-
 		lazyplug_wq = alloc_workqueue("lazyplug",
 					WQ_HIGHPRI | WQ_UNBOUND, 1);
 		lazyplug_boost_wq = alloc_workqueue("lplug_boost",
@@ -544,16 +497,16 @@ void start_stop_lazy_plug(unsigned int enabled)
 		INIT_DELAYED_WORK(&lazyplug_work, lazyplug_work_fn);
 		INIT_DELAYED_WORK(&lazyplug_boost, lazyplug_boost_fn);
 		register_power_suspend(&lazy_suspend_data);
-
 		queue_delayed_work_on(0, lazyplug_wq, &lazyplug_work,
 			msecs_to_jiffies(10));
+		register_omniboost(&lazy_nb);
 	} else if (!enabled) {
-			unregister_power_suspend(&lazy_suspend_data);
-			cancel_delayed_work_sync(&lazyplug_boost);
-			cancel_delayed_work_sync(&lazyplug_work);
-			destroy_workqueue(lazyplug_boost_wq);
-			destroy_workqueue(lazyplug_wq);
-			input_unregister_handler(&lazyplug_input_handler);
+		unregister_omniboost(&lazy_nb);
+		unregister_power_suspend(&lazy_suspend_data);
+		cancel_delayed_work_sync(&lazyplug_boost);
+		cancel_delayed_work_sync(&lazyplug_work);
+		destroy_workqueue(lazyplug_boost_wq);
+		destroy_workqueue(lazyplug_wq);
 	}
 }
 
