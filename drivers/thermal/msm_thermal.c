@@ -550,7 +550,9 @@ static int __ref do_freq_control(void)
 		set_thermal_policy(cpu, resolve_max_freq[cpu]);
 	}
 	put_online_cpus();
-	return sanitize_min_max(hotplug_check_needed, 0, 1);
+
+	sanitize_min_max(hotplug_check_needed, 0, 1)
+	return hotplug_check_needed;
 }
 
 static void __ref do_core_control(void)
