@@ -543,7 +543,8 @@ void resched_cpu(int cpu)
 	struct rq *rq = cpu_rq(cpu);
 	unsigned long flags;
 
-	raw_spin_lock_irqsave(&rq->lock, flags);
+	if (!raw_spin_trylock_irqsave(&rq->lock, flags))
+		return;
 	resched_curr(rq);
 	raw_spin_unlock_irqrestore(&rq->lock, flags);
 }
@@ -4787,7 +4788,6 @@ int __sched _cond_resched(void)
 		preempt_schedule_common();
 		return 1;
 	}
-	rcu_all_qs();
 	return 0;
 }
 EXPORT_SYMBOL(_cond_resched);
