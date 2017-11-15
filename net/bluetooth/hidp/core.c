@@ -561,7 +561,7 @@ static int hidp_session(void *arg)
 	struct sock *intr_sk = session->intr_sock->sk;
 	struct sk_buff *skb;
 	int vendor = 0x0000, product = 0x0000;
-	wait_queue_t ctrl_wait, intr_wait;
+	wait_queue_entry_t ctrl_wait, intr_wait;
 
 	BT_DBG("session %p", session);
 

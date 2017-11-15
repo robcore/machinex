@@ -535,7 +535,7 @@ void page_endio(struct page *page, int rw, int err);
 /*
  * Add an arbitrary waiter to a page's wait queue
  */
-extern void add_page_wait_queue(struct page *page, wait_queue_t *waiter);
+extern void add_page_wait_queue(struct page *page, wait_queue_entry_t *waiter);
 
 /*
  * Fault a userspace page into pagetables.  Return non-zero on a fault.
