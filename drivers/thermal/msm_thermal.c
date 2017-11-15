@@ -488,11 +488,17 @@ static long evaluate_temp(unsigned int cpu)
 	return temp;
 }
 
+static long temp_delta(void)
+{
+	return msm_thermal_info.core_limit_temp_degC -
+			 msm_thermal_info.core_temp_hysteresis_degC;
+}
+
 static int __ref do_freq_control(void)
 {
 	int ret = 0;
 	unsigned int cpu = smp_processor_id();
-	long freq_temp, delta;
+	long freq_temp;
 	unsigned int hotplug_check_needed = 0;
 	struct cpufreq_policy policy;
 
@@ -500,9 +506,6 @@ static int __ref do_freq_control(void)
 		pr_err("frequency control not ready!\n");		
 		return -EINVAL;
 	}
-
-	delta = (msm_thermal_info.limit_temp_degC - 
-			 msm_thermal_info.temp_hysteresis_degC);
 
 	get_online_cpus();
 	for_each_possible_cpu(cpu) {
@@ -527,7 +530,7 @@ static int __ref do_freq_control(void)
 					limit_idx[cpu] = thermal_limit_low[cpu];
 				resolve_max_freq[cpu] = therm_table[limit_idx[cpu]].frequency;
 				hotplug_check_needed++;
-		} else if (freq_temp <= delta) {
+		} else if (freq_temp <= temp_delta()) {
 				if (limit_idx[cpu] == MAX_IDX) {
 					resolve_max_freq[cpu] = is_display_on() ? policy.hlimit_max_screen_on : 
 										   policy.hlimit_max_screen_off;
@@ -555,11 +558,16 @@ static int __ref do_freq_control(void)
 	return hotplug_check_needed;
 }
 
+static long core_delta(void)
+{
+	return msm_thermal_info.core_limit_temp_degC -
+			 msm_thermal_info.core_temp_hysteresis_degC;
+}
+
 static void __ref do_core_control(void)
 {
 	unsigned int cpu = smp_processor_id();
 	int ret = 0;
-	long delta;
 	long core_temp;
 
 	if (!core_control_enabled || intelli_init() ||
@@ -567,9 +575,6 @@ static void __ref do_core_control(void)
 		 cpumask_empty(&core_control_mask)) {
 		return;
 	}
-
-	delta = (msm_thermal_info.core_limit_temp_degC -
-			 msm_thermal_info.core_temp_hysteresis_degC);
 
 	mutex_lock(&core_control_mutex);
 	for_each_possible_cpu(cpu) {
@@ -587,7 +592,7 @@ static void __ref do_core_control(void)
 				if (ret)
 					pr_debug("cpu_down failed. you got problems\n");
 				cpumask_set_cpu(cpu, &cores_offlined_mask);
-		} else if (core_temp <= delta &&
+		} else if (core_temp <= core_delta() &&
 				   cpumask_test_cpu(cpu, &core_control_mask) &&
 				   cpumask_test_cpu(cpu, &cores_offlined_mask)) {
 				/* If this core is already online, then bring up the
