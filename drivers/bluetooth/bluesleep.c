@@ -146,7 +146,7 @@ static struct tasklet_struct hostwake_task;
 
 /** Transmission timer */
 static void bluesleep_tx_timer_expire(unsigned long data);
-static DEFINE_TIMER(tx_timer, bluesleep_tx_timer_expire, 0, 0);
+static DEFINE_TIMER(tx_timer, bluesleep_tx_timer_expire);
 
 /** Lock for state transitions */
 struct mutex bluesleep_mutex;
