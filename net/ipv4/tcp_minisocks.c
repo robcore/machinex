@@ -44,7 +44,7 @@ struct inet_timewait_death_row tcp_death_row = {
 /* Short-time timewait calendar */
 
 	.twcal_hand	= -1,
-	.twcal_timer	= TIMER_INITIALIZER(inet_twdr_twcal_tick, 0,
+	.twcal_timer	= TIMER_INITIALIZER(inet_twdr_twcal_tick,
 					    (unsigned long)&tcp_death_row),
 };
 EXPORT_SYMBOL_GPL(tcp_death_row);
