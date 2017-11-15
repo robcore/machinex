@@ -1341,7 +1341,7 @@ static struct intelliactive_governor intelliactive_gov = {
 	}
 };
 
-static void cpufreq_intelliactive_nop_timer(unsigned long data)
+static void cpufreq_intelliactive_nop_timer(struct timer_list *t)
 {
 	/*
 	 * The purpose of slack-timer is to wake up the CPU from IDLE, in order
@@ -1367,8 +1367,8 @@ static int __init cpufreq_intelliactive_gov_init(void)
 		init_rwsem(&icpu->enable_sem);
 
 		/* Initialize per-cpu slack-timer */
-		init_timer_pinned(&icpu->slack_timer);
-		icpu->slack_timer.function = cpufreq_intelliactive_nop_timer;
+		timer_setup(&icpu->slack_timer, cpufreq_intelliactive_nop_timer,
+			    TIMER_PINNED);
 	}
 
 	spin_lock_init(&speedchange_cpumask_lock);
