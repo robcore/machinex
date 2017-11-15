@@ -18,6 +18,8 @@ extern int lock_stat;
 
 #define MAX_LOCKDEP_SUBCLASSES		8UL
 
+#include <linux/types.h>
+
 #ifdef CONFIG_LOCKDEP
 
 #include <linux/linkage.h>
@@ -411,6 +413,9 @@ extern void lock_unpin_lock(struct lockdep_map *lock, struct pin_cookie);
 		WARN_ON(debug_locks && !lockdep_is_held_type(l, 1));	\
 	} while (0)
 
+#define lockdep_assert_held_once(l)	do {				\
+		WARN_ON_ONCE(debug_locks && !lockdep_is_held(l));	\
+	} while (0)
 
 #define lockdep_recursing(tsk)	((tsk)->lockdep_recursion)
 
