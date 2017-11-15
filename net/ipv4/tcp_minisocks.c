@@ -37,7 +37,7 @@ struct inet_timewait_death_row tcp_death_row = {
 	.period		= TCP_TIMEWAIT_LEN / INET_TWDR_TWKILL_SLOTS,
 	.death_lock	= __SPIN_LOCK_UNLOCKED(tcp_death_row.death_lock),
 	.hashinfo	= &tcp_hashinfo,
-	.tw_timer	= TIMER_INITIALIZER(inet_twdr_hangman, 0,
+	.tw_timer	= TIMER_INITIALIZER(inet_twdr_hangman,
 					    (unsigned long)&tcp_death_row),
 	.twkill_work	= __WORK_INITIALIZER(tcp_death_row.twkill_work,
 					     inet_twdr_twkill_work),
