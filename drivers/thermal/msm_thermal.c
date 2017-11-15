@@ -627,7 +627,7 @@ static void __ref check_temp(struct work_struct *work)
 		else if (ret > 0)
 			do_core_control();
 	} else {
-		if (ret > 0)
+		if (ret >= 0)
 			do_core_control();
 	}
 reschedule:
