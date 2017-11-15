@@ -488,7 +488,7 @@ static long evaluate_temp(unsigned int cpu)
 	return temp;
 }
 
-static long temp_delta(void)
+static long freq_delta(void)
 {
 	return msm_thermal_info.core_limit_temp_degC -
 			 msm_thermal_info.core_temp_hysteresis_degC;
@@ -530,7 +530,7 @@ static int __ref do_freq_control(void)
 					limit_idx[cpu] = thermal_limit_low[cpu];
 				resolve_max_freq[cpu] = therm_table[limit_idx[cpu]].frequency;
 				hotplug_check_needed++;
-		} else if (freq_temp <= temp_delta()) {
+		} else if (freq_temp <= freq_delta()) {
 				if (limit_idx[cpu] == MAX_IDX) {
 					resolve_max_freq[cpu] = is_display_on() ? policy.hlimit_max_screen_on : 
 										   policy.hlimit_max_screen_off;
