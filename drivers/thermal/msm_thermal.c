@@ -43,14 +43,13 @@
 static int enabled;
 
 static struct msm_thermal_data msm_thermal_info = {
-	.poll_ms = 320,
+	.poll_ms = 240,
 	.limit_temp_degC = 65,
 	.temp_hysteresis_degC = 5,
 	.freq_step = 2,
 	.core_limit_temp_degC = 75,
 	.core_temp_hysteresis_degC = 10,
 };
-
 
 static int limit_idx[NR_CPUS];
 static int thermal_limit_low[NR_CPUS];
@@ -485,17 +484,11 @@ static long evaluate_temp(unsigned int cpu)
 	return temp;
 }
 
-static long freq_delta(void)
-{
-	return msm_thermal_info.core_limit_temp_degC -
-			 msm_thermal_info.core_temp_hysteresis_degC;
-}
-
 static int __ref do_freq_control(void)
 {
 	int ret = 0;
 	unsigned int cpu = smp_processor_id();
-	long freq_temp;
+	long freq_temp, delta;
 	unsigned int hotplug_check_needed = 0;
 	struct cpufreq_policy policy;
 
@@ -503,6 +496,9 @@ static int __ref do_freq_control(void)
 		pr_err("frequency control not ready!\n");		
 		return -EINVAL;
 	}
+
+	delta = (msm_thermal_info.core_limit_temp_degC -
+			 msm_thermal_info.core_temp_hysteresis_degC);
 
 	get_online_cpus();
 	for_each_possible_cpu(cpu) {
@@ -527,7 +523,7 @@ static int __ref do_freq_control(void)
 					limit_idx[cpu] = thermal_limit_low[cpu];
 				resolve_max_freq[cpu] = therm_table[limit_idx[cpu]].frequency;
 				hotplug_check_needed++;
-		} else if (freq_temp <= freq_delta()) {
+		} else if (freq_temp <= delta) {
 				if (limit_idx[cpu] == MAX_IDX) {
 					resolve_max_freq[cpu] = is_display_on() ? policy.hlimit_max_screen_on : 
 										   policy.hlimit_max_screen_off;
@@ -555,23 +551,20 @@ static int __ref do_freq_control(void)
 	return hotplug_check_needed;
 }
 
-static long core_delta(void)
-{
-	return msm_thermal_info.core_limit_temp_degC -
-			 msm_thermal_info.core_temp_hysteresis_degC;
-}
-
 static void __ref do_core_control(void)
 {
 	unsigned int cpu = smp_processor_id();
 	int ret = 0;
-	long core_temp;
+	long core_temp, delta;
 
 	if (!core_control_enabled || intelli_init() ||
 		 thermal_suspended ||
 		 cpumask_empty(&core_control_mask)) {
 		return;
 	}
+
+	delta = (msm_thermal_info.core_limit_temp_degC -
+			 msm_thermal_info.core_temp_hysteresis_degC);
 
 	mutex_lock(&core_control_mutex);
 	for_each_possible_cpu(cpu) {
@@ -589,7 +582,7 @@ static void __ref do_core_control(void)
 				if (ret)
 					pr_debug("cpu_down failed. you got problems\n");
 				cpumask_set_cpu(cpu, &cores_offlined_mask);
-		} else if (core_temp <= core_delta() &&
+		} else if (core_temp <= delta &&
 				   cpumask_test_cpu(cpu, &core_control_mask) &&
 				   cpumask_test_cpu(cpu, &cores_offlined_mask)) {
 				/* If this core is already online, then bring up the
@@ -617,17 +610,17 @@ static void __ref check_temp(struct work_struct *work)
 		return;
 
 	ret = do_freq_control();
-
-	if (ret < 0)
+	if (ret == -EINVAL) {
 		return;
-	else if (likely(msm_thermal_info.limit_temp_degC <
-		msm_thermal_info.core_limit_temp_degC)) {
-		if (!ret)
+	} else if (msm_thermal_info.limit_temp_degC <
+		msm_thermal_info.core_limit_temp_degC) {
+		if (ret == 0)
 			goto reschedule;
-		else if (ret > 0)
+		else
 			do_core_control();
-	} else
+	} else {
 		do_core_control();
+	}
 reschedule:
 	if (likely(enabled))
 		mod_delayed_work(intellithermal_wq, &check_temp_work,
