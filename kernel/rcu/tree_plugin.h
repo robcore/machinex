@@ -55,6 +55,7 @@ DEFINE_PER_CPU(char, rcu_cpu_has_work);
  * This probably needs to be excluded from -rt builds.
  */
 #define rt_mutex_owner(a) ({ WARN_ON_ONCE(1); NULL; })
+#define rt_mutex_futex_unlock(x) WARN_ON_ONCE(1)
 
 #endif /* #else #ifdef CONFIG_RCU_BOOST */
 
@@ -528,7 +529,7 @@ void rcu_read_unlock_special(struct task_struct *t)
 
 		/* Unboost if we were boosted. */
 		if (IS_ENABLED(CONFIG_RCU_BOOST) && drop_boost_mutex)
-			rt_mutex_unlock(&rnp->boost_mtx);
+			rt_mutex_futex_unlock(&rnp->boost_mtx);
 
 		/*
 		 * If this was the last task on the expedited lists,
@@ -1503,7 +1504,7 @@ static void rcu_prepare_for_idle(void)
 	rdtp->last_accelerate = jiffies;
 	for_each_rcu_flavor(rsp) {
 		rdp = this_cpu_ptr(rsp->rda);
-		if (rcu_segcblist_pend_cbs(&rdp->cblist))
+		if (!rcu_segcblist_pend_cbs(&rdp->cblist))
 			continue;
 		rnp = rdp->mynode;
 		raw_spin_lock_rcu_node(rnp); /* irqs already disabled. */
@@ -2227,9 +2228,11 @@ static void do_nocb_deferred_wakeup_common(struct rcu_data *rdp)
 }
 
 /* Do a deferred wakeup of rcu_nocb_kthread() from a timer handler. */
-static void do_nocb_deferred_wakeup_timer(unsigned long x)
+static void do_nocb_deferred_wakeup_timer(struct timer_list *t)
 {
-	do_nocb_deferred_wakeup_common((struct rcu_data *)x);
+	struct rcu_data *rdp = from_timer(rdp, t, nocb_timer);
+
+	do_nocb_deferred_wakeup_common(rdp);
 }
 
 /*
@@ -2293,8 +2296,7 @@ static void __init rcu_boot_init_nocb_percpu_data(struct rcu_data *rdp)
 	init_swait_queue_head(&rdp->nocb_wq);
 	rdp->nocb_follower_tail = &rdp->nocb_follower_head;
 	raw_spin_lock_init(&rdp->nocb_lock);
-	setup_timer(&rdp->nocb_timer, do_nocb_deferred_wakeup_timer,
-		    (unsigned long)rdp);
+	timer_setup(&rdp->nocb_timer, do_nocb_deferred_wakeup_timer, 0);
 }
 
 /*
