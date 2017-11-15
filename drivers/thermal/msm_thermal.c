@@ -43,7 +43,7 @@
 static int enabled;
 
 static struct msm_thermal_data msm_thermal_info = {
-	.poll_ms = 240,
+	.poll_ms = 280,
 	.limit_temp_degC = 65,
 	.temp_hysteresis_degC = 5,
 	.freq_step = 2,
@@ -497,8 +497,8 @@ static int __ref do_freq_control(void)
 		return -EINVAL;
 	}
 
-	delta = (msm_thermal_info.core_limit_temp_degC -
-			 msm_thermal_info.core_temp_hysteresis_degC);
+	delta = (msm_thermal_info.limit_temp_degC -
+			 msm_thermal_info.temp_hysteresis_degC);
 
 	get_online_cpus();
 	for_each_possible_cpu(cpu) {
