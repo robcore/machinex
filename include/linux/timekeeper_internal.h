@@ -45,6 +45,7 @@ struct tk_read_base {
 
 	/* Monotonic base time */
 	ktime_t			base;
+	u64			base_real;
 };
 
 /**
