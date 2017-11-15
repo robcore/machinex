@@ -462,12 +462,6 @@ static int msm_thermal_get_freq_table(void)
 	return 0;
 }
 
-static void check_poweroff(unsigned int tp)
-{
-	if (unlikely(tp > SHUTOFF_TEMP))
-		orderly_poweroff(true);
-}
-
 static long evaluate_temp(unsigned int cpu)
 {
 	struct tsens_device tsens_dev;
@@ -484,7 +478,10 @@ static long evaluate_temp(unsigned int cpu)
 				KBUILD_MODNAME, tsens_dev.sensor_num);
 		return -EINVAL;
 	}
-	check_poweroff(temp);
+
+	if (unlikely(temp > SHUTOFF_TEMP))
+		orderly_poweroff(true);
+
 	return temp;
 }
 
@@ -620,16 +617,17 @@ static void __ref check_temp(struct work_struct *work)
 		return;
 
 	ret = do_freq_control();
-	if (likely(msm_thermal_info.limit_temp_degC <
+
+	if (ret < 0)
+		return;
+	else if (likely(msm_thermal_info.limit_temp_degC <
 		msm_thermal_info.core_limit_temp_degC)) {
 		if (!ret)
 			goto reschedule;
 		else if (ret > 0)
 			do_core_control();
-	} else {
-		if (ret >= 0)
-			do_core_control();
-	}
+	} else
+		do_core_control();
 reschedule:
 	if (likely(enabled))
 		mod_delayed_work(intellithermal_wq, &check_temp_work,
