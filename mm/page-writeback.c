@@ -145,7 +145,7 @@ static struct fprop_global writeout_completions;
 static void writeout_period(unsigned long t);
 /* Timer for aging of writeout_completions */
 static struct timer_list writeout_period_timer =
-		TIMER_DEFERRED_INITIALIZER(writeout_period, 0, 0);
+		TIMER_DEFERRED_INITIALIZER(writeout_period, 0);
 static unsigned long writeout_period_time = 0;
 
 /*
