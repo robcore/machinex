@@ -843,9 +843,10 @@ lcs_notify_lancmd_waiters(struct lcs_card *card, struct lcs_cmd *cmd)
  * Emit buffer of a lan command.
  */
 static void
-lcs_lancmd_timeout(unsigned long data)
+lcs_lancmd_timeout(struct timer_list *t)
 {
-	struct lcs_reply *reply, *list_reply, *r;
+	struct lcs_reply *reply = from_timer(reply, t, timer);
+	struct lcs_reply *list_reply, *r;
 	unsigned long flags;
 
 	LCS_DBF_TEXT(4, trace, "timeout");
@@ -873,7 +874,6 @@ lcs_send_lancmd(struct lcs_card *card, struct lcs_buffer *buffer,
 {
 	struct lcs_reply *reply;
 	struct lcs_cmd *cmd;
-	struct timer_list timer;
 	unsigned long flags;
 	int rc;
 

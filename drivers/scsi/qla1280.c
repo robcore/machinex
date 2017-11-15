@@ -765,9 +765,9 @@ enum action {
 };
 
 
-static void qla1280_mailbox_timeout(unsigned long __data)
+static void qla1280_mailbox_timeout(struct timer_list *t)
 {
-	struct scsi_qla_host *ha = (struct scsi_qla_host *)__data;
+	struct scsi_qla_host *ha = from_timer(ha, t, mailbox_timer);
 	struct device_reg __iomem *reg;
 	reg = ha->iobase;
 
@@ -2473,7 +2473,6 @@ qla1280_mailbox_command(struct scsi_qla_host *ha, uint8_t mr, uint16_t *mb)
 	uint16_t __iomem *mptr;
 	uint16_t data;
 	DECLARE_COMPLETION_ONSTACK(wait);
-	struct timer_list timer;
 
 	ENTER("qla1280_mailbox_command");
 
