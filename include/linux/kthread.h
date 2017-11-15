@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 #ifndef _LINUX_KTHREAD_H
 #define _LINUX_KTHREAD_H
 /* Simple interface for creating and stopping kernel threads without mess. */
@@ -15,7 +16,7 @@ struct task_struct *kthread_create_on_node(int (*threadfn)(void *data),
  * @threadfn: the function to run in the thread
  * @data: data pointer for @threadfn()
  * @namefmt: printf-style format string for the thread name
- * @...: arguments for @namefmt.
+ * @arg...: arguments for @namefmt.
  *
  * This macro will create a kthread on the current node, leaving it in
  * the stopped state.  This is just a helper for kthread_create_on_node();
@@ -75,7 +76,7 @@ extern int tsk_fork_get_node(struct task_struct *tsk);
  */
 struct kthread_work;
 typedef void (*kthread_work_func_t)(struct kthread_work *work);
-void kthread_delayed_work_timer_fn(unsigned long __data);
+void kthread_delayed_work_timer_fn(struct timer_list *t);
 
 enum {
 	KTW_FREEZABLE		= 1 << 0,	/* freeze during suspend */
@@ -93,7 +94,6 @@ struct kthread_worker {
 struct kthread_work {
 	struct list_head	node;
 	kthread_work_func_t	func;
-	wait_queue_head_t	done;
 	struct kthread_worker	*worker;
 	/* Number of canceling calls that are running at the moment. */
 	int			canceling;
@@ -113,13 +113,12 @@ struct kthread_delayed_work {
 #define KTHREAD_WORK_INIT(work, fn)	{				\
 	.node = LIST_HEAD_INIT((work).node),				\
 	.func = (fn),							\
-	.done = __WAIT_QUEUE_HEAD_INITIALIZER((work).done),		\
 	}
 
 #define KTHREAD_DELAYED_WORK_INIT(dwork, fn) {				\
 	.work = KTHREAD_WORK_INIT((dwork).work, (fn)),			\
-	.timer = __TIMER_INITIALIZER(kthread_delayed_work_timer_fn,	\
-				     0, (unsigned long)&(dwork),	\
+	.timer = __TIMER_INITIALIZER((TIMER_FUNC_TYPE)kthread_delayed_work_timer_fn,\
+				     (TIMER_DATA_TYPE)&(dwork.timer),	\
 				     TIMER_IRQSAFE),			\
 	}
 
@@ -134,22 +133,16 @@ struct kthread_delayed_work {
 		KTHREAD_DELAYED_WORK_INIT(dwork, fn)
 
 /*
- * kthread_worker.lock and kthread_work.done need their own lockdep class
- * keys if they are defined on stack with lockdep enabled.  Use the
- * following macros when defining them on stack.
+ * kthread_worker.lock needs its own lockdep class key when defined on
+ * stack with lockdep enabled.  Use the following macros in such cases.
  */
 #ifdef CONFIG_LOCKDEP
 # define KTHREAD_WORKER_INIT_ONSTACK(worker)				\
 	({ kthread_init_worker(&worker); worker; })
 # define DEFINE_KTHREAD_WORKER_ONSTACK(worker)				\
 	struct kthread_worker worker = KTHREAD_WORKER_INIT_ONSTACK(worker)
-# define KTHREAD_WORK_INIT_ONSTACK(work, fn)				\
-	({ init_kthread_work((&work), fn); work; })
-# define DEFINE_KTHREAD_WORK_ONSTACK(work, fn)				\
-	struct kthread_work work = KTHREAD_WORK_INIT_ONSTACK(work, fn)
 #else
 # define DEFINE_KTHREAD_WORKER_ONSTACK(worker) DEFINE_KTHREAD_WORKER(worker)
-# define DEFINE_KTHREAD_WORK_ONSTACK(work, fn) DEFINE_KTHREAD_WORK(work, fn)
 #endif
 
 extern void __kthread_init_worker(struct kthread_worker *worker,
@@ -166,15 +159,14 @@ extern void __kthread_init_worker(struct kthread_worker *worker,
 		memset((work), 0, sizeof(struct kthread_work));		\
 		INIT_LIST_HEAD(&(work)->node);				\
 		(work)->func = (fn);					\
-		init_waitqueue_head(&(work)->done);			\
 	} while (0)
 
 #define kthread_init_delayed_work(dwork, fn)				\
 	do {								\
 		kthread_init_work(&(dwork)->work, (fn));		\
 		__setup_timer(&(dwork)->timer,				\
-			      kthread_delayed_work_timer_fn,		\
-			      (unsigned long)(dwork),			\
+			      (TIMER_FUNC_TYPE)kthread_delayed_work_timer_fn,\
+			      (TIMER_DATA_TYPE)&(dwork)->timer,		\
 			      TIMER_IRQSAFE);				\
 	} while (0)
 
