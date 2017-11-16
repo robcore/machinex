@@ -2054,11 +2054,11 @@ __xfs_iunpin_wait(
 	xfs_iunpin(ip);
 
 	do {
-		prepare_to_wait(wq, &wait.wait, TASK_UNINTERRUPTIBLE);
+		prepare_to_wait(wq, &wait.wq_entry, TASK_UNINTERRUPTIBLE);
 		if (xfs_ipincount(ip))
 			io_schedule();
 	} while (xfs_ipincount(ip));
-	finish_wait(wq, &wait.wait);
+	finish_wait(wq, &wait.wq_entry);
 }
 
 void
