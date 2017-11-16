@@ -52,34 +52,34 @@ struct task_struct;
  * Macros for declaration and initialisaton of the datatypes
  */
 
-#define __WAITQUEUE_INITIALIZER(name, tsk) {				\
-	.private	= tsk,						\
-	.func		= default_wake_function,			\
+#define __WAITQUEUE_INITIALIZER(name, tsk) {					\
+	.private	= tsk,							\
+	.func		= default_wake_function,				\
 	.task_list	= { NULL, NULL } }
 
-#define DECLARE_WAITQUEUE(name, tsk)					\
+#define DECLARE_WAITQUEUE(name, tsk)						\
 	struct wait_queue_entry name = __WAITQUEUE_INITIALIZER(name, tsk)
 
-#define __WAIT_QUEUE_HEAD_INITIALIZER(name) {				\
-	.lock		= __SPIN_LOCK_UNLOCKED(name.lock),		\
+#define __WAIT_QUEUE_HEAD_INITIALIZER(name) {					\
+	.lock		= __SPIN_LOCK_UNLOCKED(name.lock),			\
 	.task_list	= { &(name).task_list, &(name).task_list } }
 
 #define DECLARE_WAIT_QUEUE_HEAD(name) \
 	struct wait_queue_head name = __WAIT_QUEUE_HEAD_INITIALIZER(name)
 
-#define __WAIT_BIT_KEY_INITIALIZER(word, bit)				\
+#define __WAIT_BIT_KEY_INITIALIZER(word, bit)					\
 	{ .flags = word, .bit_nr = bit, }
 
-#define __WAIT_ATOMIC_T_KEY_INITIALIZER(p)				\
+#define __WAIT_ATOMIC_T_KEY_INITIALIZER(p)					\
 	{ .flags = p, .bit_nr = WAIT_ATOMIC_T_BIT_NR, }
 
 extern void __init_waitqueue_head(struct wait_queue_head *wq_head, const char *name, struct lock_class_key *);
 
-#define init_waitqueue_head(wq_head)			\
-	do {						\
-		static struct lock_class_key __key;	\
-							\
-		__init_waitqueue_head((wq_head), #wq_head, &__key);	\
+#define init_waitqueue_head(wq_head)						\
+	do {									\
+		static struct lock_class_key __key;				\
+										\
+		__init_waitqueue_head((wq_head), #wq_head, &__key);		\
 	} while (0)
 
 #ifdef CONFIG_LOCKDEP
@@ -113,9 +113,9 @@ static inline int waitqueue_active(struct wait_queue_head *wq_head)
 
 /**
  * wq_has_sleeper - check if there are any waiting processes
- * @wq: wait queue head
+ * @wq_head: wait queue head
  *
- * Returns true if wq has waiting processes
+ * Returns true if wq_head has waiting processes
  *
  * Please refer to the comment for waitqueue_active.
  */
@@ -200,26 +200,26 @@ struct wait_queue_head *bit_waitqueue(void *word, int bit);
 /*
  * Wakeup macros to be used to report events to the targets.
  */
-#define wake_up_poll(x, m)						\
+#define wake_up_poll(x, m)							\
 	__wake_up(x, TASK_NORMAL, 1, (void *) (m))
-#define wake_up_locked_poll(x, m)					\
+#define wake_up_locked_poll(x, m)						\
 	__wake_up_locked_key((x), TASK_NORMAL, (void *) (m))
-#define wake_up_interruptible_poll(x, m)				\
+#define wake_up_interruptible_poll(x, m)					\
 	__wake_up(x, TASK_INTERRUPTIBLE, 1, (void *) (m))
-#define wake_up_interruptible_sync_poll(x, m)				\
+#define wake_up_interruptible_sync_poll(x, m)					\
 	__wake_up_sync_key((x), TASK_INTERRUPTIBLE, 1, (void *) (m))
 
-#define ___wait_cond_timeout(condition)					\
-({									\
-	bool __cond = (condition);					\
-	if (__cond && !__ret)						\
-		__ret = 1;						\
-	__cond || !__ret;						\
+#define ___wait_cond_timeout(condition)						\
+({										\
+	bool __cond = (condition);						\
+	if (__cond && !__ret)							\
+		__ret = 1;							\
+	__cond || !__ret;							\
 })
 
-#define ___wait_is_interruptible(state)					\
-	(!__builtin_constant_p(state) ||				\
-		state == TASK_INTERRUPTIBLE || state == TASK_KILLABLE)	\
+#define ___wait_is_interruptible(state)						\
+	(!__builtin_constant_p(state) ||					\
+		state == TASK_INTERRUPTIBLE || state == TASK_KILLABLE)		\
 
 extern void init_wait_entry(struct wait_queue_entry *wq_entry, int flags);
 
@@ -347,83 +347,83 @@ do {									\
  * or the remaining jiffies (at least 1) if the @condition evaluated
  * to %true before the @timeout elapsed.
  */
-#define wait_event_timeout(wq, condition, timeout)			\
-({									\
-	long __ret = timeout;						\
-	might_sleep();							\
-	if (!___wait_cond_timeout(condition))				\
-		__ret = __wait_event_timeout(wq, condition, timeout);	\
-	__ret;								\
+#define wait_event_timeout(wq_head, condition, timeout)				\
+({										\
+	long __ret = timeout;							\
+	might_sleep();								\
+	if (!___wait_cond_timeout(condition))					\
+		__ret = __wait_event_timeout(wq_head, condition, timeout);	\
+	__ret;									\
 })
 
-#define __wait_event_freezable_timeout(wq, condition, timeout)		\
-	___wait_event(wq, ___wait_cond_timeout(condition),		\
-		      TASK_INTERRUPTIBLE, 0, timeout,			\
+#define __wait_event_freezable_timeout(wq_head, condition, timeout)		\
+	___wait_event(wq_head, ___wait_cond_timeout(condition),			\
+		      TASK_INTERRUPTIBLE, 0, timeout,				\
 		      __ret = schedule_timeout(__ret); try_to_freeze())
 
 /*
  * like wait_event_timeout() -- except it uses TASK_INTERRUPTIBLE to avoid
  * increasing load and is freezable.
  */
-#define wait_event_freezable_timeout(wq, condition, timeout)		\
-({									\
-	long __ret = timeout;						\
-	might_sleep();							\
-	if (!___wait_cond_timeout(condition))				\
-		__ret = __wait_event_freezable_timeout(wq, condition, timeout);	\
-	__ret;								\
+#define wait_event_freezable_timeout(wq_head, condition, timeout)		\
+({										\
+	long __ret = timeout;							\
+	might_sleep();								\
+	if (!___wait_cond_timeout(condition))					\
+		__ret = __wait_event_freezable_timeout(wq_head, condition, timeout); \
+	__ret;									\
 })
 
-#define __wait_event_exclusive_cmd(wq, condition, cmd1, cmd2)		\
-	(void)___wait_event(wq, condition, TASK_UNINTERRUPTIBLE, 1, 0,	\
+#define __wait_event_exclusive_cmd(wq_head, condition, cmd1, cmd2)		\
+	(void)___wait_event(wq_head, condition, TASK_UNINTERRUPTIBLE, 1, 0,	\
 			    cmd1; schedule(); cmd2)
 /*
  * Just like wait_event_cmd(), except it sets exclusive flag
  */
-#define wait_event_exclusive_cmd(wq, condition, cmd1, cmd2)		\
-do {									\
-	if (condition)							\
-		break;							\
-	__wait_event_exclusive_cmd(wq, condition, cmd1, cmd2);		\
+#define wait_event_exclusive_cmd(wq_head, condition, cmd1, cmd2)		\
+do {										\
+	if (condition)								\
+		break;								\
+	__wait_event_exclusive_cmd(wq_head, condition, cmd1, cmd2);		\
 } while (0)
 
-#define __wait_event_cmd(wq, condition, cmd1, cmd2)			\
-	(void)___wait_event(wq, condition, TASK_UNINTERRUPTIBLE, 0, 0,	\
+#define __wait_event_cmd(wq_head, condition, cmd1, cmd2)			\
+	(void)___wait_event(wq_head, condition, TASK_UNINTERRUPTIBLE, 0, 0,	\
 			    cmd1; schedule(); cmd2)
 
 /**
  * wait_event_cmd - sleep until a condition gets true
- * @wq: the waitqueue to wait on
+ * @wq_head: the waitqueue to wait on
  * @condition: a C expression for the event to wait for
  * @cmd1: the command will be executed before sleep
  * @cmd2: the command will be executed after sleep
  *
  * The process is put to sleep (TASK_UNINTERRUPTIBLE) until the
  * @condition evaluates to true. The @condition is checked each time
- * the waitqueue @wq is woken up.
+ * the waitqueue @wq_head is woken up.
  *
  * wake_up() has to be called after changing any variable that could
  * change the result of the wait condition.
  */
-#define wait_event_cmd(wq, condition, cmd1, cmd2)			\
-do {									\
-	if (condition)							\
-		break;							\
-	__wait_event_cmd(wq, condition, cmd1, cmd2);			\
+#define wait_event_cmd(wq_head, condition, cmd1, cmd2)				\
+do {										\
+	if (condition)								\
+		break;								\
+	__wait_event_cmd(wq_head, condition, cmd1, cmd2);			\
 } while (0)
 
-#define __wait_event_interruptible(wq, condition)			\
-	___wait_event(wq, condition, TASK_INTERRUPTIBLE, 0, 0,		\
+#define __wait_event_interruptible(wq_head, condition)				\
+	___wait_event(wq_head, condition, TASK_INTERRUPTIBLE, 0, 0,		\
 		      schedule())
 
 /**
  * wait_event_interruptible - sleep until a condition gets true
- * @wq: the waitqueue to wait on
+ * @wq_head: the waitqueue to wait on
  * @condition: a C expression for the event to wait for
  *
  * The process is put to sleep (TASK_INTERRUPTIBLE) until the
  * @condition evaluates to true or a signal is received.
- * The @condition is checked each time the waitqueue @wq is woken up.
+ * The @condition is checked each time the waitqueue @wq_head is woken up.
  *
  * wake_up() has to be called after changing any variable that could
  * change the result of the wait condition.
@@ -431,29 +431,29 @@ do {									\
  * The function will return -ERESTARTSYS if it was interrupted by a
  * signal and 0 if @condition evaluated to true.
  */
-#define wait_event_interruptible(wq, condition)				\
-({									\
-	int __ret = 0;							\
-	might_sleep();							\
-	if (!(condition))						\
-		__ret = __wait_event_interruptible(wq, condition);	\
-	__ret;								\
+#define wait_event_interruptible(wq_head, condition)				\
+({										\
+	int __ret = 0;								\
+	might_sleep();								\
+	if (!(condition))							\
+		__ret = __wait_event_interruptible(wq_head, condition);		\
+	__ret;									\
 })
 
-#define __wait_event_interruptible_timeout(wq, condition, timeout)	\
-	___wait_event(wq, ___wait_cond_timeout(condition),		\
-		      TASK_INTERRUPTIBLE, 0, timeout,			\
+#define __wait_event_interruptible_timeout(wq_head, condition, timeout)		\
+	___wait_event(wq_head, ___wait_cond_timeout(condition),			\
+		      TASK_INTERRUPTIBLE, 0, timeout,				\
 		      __ret = schedule_timeout(__ret))
 
 /**
  * wait_event_interruptible_timeout - sleep until a condition gets true or a timeout elapses
- * @wq: the waitqueue to wait on
+ * @wq_head: the waitqueue to wait on
  * @condition: a C expression for the event to wait for
  * @timeout: timeout, in jiffies
  *
  * The process is put to sleep (TASK_INTERRUPTIBLE) until the
  * @condition evaluates to true or a signal is received.
- * The @condition is checked each time the waitqueue @wq is woken up.
+ * The @condition is checked each time the waitqueue @wq_head is woken up.
  *
  * wake_up() has to be called after changing any variable that could
  * change the result of the wait condition.
@@ -603,25 +603,25 @@ do {									\
  * The function returns 0 if @condition became true, or -ETIME if the timeout
  * elapsed.
  */
-#define wait_event_hrtimeout(wq, condition, timeout)			\
-({									\
-	int __ret = 0;							\
-	might_sleep();							\
-	if (!(condition))						\
-		__ret = __wait_event_hrtimeout(wq, condition, timeout,	\
-					       TASK_UNINTERRUPTIBLE);	\
-	__ret;								\
+#define wait_event_hrtimeout(wq_head, condition, timeout)			\
+({										\
+	int __ret = 0;								\
+	might_sleep();								\
+	if (!(condition))							\
+		__ret = __wait_event_hrtimeout(wq_head, condition, timeout,	\
+					       TASK_UNINTERRUPTIBLE);		\
+	__ret;									\
 })
 
 /**
  * wait_event_interruptible_hrtimeout - sleep until a condition gets true or a timeout elapses
- * @wq: the waitqueue to wait on
+ * @wq_head: the waitqueue to wait on
  * @condition: a C expression for the event to wait for
  * @timeout: timeout, as a ktime_t
  *
  * The process is put to sleep (TASK_INTERRUPTIBLE) until the
  * @condition evaluates to true or a signal is received.
- * The @condition is checked each time the waitqueue @wq is woken up.
+ * The @condition is checked each time the waitqueue @wq_head is woken up.
  *
  * wake_up() has to be called after changing any variable that could
  * change the result of the wait condition.
@@ -735,8 +735,8 @@ extern int do_wait_intr_irq(wait_queue_head_t *, wait_queue_entry_t *);
  * The function will return -ERESTARTSYS if it was interrupted by a
  * signal and 0 if @condition evaluated to true.
  */
-#define wait_event_interruptible_locked(wq, condition)			\
-	((condition)							\
+#define wait_event_interruptible_locked(wq, condition)				\
+	((condition)								\
 	 ? 0 : __wait_event_interruptible_locked(wq, condition, 0, do_wait_intr))
 
 /**
@@ -762,8 +762,8 @@ extern int do_wait_intr_irq(wait_queue_head_t *, wait_queue_entry_t *);
  * The function will return -ERESTARTSYS if it was interrupted by a
  * signal and 0 if @condition evaluated to true.
  */
-#define wait_event_interruptible_locked_irq(wq, condition)		\
-	((condition)							\
+#define wait_event_interruptible_locked_irq(wq, condition)			\
+	((condition)								\
 	 ? 0 : __wait_event_interruptible_locked(wq, condition, 0, do_wait_intr_irq))
 
 /**
@@ -793,8 +793,8 @@ extern int do_wait_intr_irq(wait_queue_head_t *, wait_queue_entry_t *);
  * The function will return -ERESTARTSYS if it was interrupted by a
  * signal and 0 if @condition evaluated to true.
  */
-#define wait_event_interruptible_exclusive_locked(wq, condition)	\
-	((condition)							\
+#define wait_event_interruptible_exclusive_locked(wq, condition)		\
+	((condition)								\
 	 ? 0 : __wait_event_interruptible_locked(wq, condition, 1, do_wait_intr))
 
 /**
@@ -824,12 +824,12 @@ extern int do_wait_intr_irq(wait_queue_head_t *, wait_queue_entry_t *);
  * The function will return -ERESTARTSYS if it was interrupted by a
  * signal and 0 if @condition evaluated to true.
  */
-#define wait_event_interruptible_exclusive_locked_irq(wq, condition)	\
-	((condition)							\
+#define wait_event_interruptible_exclusive_locked_irq(wq, condition)		\
+	((condition)								\
 	 ? 0 : __wait_event_interruptible_locked(wq, condition, 1, do_wait_intr_irq))
 
 
-#define __wait_event_killable(wq, condition)				\
+#define __wait_event_killable(wq, condition)					\
 	___wait_event(wq, condition, TASK_KILLABLE, 0, 0, schedule())
 
 /**
@@ -847,21 +847,21 @@ extern int do_wait_intr_irq(wait_queue_head_t *, wait_queue_entry_t *);
  * The function will return -ERESTARTSYS if it was interrupted by a
  * signal and 0 if @condition evaluated to true.
  */
-#define wait_event_killable(wq, condition)				\
-({									\
-	int __ret = 0;							\
-	might_sleep();							\
-	if (!(condition))						\
-		__ret = __wait_event_killable(wq, condition);		\
-	__ret;								\
+#define wait_event_killable(wq_head, condition)					\
+({										\
+	int __ret = 0;								\
+	might_sleep();								\
+	if (!(condition))							\
+		__ret = __wait_event_killable(wq_head, condition);		\
+	__ret;									\
 })
 
 
-#define __wait_event_lock_irq(wq, condition, lock, cmd)			\
-	(void)___wait_event(wq, condition, TASK_UNINTERRUPTIBLE, 0, 0,	\
-			    spin_unlock_irq(&lock);			\
-			    cmd;					\
-			    schedule();					\
+#define __wait_event_lock_irq(wq_head, condition, lock, cmd)			\
+	(void)___wait_event(wq_head, condition, TASK_UNINTERRUPTIBLE, 0, 0,	\
+			    spin_unlock_irq(&lock);				\
+			    cmd;						\
+			    schedule();						\
 			    spin_lock_irq(&lock))
 
 /**
@@ -869,7 +869,7 @@ extern int do_wait_intr_irq(wait_queue_head_t *, wait_queue_entry_t *);
  *			     condition is checked under the lock. This
  *			     is expected to be called with the lock
  *			     taken.
- * @wq: the waitqueue to wait on
+ * @wq_head: the waitqueue to wait on
  * @condition: a C expression for the event to wait for
  * @lock: a locked spinlock_t, which will be released before cmd
  *	  and schedule() and reacquired afterwards.
@@ -878,7 +878,7 @@ extern int do_wait_intr_irq(wait_queue_head_t *, wait_queue_entry_t *);
  *
  * The process is put to sleep (TASK_UNINTERRUPTIBLE) until the
  * @condition evaluates to true. The @condition is checked each time
- * the waitqueue @wq is woken up.
+ * the waitqueue @wq_head is woken up.
  *
  * wake_up() has to be called after changing any variable that could
  * change the result of the wait condition.
@@ -887,11 +887,11 @@ extern int do_wait_intr_irq(wait_queue_head_t *, wait_queue_entry_t *);
  * dropped before invoking the cmd and going to sleep and is reacquired
  * afterwards.
  */
-#define wait_event_lock_irq_cmd(wq, condition, lock, cmd)		\
-do {									\
-	if (condition)							\
-		break;							\
-	__wait_event_lock_irq(wq, condition, lock, cmd);		\
+#define wait_event_lock_irq_cmd(wq_head, condition, lock, cmd)			\
+do {										\
+	if (condition)								\
+		break;								\
+	__wait_event_lock_irq(wq_head, condition, lock, cmd);			\
 } while (0)
 
 /**
@@ -899,14 +899,14 @@ do {									\
  *			 condition is checked under the lock. This
  *			 is expected to be called with the lock
  *			 taken.
- * @wq: the waitqueue to wait on
+ * @wq_head: the waitqueue to wait on
  * @condition: a C expression for the event to wait for
  * @lock: a locked spinlock_t, which will be released before schedule()
  *	  and reacquired afterwards.
  *
  * The process is put to sleep (TASK_UNINTERRUPTIBLE) until the
  * @condition evaluates to true. The @condition is checked each time
- * the waitqueue @wq is woken up.
+ * the waitqueue @wq_head is woken up.
  *
  * wake_up() has to be called after changing any variable that could
  * change the result of the wait condition.
@@ -914,26 +914,26 @@ do {									\
  * This is supposed to be called while holding the lock. The lock is
  * dropped before going to sleep and is reacquired afterwards.
  */
-#define wait_event_lock_irq(wq, condition, lock)			\
-do {									\
-	if (condition)							\
-		break;							\
-	__wait_event_lock_irq(wq, condition, lock, );			\
+#define wait_event_lock_irq(wq_head, condition, lock)				\
+do {										\
+	if (condition)								\
+		break;								\
+	__wait_event_lock_irq(wq_head, condition, lock, );			\
 } while (0)
 
 
-#define __wait_event_interruptible_lock_irq(wq, condition, lock, cmd)	\
-	___wait_event(wq, condition, TASK_INTERRUPTIBLE, 0, 0,		\
-		      spin_unlock_irq(&lock);				\
-		      cmd;						\
-		      schedule();					\
+#define __wait_event_interruptible_lock_irq(wq_head, condition, lock, cmd)	\
+	___wait_event(wq_head, condition, TASK_INTERRUPTIBLE, 0, 0,		\
+		      spin_unlock_irq(&lock);					\
+		      cmd;							\
+		      schedule();						\
 		      spin_lock_irq(&lock))
 
 /**
  * wait_event_interruptible_lock_irq_cmd - sleep until a condition gets true.
  *		The condition is checked under the lock. This is expected to
  *		be called with the lock taken.
- * @wq: the waitqueue to wait on
+ * @wq_head: the waitqueue to wait on
  * @condition: a C expression for the event to wait for
  * @lock: a locked spinlock_t, which will be released before cmd and
  *	  schedule() and reacquired afterwards.
@@ -942,7 +942,7 @@ do {									\
  *
  * The process is put to sleep (TASK_INTERRUPTIBLE) until the
  * @condition evaluates to true or a signal is received. The @condition is
- * checked each time the waitqueue @wq is woken up.
+ * checked each time the waitqueue @wq_head is woken up.
  *
  * wake_up() has to be called after changing any variable that could
  * change the result of the wait condition.
@@ -954,27 +954,27 @@ do {									\
  * The macro will return -ERESTARTSYS if it was interrupted by a signal
  * and 0 if @condition evaluated to true.
  */
-#define wait_event_interruptible_lock_irq_cmd(wq, condition, lock, cmd)	\
-({									\
-	int __ret = 0;							\
-	if (!(condition))						\
-		__ret = __wait_event_interruptible_lock_irq(wq,		\
-						condition, lock, cmd);	\
-	__ret;								\
+#define wait_event_interruptible_lock_irq_cmd(wq_head, condition, lock, cmd)	\
+({										\
+	int __ret = 0;								\
+	if (!(condition))							\
+		__ret = __wait_event_interruptible_lock_irq(wq_head,		\
+						condition, lock, cmd);		\
+	__ret;									\
 })
 
 /**
  * wait_event_interruptible_lock_irq - sleep until a condition gets true.
  *		The condition is checked under the lock. This is expected
  *		to be called with the lock taken.
- * @wq: the waitqueue to wait on
+ * @wq_head: the waitqueue to wait on
  * @condition: a C expression for the event to wait for
  * @lock: a locked spinlock_t, which will be released before schedule()
  *	  and reacquired afterwards.
  *
  * The process is put to sleep (TASK_INTERRUPTIBLE) until the
  * @condition evaluates to true or signal is received. The @condition is
- * checked each time the waitqueue @wq is woken up.
+ * checked each time the waitqueue @wq_head is woken up.
  *
  * wake_up() has to be called after changing any variable that could
  * change the result of the wait condition.
@@ -985,28 +985,28 @@ do {									\
  * The macro will return -ERESTARTSYS if it was interrupted by a signal
  * and 0 if @condition evaluated to true.
  */
-#define wait_event_interruptible_lock_irq(wq, condition, lock)		\
-({									\
-	int __ret = 0;							\
-	if (!(condition))						\
-		__ret = __wait_event_interruptible_lock_irq(wq,		\
-						condition, lock,);	\
-	__ret;								\
+#define wait_event_interruptible_lock_irq(wq_head, condition, lock)		\
+({										\
+	int __ret = 0;								\
+	if (!(condition))							\
+		__ret = __wait_event_interruptible_lock_irq(wq_head,		\
+						condition, lock,);		\
+	__ret;									\
 })
 
-#define __wait_event_interruptible_lock_irq_timeout(wq, condition,	\
-						    lock, timeout)	\
-	___wait_event(wq, ___wait_cond_timeout(condition),		\
-		      TASK_INTERRUPTIBLE, 0, timeout,			\
-		      spin_unlock_irq(&lock);				\
-		      __ret = schedule_timeout(__ret);			\
+#define __wait_event_interruptible_lock_irq_timeout(wq_head, condition,		\
+						    lock, timeout)		\
+	___wait_event(wq_head, ___wait_cond_timeout(condition),			\
+		      TASK_INTERRUPTIBLE, 0, timeout,				\
+		      spin_unlock_irq(&lock);					\
+		      __ret = schedule_timeout(__ret);				\
 		      spin_lock_irq(&lock));
 
 /**
  * wait_event_interruptible_lock_irq_timeout - sleep until a condition gets
  *		true or a timeout elapses. The condition is checked under
  *		the lock. This is expected to be called with the lock taken.
- * @wq: the waitqueue to wait on
+ * @wq_head: the waitqueue to wait on
  * @condition: a C expression for the event to wait for
  * @lock: a locked spinlock_t, which will be released before schedule()
  *	  and reacquired afterwards.
@@ -1014,7 +1014,7 @@ do {									\
  *
  * The process is put to sleep (TASK_INTERRUPTIBLE) until the
  * @condition evaluates to true or signal is received. The @condition is
- * checked each time the waitqueue @wq is woken up.
+ * checked each time the waitqueue @wq_head is woken up.
  *
  * wake_up() has to be called after changing any variable that could
  * change the result of the wait condition.
@@ -1026,14 +1026,14 @@ do {									\
  * was interrupted by a signal, and the remaining jiffies otherwise
  * if the condition evaluated to true before the timeout elapsed.
  */
-#define wait_event_interruptible_lock_irq_timeout(wq, condition, lock,	\
-						  timeout)		\
-({									\
-	long __ret = timeout;						\
-	if (!___wait_cond_timeout(condition))				\
-		__ret = __wait_event_interruptible_lock_irq_timeout(	\
-					wq, condition, lock, timeout);	\
-	__ret;								\
+#define wait_event_interruptible_lock_irq_timeout(wq_head, condition, lock,	\
+						  timeout)			\
+({										\
+	long __ret = timeout;							\
+	if (!___wait_cond_timeout(condition))					\
+		__ret = __wait_event_interruptible_lock_irq_timeout(		\
+					wq_head, condition, lock, timeout);	\
+	__ret;									\
 })
 
 
@@ -1049,32 +1049,32 @@ int woken_wake_function(struct wait_queue_entry *wq_entry, unsigned mode, int sy
 int autoremove_wake_function(struct wait_queue_entry *wq_entry, unsigned mode, int sync, void *key);
 int wake_bit_function(struct wait_queue_entry *wq_entry, unsigned mode, int sync, void *key);
 
-#define DEFINE_WAIT_FUNC(name, function)				\
-	struct wait_queue_entry name = {				\
-		.private	= current,				\
-		.func		= function,				\
-		.task_list	= LIST_HEAD_INIT((name).task_list),	\
+#define DEFINE_WAIT_FUNC(name, function)					\
+	struct wait_queue_entry name = {					\
+		.private	= current,					\
+		.func		= function,					\
+		.task_list	= LIST_HEAD_INIT((name).task_list),		\
 	}
 
 #define DEFINE_WAIT(name) DEFINE_WAIT_FUNC(name, autoremove_wake_function)
 
-#define DEFINE_WAIT_BIT(name, word, bit)				\
-	struct wait_bit_queue_entry name = {				\
-		.key = __WAIT_BIT_KEY_INITIALIZER(word, bit),		\
-		.wq_entry = {						\
-			.private	= current,			\
-			.func		= wake_bit_function,		\
-			.task_list	=				\
-				LIST_HEAD_INIT((name).wq_entry.task_list), \
-		},							\
+#define DEFINE_WAIT_BIT(name, word, bit)					\
+	struct wait_bit_queue_entry name = {					\
+		.key = __WAIT_BIT_KEY_INITIALIZER(word, bit),			\
+		.wq_entry = {							\
+			.private	= current,				\
+			.func		= wake_bit_function,			\
+			.task_list	=					\
+				LIST_HEAD_INIT((name).wq_entry.task_list),	\
+		},								\
 	}
 
-#define init_wait(wait)							\
-	do {								\
-		(wait)->private = current;				\
-		(wait)->func = autoremove_wake_function;		\
-		INIT_LIST_HEAD(&(wait)->task_list);			\
-		(wait)->flags = 0;					\
+#define init_wait(wait)								\
+	do {									\
+		(wait)->private = current;					\
+		(wait)->func = autoremove_wake_function;			\
+		INIT_LIST_HEAD(&(wait)->task_list);				\
+		(wait)->flags = 0;						\
 	} while (0)
 
 
