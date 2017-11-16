@@ -1245,7 +1245,8 @@ static inline struct kmem_cache *slab_pre_alloc_hook(struct kmem_cache *s,
 						     gfp_t flags)
 {
 	flags &= gfp_allowed_mask;
-	lockdep_trace_alloc(flags);
+	fs_reclaim_acquire(flags);
+	fs_reclaim_release(flags);
 	might_sleep_if(flags & __GFP_WAIT);
 
 	if (should_failslab(s->object_size, flags, s->flags))
