@@ -354,6 +354,8 @@ static struct vmap_area *alloc_vmap_area(unsigned long size,
 	BUG_ON(size & ~PAGE_MASK);
 	BUG_ON(!is_power_of_2(align));
 
+	might_sleep();
+
 	va = kmalloc_node(sizeof(struct vmap_area),
 			gfp_mask & GFP_RECLAIM_MASK, node);
 	if (unlikely(!va))
