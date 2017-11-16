@@ -519,11 +519,11 @@ static int __ref do_freq_control(void)
 					continue;
 				}
 				limit_idx[cpu] -= msm_thermal_info.freq_step;
-				if (limit_idx[cpu] < thermal_limit_low[cpu])
+				if (limit_idx[cpu] <= thermal_limit_low[cpu])
 					limit_idx[cpu] = thermal_limit_low[cpu];
 				resolve_max_freq[cpu] = therm_table[limit_idx[cpu]].frequency;
 				hotplug_check_needed++;
-		} else if (freq_temp <= delta) {
+		} else if (freq_temp < delta) {
 				if (limit_idx[cpu] == MAX_IDX) {
 					resolve_max_freq[cpu] = is_display_on() ? policy.hlimit_max_screen_on : 
 										   policy.hlimit_max_screen_off;
@@ -582,7 +582,7 @@ static void __ref do_core_control(void)
 				if (ret)
 					pr_debug("cpu_down failed. you got problems\n");
 				cpumask_set_cpu(cpu, &cores_offlined_mask);
-		} else if (core_temp <= delta &&
+		} else if (core_temp < delta &&
 				   cpumask_test_cpu(cpu, &core_control_mask) &&
 				   cpumask_test_cpu(cpu, &cores_offlined_mask)) {
 				/* If this core is already online, then bring up the
