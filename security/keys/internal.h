@@ -15,6 +15,7 @@
 #include <linux/sched.h>
 #include <linux/key-type.h>
 #include <linux/task_work.h>
+#include <linux/wait_bit.h>
 
 struct iovec;
 
