@@ -55,7 +55,8 @@ static int limit_idx[NR_CPUS];
 static int thermal_limit_low[NR_CPUS];
 static unsigned int resolve_max_freq[NR_CPUS];
 
-static uint32_t msm_sens_id[NR_CPUS] = { 7, 8, 9, 10 };
+static const uint32_t soc_sens_id = 0;
+static const uint32_t msm_sens_id[NR_CPUS] = { 7, 8, 9, 10 };
 
 static struct delayed_work check_temp_work;
 static struct work_struct get_table_work;
@@ -471,6 +472,29 @@ static long evaluate_temp(unsigned int cpu)
 		return -EINVAL;
 
 	tsens_dev.sensor_num = msm_sens_id[cpu];
+	ret = tsens_get_temp(&tsens_dev, &temp);
+	if (!temp || ret) {
+		pr_err("%s: Unable to read TSENS sensor %u\n",
+				KBUILD_MODNAME, tsens_dev.sensor_num);
+		return -EINVAL;
+	}
+
+	if (unlikely(temp > SHUTOFF_TEMP))
+		orderly_poweroff(true);
+
+	return temp;
+}
+
+static long evaluate_any_temp(uint32_t sens_id)
+{
+	struct tsens_device tsens_dev;
+	long temp;
+	int ret = 0;
+
+	if (thermal_suspended)
+		return -EINVAL;
+
+	tsens_dev.sensor_num = sens_id;
 	ret = tsens_get_temp(&tsens_dev, &temp);
 	if (!temp || ret) {
 		pr_err("%s: Unable to read TSENS sensor %u\n",
