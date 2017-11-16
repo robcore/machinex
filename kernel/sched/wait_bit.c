@@ -2,8 +2,7 @@
  * The implementation of the wait_bit*() and related waiting APIs:
  */
 #include <linux/wait_bit.h>
-#include <linux/sched/signal.h>
-#include <linux/sched/debug.h>
+#include <linux/sched.h>
 #include <linux/hash.h>
 
 #define WAIT_TABLE_BITS 8
