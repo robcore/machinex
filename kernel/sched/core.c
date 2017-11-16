@@ -5667,6 +5667,8 @@ void __init sched_init(void)
 
 	sched_clock_init();
 
+	wait_bit_init();
+
 #ifdef CONFIG_FAIR_GROUP_SCHED
 	alloc_size += 2 * nr_cpu_ids * sizeof(void **);
 #endif
