@@ -59,7 +59,7 @@ struct worker {
  */
 static inline struct worker *current_wq_worker(void)
 {
-	if (current->flags & PF_WQ_WORKER)
+	if (in_task() && (current->flags & PF_WQ_WORKER))
 		return kthread_data(current);
 	return NULL;
 }

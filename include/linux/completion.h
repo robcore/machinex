@@ -9,6 +9,9 @@
  */
 
 #include <linux/wait.h>
+#ifdef CONFIG_LOCKDEP_COMPLETIONS
+#include <linux/lockdep.h>
+#endif
 
 /*
  * struct completion - structure used to maintain state for a "completion"
@@ -25,13 +28,64 @@
 struct completion {
 	unsigned int done;
 	wait_queue_head_t wait;
+#ifdef CONFIG_LOCKDEP_COMPLETIONS
+	struct lockdep_map_cross map;
+#endif
 };
 
+#ifdef CONFIG_LOCKDEP_COMPLETIONS
+static inline void complete_acquire(struct completion *x)
+{
+	lock_acquire_exclusive((struct lockdep_map *)&x->map, 0, 0, NULL, _RET_IP_);
+}
+
+static inline void complete_release(struct completion *x)
+{
+	lock_release((struct lockdep_map *)&x->map, 0, _RET_IP_);
+}
+
+static inline void complete_release_commit(struct completion *x)
+{
+	lock_commit_crosslock((struct lockdep_map *)&x->map);
+}
+
+#define init_completion_map(x, m)					\
+do {									\
+	lockdep_init_map_crosslock((struct lockdep_map *)&(x)->map,	\
+			(m)->name, (m)->key, 0);				\
+	__init_completion(x);						\
+} while (0)
+
+#define init_completion(x)						\
+do {									\
+	static struct lock_class_key __key;				\
+	lockdep_init_map_crosslock((struct lockdep_map *)&(x)->map,	\
+			"(completion)" #x,				\
+			&__key, 0);					\
+	__init_completion(x);						\
+} while (0)
+#else
+#define init_completion_map(x, m) __init_completion(x)
+#define init_completion(x) __init_completion(x)
+static inline void complete_acquire(struct completion *x) {}
+static inline void complete_release(struct completion *x) {}
+static inline void complete_release_commit(struct completion *x) {}
+#endif
+
+#ifdef CONFIG_LOCKDEP_COMPLETIONS
+#define COMPLETION_INITIALIZER(work) \
+	{ 0, __WAIT_QUEUE_HEAD_INITIALIZER((work).wait), \
+	STATIC_CROSS_LOCKDEP_MAP_INIT("(completion)" #work, &(work)) }
+#else
 #define COMPLETION_INITIALIZER(work) \
 	{ 0, __WAIT_QUEUE_HEAD_INITIALIZER((work).wait) }
+#endif
+
+#define COMPLETION_INITIALIZER_ONSTACK_MAP(work, map) \
+	(*({ init_completion_map(&(work), &(map)); &(work); }))
 
 #define COMPLETION_INITIALIZER_ONSTACK(work) \
-	({ init_completion(&work); work; })
+	(*({ init_completion(&work); &work; }))
 
 /**
  * DECLARE_COMPLETION - declare and initialize a completion structure
@@ -59,8 +113,11 @@ struct completion {
 #ifdef CONFIG_LOCKDEP
 # define DECLARE_COMPLETION_ONSTACK(work) \
 	struct completion work = COMPLETION_INITIALIZER_ONSTACK(work)
+# define DECLARE_COMPLETION_ONSTACK_MAP(work, map) \
+	struct completion work = COMPLETION_INITIALIZER_ONSTACK_MAP(work, map)
 #else
 # define DECLARE_COMPLETION_ONSTACK(work) DECLARE_COMPLETION(work)
+# define DECLARE_COMPLETION_ONSTACK_MAP(work, map) DECLARE_COMPLETION(work)
 #endif
 
 /**
@@ -70,7 +127,7 @@ struct completion {
  * This inline function will initialize a dynamically created completion
  * structure.
  */
-static inline void init_completion(struct completion *x)
+static inline void __init_completion(struct completion *x)
 {
 	x->done = 0;
 	init_waitqueue_head(&x->wait);
@@ -105,15 +162,5 @@ extern bool completion_done(struct completion *x);
 
 extern void complete(struct completion *);
 extern void complete_all(struct completion *);
-
-/**
- * INIT_COMPLETION - reinitialize a completion structure
- * @x:  completion structure to be reinitialized
- *
- * This macro should be used to reinitialize a completion structure so it can
- * be reused. This is especially important after complete_all() is used.
- */
-#define INIT_COMPLETION(x)	((x).done = 0)
-
 
 #endif

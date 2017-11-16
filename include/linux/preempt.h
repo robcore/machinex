@@ -120,6 +120,9 @@ do { \
 	preempt_check_resched_context(); \
 } while (0)
 
+#define in_task()		(!(preempt_count() & \
+				   (NMI_MASK | HARDIRQ_MASK | SOFTIRQ_OFFSET)))
+
 #else /* !CONFIG_PREEMPT_COUNT */
 
 /*
