@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 #ifndef _LINUX_WAIT_H
 #define _LINUX_WAIT_H
 /*
@@ -6,6 +7,7 @@
 #include <linux/list.h>
 #include <linux/stddef.h>
 #include <linux/spinlock.h>
+
 #include <asm/current.h>
 #include <uapi/linux/wait.h>
 
@@ -17,6 +19,7 @@ int default_wake_function(struct wait_queue_entry *wq_entry, unsigned mode, int 
 /* wait_queue_entry::flags */
 #define WQ_FLAG_EXCLUSIVE	0x01
 #define WQ_FLAG_WOKEN		0x02
+#define WQ_FLAG_BOOKMARK	0x04
 
 /*
  * A single wait-queue entry structure:
@@ -88,6 +91,36 @@ init_waitqueue_func_entry(struct wait_queue_entry *wq_entry, wait_queue_func_t f
 	wq_entry->func		= func;
 }
 
+/**
+ * waitqueue_active -- locklessly test for waiters on the queue
+ * @wq_head: the waitqueue to test for waiters
+ *
+ * returns true if the wait list is not empty
+ *
+ * NOTE: this function is lockless and requires care, incorrect usage _will_
+ * lead to sporadic and non-obvious failure.
+ *
+ * Use either while holding wait_queue_head::lock or when used for wakeups
+ * with an extra smp_mb() like:
+ *
+ *      CPU0 - waker                    CPU1 - waiter
+ *
+ *                                      for (;;) {
+ *      @cond = true;                     prepare_to_wait(&wq_head, &wait, state);
+ *      smp_mb();                         // smp_mb() from set_current_state()
+ *      if (waitqueue_active(wq_head))         if (@cond)
+ *        wake_up(wq_head);                      break;
+ *                                        schedule();
+ *                                      }
+ *                                      finish_wait(&wq_head, &wait);
+ *
+ * Because without the explicit smp_mb() it's possible for the
+ * waitqueue_active() load to get hoisted over the @cond store such that we'll
+ * observe an empty wait list while the waiter might not observe @cond.
+ *
+ * Also note that this 'optimization' trades a spin_lock() for an smp_mb(),
+ * which (when the lock is uncontended) are of roughly equal cost.
+ */
 static inline int waitqueue_active(struct wait_queue_head *wq_head)
 {
 	return !list_empty(&wq_head->head);
@@ -153,6 +186,8 @@ __remove_wait_queue(struct wait_queue_head *wq_head, struct wait_queue_entry *wq
 
 void __wake_up(struct wait_queue_head *wq_head, unsigned int mode, int nr, void *key);
 void __wake_up_locked_key(struct wait_queue_head *wq_head, unsigned int mode, void *key);
+void __wake_up_locked_key_bookmark(struct wait_queue_head *wq_head,
+		unsigned int mode, void *key, wait_queue_entry_t *bookmark);
 void __wake_up_sync_key(struct wait_queue_head *wq_head, unsigned int mode, int nr, void *key);
 void __wake_up_locked(struct wait_queue_head *wq_head, unsigned int mode, int nr);
 void __wake_up_sync(struct wait_queue_head *wq_head, unsigned int mode, int nr);
@@ -206,108 +241,108 @@ extern void init_wait_entry(struct wait_queue_entry *wq_entry, int flags);
  * otherwise.
  */
 
-#define ___wait_event(wq, condition, state, exclusive, ret, cmd)	\
-({									\
-	__label__ __out;						\
-	struct wait_queue_entry __wq_entry;				\
-	long __ret = ret;	/* explicit shadow */			\
-									\
-	init_wait_entry(&__wq_entry, exclusive ? WQ_FLAG_EXCLUSIVE : 0);\
-	for (;;) {							\
-		long __int = prepare_to_wait_event(&wq, &__wq_entry, state);\
-									\
-		if (condition)						\
-			break;						\
-									\
-		if (___wait_is_interruptible(state) && __int) {		\
-			__ret = __int;					\
-			goto __out;					\
-		}							\
-									\
-		cmd;							\
-	}								\
-	finish_wait(&wq, &__wq_entry);					\
-__out:	__ret;								\
+#define ___wait_event(wq_head, condition, state, exclusive, ret, cmd)		\
+({										\
+	__label__ __out;							\
+	struct wait_queue_entry __wq_entry;					\
+	long __ret = ret;	/* explicit shadow */				\
+										\
+	init_wait_entry(&__wq_entry, exclusive ? WQ_FLAG_EXCLUSIVE : 0);	\
+	for (;;) {								\
+		long __int = prepare_to_wait_event(&wq_head, &__wq_entry, state);\
+										\
+		if (condition)							\
+			break;							\
+										\
+		if (___wait_is_interruptible(state) && __int) {			\
+			__ret = __int;						\
+			goto __out;						\
+		}								\
+										\
+		cmd;								\
+	}									\
+	finish_wait(&wq_head, &__wq_entry);					\
+__out:	__ret;									\
 })
 
-#define __wait_event(wq, condition)					\
-	(void)___wait_event(wq, condition, TASK_UNINTERRUPTIBLE, 0, 0,	\
+#define __wait_event(wq_head, condition)					\
+	(void)___wait_event(wq_head, condition, TASK_UNINTERRUPTIBLE, 0, 0,	\
 			    schedule())
 
 /**
  * wait_event - sleep until a condition gets true
- * @wq: the waitqueue to wait on
+ * @wq_head: the waitqueue to wait on
  * @condition: a C expression for the event to wait for
  *
  * The process is put to sleep (TASK_UNINTERRUPTIBLE) until the
  * @condition evaluates to true. The @condition is checked each time
- * the waitqueue @wq is woken up.
+ * the waitqueue @wq_head is woken up.
  *
  * wake_up() has to be called after changing any variable that could
  * change the result of the wait condition.
  */
-#define wait_event(wq, condition)					\
-do {									\
-	might_sleep();							\
-	if (condition)							\
-		break;							\
-	__wait_event(wq, condition);					\
+#define wait_event(wq_head, condition)						\
+do {										\
+	might_sleep();								\
+	if (condition)								\
+		break;								\
+	__wait_event(wq_head, condition);					\
 } while (0)
 
-#define __io_wait_event(wq, condition)					\
-	(void)___wait_event(wq, condition, TASK_UNINTERRUPTIBLE, 0, 0,	\
+#define __io_wait_event(wq_head, condition)					\
+	(void)___wait_event(wq_head, condition, TASK_UNINTERRUPTIBLE, 0, 0,	\
 			    io_schedule())
 
 /*
  * io_wait_event() -- like wait_event() but with io_schedule()
  */
-#define io_wait_event(wq, condition)					\
-do {									\
-	might_sleep();							\
-	if (condition)							\
-		break;							\
-	__io_wait_event(wq, condition);					\
+#define io_wait_event(wq_head, condition)					\
+do {										\
+	might_sleep();								\
+	if (condition)								\
+		break;								\
+	__io_wait_event(wq_head, condition);					\
 } while (0)
 
-#define __wait_event_freezable(wq, condition)				\
-	___wait_event(wq, condition, TASK_INTERRUPTIBLE, 0, 0,		\
+#define __wait_event_freezable(wq_head, condition)				\
+	___wait_event(wq_head, condition, TASK_INTERRUPTIBLE, 0, 0,		\
 			    schedule(); try_to_freeze())
 
 /**
- * wait_event - sleep (or freeze) until a condition gets true
- * @wq: the waitqueue to wait on
+ * wait_event_freezable - sleep (or freeze) until a condition gets true
+ * @wq_head: the waitqueue to wait on
  * @condition: a C expression for the event to wait for
  *
  * The process is put to sleep (TASK_INTERRUPTIBLE -- so as not to contribute
  * to system load) until the @condition evaluates to true. The
- * @condition is checked each time the waitqueue @wq is woken up.
+ * @condition is checked each time the waitqueue @wq_head is woken up.
  *
  * wake_up() has to be called after changing any variable that could
  * change the result of the wait condition.
  */
-#define wait_event_freezable(wq, condition)				\
-({									\
-	int __ret = 0;							\
-	might_sleep();							\
-	if (!(condition))						\
-		__ret = __wait_event_freezable(wq, condition);		\
-	__ret;								\
+#define wait_event_freezable(wq_head, condition)				\
+({										\
+	int __ret = 0;								\
+	might_sleep();								\
+	if (!(condition))							\
+		__ret = __wait_event_freezable(wq_head, condition);		\
+	__ret;									\
 })
 
-#define __wait_event_timeout(wq, condition, timeout)			\
-	___wait_event(wq, ___wait_cond_timeout(condition),		\
-		      TASK_UNINTERRUPTIBLE, 0, timeout,			\
+#define __wait_event_timeout(wq_head, condition, timeout)			\
+	___wait_event(wq_head, ___wait_cond_timeout(condition),			\
+		      TASK_UNINTERRUPTIBLE, 0, timeout,				\
 		      __ret = schedule_timeout(__ret))
 
 /**
  * wait_event_timeout - sleep until a condition gets true or a timeout elapses
- * @wq: the waitqueue to wait on
+ * @wq_head: the waitqueue to wait on
  * @condition: a C expression for the event to wait for
  * @timeout: timeout, in jiffies
  *
  * The process is put to sleep (TASK_UNINTERRUPTIBLE) until the
  * @condition evaluates to true. The @condition is checked each time
- * the waitqueue @wq is woken up.
+ * the waitqueue @wq_head is woken up.
  *
  * wake_up() has to be called after changing any variable that could
  * change the result of the wait condition.
@@ -436,22 +471,22 @@ do {										\
  * to %true before the @timeout elapsed, or -%ERESTARTSYS if it was
  * interrupted by a signal.
  */
-#define wait_event_interruptible_timeout(wq, condition, timeout)	\
-({									\
-	long __ret = timeout;						\
-	might_sleep();							\
-	if (!___wait_cond_timeout(condition))				\
-		__ret = __wait_event_interruptible_timeout(wq,		\
-						condition, timeout);	\
-	__ret;								\
+#define wait_event_interruptible_timeout(wq_head, condition, timeout)		\
+({										\
+	long __ret = timeout;							\
+	might_sleep();								\
+	if (!___wait_cond_timeout(condition))					\
+		__ret = __wait_event_interruptible_timeout(wq_head,		\
+						condition, timeout);		\
+	__ret;									\
 })
 
-#define __wait_io_event_interruptible(wq, condition, ret)		\
+#define __wait_io_event_interruptible(wq_head, condition, ret)		\
 do {									\
 	DEFINE_WAIT(__wait);						\
 									\
 	for (;;) {							\
-		prepare_to_wait(&wq, &__wait, TASK_INTERRUPTIBLE);	\
+		prepare_to_wait(&wq_head, &__wait, TASK_INTERRUPTIBLE);	\
 		if (condition)						\
 			break;						\
 		if (!signal_pending(current)) {				\
@@ -461,7 +496,7 @@ do {									\
 		ret = -ERESTARTSYS;					\
 		break;							\
 	}								\
-	finish_wait(&wq, &__wait);					\
+	finish_wait(&wq_head, &__wait);					\
 } while (0)
 
 /**
@@ -479,20 +514,20 @@ do {									\
  * The function will return -ERESTARTSYS if it was interrupted by a
  * signal and 0 if @condition evaluated to true.
  */
-#define wait_io_event_interruptible(wq, condition)			\
+#define wait_io_event_interruptible(wq_head, condition)			\
 ({									\
 	int __ret = 0;							\
 	if (!(condition))						\
-		__wait_io_event_interruptible(wq, condition, __ret);	\
+		__wait_io_event_interruptible(wq_head, condition, __ret);	\
 	__ret;								\
 })
 
-#define __wait_io_event_interruptible_timeout(wq, condition, ret)	\
+#define __wait_io_event_interruptible_timeout(wq_head, condition, ret)	\
 do {									\
 	DEFINE_WAIT(__wait);						\
 									\
 	for (;;) {							\
-		prepare_to_wait(&wq, &__wait, TASK_INTERRUPTIBLE);	\
+		prepare_to_wait(&wq_head, &__wait, TASK_INTERRUPTIBLE);	\
 		if (condition)						\
 			break;						\
 		if (!signal_pending(current)) {				\
@@ -504,7 +539,7 @@ do {									\
 		ret = -ERESTARTSYS;					\
 		break;							\
 	}								\
-	finish_wait(&wq, &__wait);					\
+	finish_wait(&wq_head, &__wait);					\
 } while (0)
 
 /**
@@ -525,48 +560,47 @@ do {									\
  * if the condition evaluated to true before the timeout elapsed.
  */
 
-#define wait_io_event_interruptible_timeout(wq, condition, timeout)	\
+#define wait_io_event_interruptible_timeout(wq_head, condition, timeout)	\
 ({									\
 	long __ret = timeout;						\
 	if (!(condition))						\
-		__wait_io_event_interruptible_timeout(wq, condition, __ret); \
+		__wait_io_event_interruptible_timeout(wq_head, condition, __ret); \
 	__ret;								\
 })
 
-#define __wait_event_hrtimeout(wq, condition, timeout, state)		\
-({									\
-	int __ret = 0;							\
-	struct hrtimer_sleeper __t;					\
-									\
-	hrtimer_init_on_stack(&__t.timer, CLOCK_MONOTONIC,		\
-			      HRTIMER_MODE_REL);			\
-	hrtimer_init_sleeper(&__t, current);				\
-	if ((timeout) != KTIME_MAX)				\
-		hrtimer_start_range_ns(&__t.timer, timeout,		\
-				       current->timer_slack_ns,		\
-				       HRTIMER_MODE_REL);		\
-									\
-	__ret = ___wait_event(wq, condition, state, 0, 0,		\
-		if (!__t.task) {					\
-			__ret = -ETIME;					\
-			break;						\
-		}							\
-		schedule());						\
-									\
-	hrtimer_cancel(&__t.timer);					\
-	destroy_hrtimer_on_stack(&__t.timer);				\
-	__ret;								\
+#define __wait_event_hrtimeout(wq_head, condition, timeout, state)		\
+({										\
+	int __ret = 0;								\
+	struct hrtimer_sleeper __t;						\
+										\
+	hrtimer_init_on_stack(&__t.timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);	\
+	hrtimer_init_sleeper(&__t, current);					\
+	if ((timeout) != KTIME_MAX)						\
+		hrtimer_start_range_ns(&__t.timer, timeout,			\
+				       current->timer_slack_ns,			\
+				       HRTIMER_MODE_REL);			\
+										\
+	__ret = ___wait_event(wq_head, condition, state, 0, 0,			\
+		if (!__t.task) {						\
+			__ret = -ETIME;						\
+			break;							\
+		}								\
+		schedule());							\
+										\
+	hrtimer_cancel(&__t.timer);						\
+	destroy_hrtimer_on_stack(&__t.timer);					\
+	__ret;									\
 })
 
 /**
  * wait_event_hrtimeout - sleep until a condition gets true or a timeout elapses
- * @wq: the waitqueue to wait on
+ * @wq_head: the waitqueue to wait on
  * @condition: a C expression for the event to wait for
  * @timeout: timeout, as a ktime_t
  *
  * The process is put to sleep (TASK_UNINTERRUPTIBLE) until the
  * @condition evaluates to true or a signal is received.
- * The @condition is checked each time the waitqueue @wq is woken up.
+ * The @condition is checked each time the waitqueue @wq_head is woken up.
  *
  * wake_up() has to be called after changing any variable that could
  * change the result of the wait condition.
@@ -586,13 +620,13 @@ do {									\
 
 /**
  * wait_event_interruptible_hrtimeout - sleep until a condition gets true or a timeout elapses
- * @wq_head: the waitqueue to wait on
+ * @wq: the waitqueue to wait on
  * @condition: a C expression for the event to wait for
  * @timeout: timeout, as a ktime_t
  *
  * The process is put to sleep (TASK_INTERRUPTIBLE) until the
  * @condition evaluates to true or a signal is received.
- * The @condition is checked each time the waitqueue @wq_head is woken up.
+ * The @condition is checked each time the waitqueue @wq is woken up.
  *
  * wake_up() has to be called after changing any variable that could
  * change the result of the wait condition.
@@ -600,86 +634,73 @@ do {									\
  * The function returns 0 if @condition became true, -ERESTARTSYS if it was
  * interrupted by a signal, or -ETIME if the timeout elapsed.
  */
-#define wait_event_interruptible_hrtimeout(wq, condition, timeout)	\
-({									\
-	long __ret = 0;							\
-	might_sleep();							\
-	if (!(condition))						\
-		__ret = __wait_event_hrtimeout(wq, condition, timeout,	\
-					       TASK_INTERRUPTIBLE);	\
-	__ret;								\
+#define wait_event_interruptible_hrtimeout(wq, condition, timeout)		\
+({										\
+	long __ret = 0;								\
+	might_sleep();								\
+	if (!(condition))							\
+		__ret = __wait_event_hrtimeout(wq, condition, timeout,		\
+					       TASK_INTERRUPTIBLE);		\
+	__ret;									\
 })
 
-#define __wait_event_interruptible_exclusive(wq, condition)		\
-	___wait_event(wq, condition, TASK_INTERRUPTIBLE, 1, 0,		\
+#define __wait_event_interruptible_exclusive(wq, condition)			\
+	___wait_event(wq, condition, TASK_INTERRUPTIBLE, 1, 0,			\
 		      schedule())
 
-#define wait_event_interruptible_exclusive(wq, condition)		\
-({									\
-	int __ret = 0;							\
-	might_sleep();							\
-	if (!(condition))						\
-		__ret = __wait_event_interruptible_exclusive(wq, condition);\
-	__ret;								\
+#define wait_event_interruptible_exclusive(wq, condition)			\
+({										\
+	int __ret = 0;								\
+	might_sleep();								\
+	if (!(condition))							\
+		__ret = __wait_event_interruptible_exclusive(wq, condition);	\
+	__ret;									\
 })
 
-#define __wait_event_killable_exclusive(wq, condition)			\
-	___wait_event(wq, condition, TASK_KILLABLE, 1, 0,		\
+#define __wait_event_killable_exclusive(wq, condition)				\
+	___wait_event(wq, condition, TASK_KILLABLE, 1, 0,			\
 		      schedule())
 
-#define wait_event_killable_exclusive(wq, condition)			\
-({									\
-	int __ret = 0;							\
-	might_sleep();							\
-	if (!(condition))						\
-		__ret = __wait_event_killable_exclusive(wq, condition);	\
-	__ret;								\
-})
-
-#define __wait_event_killable_exclusive(wq, condition)			\
-	___wait_event(wq, condition, TASK_KILLABLE, 1, 0,		\
-		      schedule())
-
-#define wait_event_killable_exclusive(wq, condition)			\
-({									\
-	int __ret = 0;							\
-	might_sleep();							\
-	if (!(condition))						\
-		__ret = __wait_event_killable_exclusive(wq, condition);	\
-	__ret;								\
+#define wait_event_killable_exclusive(wq, condition)				\
+({										\
+	int __ret = 0;								\
+	might_sleep();								\
+	if (!(condition))							\
+		__ret = __wait_event_killable_exclusive(wq, condition);		\
+	__ret;									\
 })
 
 
-#define __wait_event_freezable_exclusive(wq, condition)			\
-	___wait_event(wq, condition, TASK_INTERRUPTIBLE, 1, 0,		\
+#define __wait_event_freezable_exclusive(wq, condition)				\
+	___wait_event(wq, condition, TASK_INTERRUPTIBLE, 1, 0,			\
 			schedule(); try_to_freeze())
 
-#define wait_event_freezable_exclusive(wq, condition)			\
-({									\
-	int __ret = 0;							\
-	might_sleep();							\
-	if (!(condition))						\
-		__ret = __wait_event_freezable_exclusive(wq, condition);\
-	__ret;								\
+#define wait_event_freezable_exclusive(wq, condition)				\
+({										\
+	int __ret = 0;								\
+	might_sleep();								\
+	if (!(condition))							\
+		__ret = __wait_event_freezable_exclusive(wq, condition);	\
+	__ret;									\
 })
 
 extern int do_wait_intr(wait_queue_head_t *, wait_queue_entry_t *);
 extern int do_wait_intr_irq(wait_queue_head_t *, wait_queue_entry_t *);
 
-#define __wait_event_interruptible_locked(wq, condition, exclusive, fn) \
-({									\
-	int __ret;							\
-	DEFINE_WAIT(__wait);						\
-	if (exclusive)							\
-		__wait.flags |= WQ_FLAG_EXCLUSIVE;			\
-	do {								\
-		__ret = fn(&(wq), &__wait);				\
-		if (__ret)						\
-			break;						\
-	} while (!(condition));						\
-	__remove_wait_queue(&(wq), &__wait);				\
-	__set_current_state(TASK_RUNNING);				\
-	__ret;								\
+#define __wait_event_interruptible_locked(wq, condition, exclusive, fn)		\
+({										\
+	int __ret;								\
+	DEFINE_WAIT(__wait);							\
+	if (exclusive)								\
+		__wait.flags |= WQ_FLAG_EXCLUSIVE;				\
+	do {									\
+		__ret = fn(&(wq), &__wait);					\
+		if (__ret)							\
+			break;							\
+	} while (!(condition));							\
+	__remove_wait_queue(&(wq), &__wait);					\
+	__set_current_state(TASK_RUNNING);					\
+	__ret;									\
 })
 
 
@@ -805,12 +826,12 @@ extern int do_wait_intr_irq(wait_queue_head_t *, wait_queue_entry_t *);
 
 /**
  * wait_event_killable - sleep until a condition gets true
- * @wq: the waitqueue to wait on
+ * @wq_head: the waitqueue to wait on
  * @condition: a C expression for the event to wait for
  *
  * The process is put to sleep (TASK_KILLABLE) until the
  * @condition evaluates to true or a signal is received.
- * The @condition is checked each time the waitqueue @wq is woken up.
+ * The @condition is checked each time the waitqueue @wq_head is woken up.
  *
  * wake_up() has to be called after changing any variable that could
  * change the result of the wait condition.
@@ -824,6 +845,43 @@ extern int do_wait_intr_irq(wait_queue_head_t *, wait_queue_entry_t *);
 	might_sleep();								\
 	if (!(condition))							\
 		__ret = __wait_event_killable(wq_head, condition);		\
+	__ret;									\
+})
+
+#define __wait_event_killable_timeout(wq_head, condition, timeout)		\
+	___wait_event(wq_head, ___wait_cond_timeout(condition),			\
+		      TASK_KILLABLE, 0, timeout,				\
+		      __ret = schedule_timeout(__ret))
+
+/**
+ * wait_event_killable_timeout - sleep until a condition gets true or a timeout elapses
+ * @wq_head: the waitqueue to wait on
+ * @condition: a C expression for the event to wait for
+ * @timeout: timeout, in jiffies
+ *
+ * The process is put to sleep (TASK_KILLABLE) until the
+ * @condition evaluates to true or a kill signal is received.
+ * The @condition is checked each time the waitqueue @wq_head is woken up.
+ *
+ * wake_up() has to be called after changing any variable that could
+ * change the result of the wait condition.
+ *
+ * Returns:
+ * 0 if the @condition evaluated to %false after the @timeout elapsed,
+ * 1 if the @condition evaluated to %true after the @timeout elapsed,
+ * the remaining jiffies (at least 1) if the @condition evaluated
+ * to %true before the @timeout elapsed, or -%ERESTARTSYS if it was
+ * interrupted by a kill signal.
+ *
+ * Only kill signals interrupt this process.
+ */
+#define wait_event_killable_timeout(wq_head, condition, timeout)		\
+({										\
+	long __ret = timeout;							\
+	might_sleep();								\
+	if (!___wait_cond_timeout(condition))					\
+		__ret = __wait_event_killable_timeout(wq_head,			\
+						condition, timeout);		\
 	__ret;									\
 })
 
@@ -1006,7 +1064,6 @@ do {										\
 					wq_head, condition, lock, timeout);	\
 	__ret;									\
 })
-
 
 /*
  * Waitqueues which are removed from the waitqueue_head at wakeup time

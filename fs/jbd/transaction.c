@@ -26,6 +26,7 @@
 #include <linux/mm.h>
 #include <linux/highmem.h>
 #include <linux/hrtimer.h>
+#include <linux/wait.h>
 
 static void __journal_temp_unlink_buffer(struct journal_head *jh);
 
@@ -642,13 +643,13 @@ repeat:
 			jbd_unlock_bh_state(bh);
 			/* commit wakes up all shadow buffers after IO */
 			for ( ; ; ) {
-				prepare_to_wait(wqh, &wait.wait,
+				prepare_to_wait(wqh, &wait.wq_entry,
 						TASK_UNINTERRUPTIBLE);
 				if (jh->b_jlist != BJ_Shadow)
 					break;
 				schedule();
 			}
-			finish_wait(wqh, &wait.wait);
+			finish_wait(wqh, &wait.wq_entry);
 			goto repeat;
 		}
 
