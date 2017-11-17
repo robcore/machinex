@@ -1039,32 +1039,6 @@ void acpuclk_set_vdd(unsigned int khz, int vdd_uv) {
 }
 #endif	/* CONFIG_CPU_VOTALGE_TABLE */
 
-static struct cpufreq_frequency_table freq_table[NR_CPUS][35];
-static struct cpufreq_frequency_table *
-machinex_freq_table(void)
-{
-	int cpu;
-	for_each_possible_cpu(cpu) {
-		int i, freq_cnt = 0;
-		/* Construct the freq_table tables from freq_table. */
-		for (i = 0; drv.freq_table[i].speed.khz != 0
-				&& freq_cnt < ARRAY_SIZE(*freq_table)-1; i++) {
-			if (drv.freq_table[i].use_for_scaling) {
-				freq_table[cpu][freq_cnt].driver_data = freq_cnt;
-				freq_table[cpu][freq_cnt].frequency
-					= drv.freq_table[i].speed.khz;
-				freq_cnt++;
-			}
-		}
-		/* freq_table not big enough to store all usable freqs. */
-		BUG_ON(drv.freq_table[i].speed.khz != 0);
-
-		freq_table[cpu][freq_cnt].driver_data = freq_cnt;
-		freq_table[cpu][freq_cnt].frequency = CPUFREQ_TABLE_END;
-	}
-	/* Register table with CPUFreq. */
-	return freq_table[0];
-}
 static void __init cpufreq_table_init(void)
 {
 	pr_info("CPU Driver Init\n");
@@ -1096,7 +1070,7 @@ static int acpuclk_cpu_callback(struct notifier_block *nfb,
 		/* Fall through. */
 	case CPU_DEAD:
 	case CPU_UP_CANCELED:
-		acpuclk_krait_set_rate(cpu, hot_unplug_khz, SETRATE_HOTPLUG); /* cpufreq_freq_transition_begin/end(policy, &freqs, ret); ? */
+		acpuclk_krait_set_rate(cpu, hot_unplug_khz, SETRATE_HOTPLUG);
 		regulator_set_optimum_mode(sc->vreg[VREG_CORE].reg, 0);
 		break;
 	case CPU_UP_PREPARE:
@@ -1352,9 +1326,27 @@ static unsigned int msm_cpufreq_get_freq(unsigned int cpu)
 		return 0;
 }
 
+static struct cpufreq_frequency_table freq_table[] = {
+	{ .frequency = 384000 },
+	{ .frequency = 486000 },
+	{ .frequency = 594000 },
+	{ .frequency = 702000 },
+	{ .frequency = 810000 },
+	{ .frequency = 918000 },
+	{ .frequency = 1026000 },
+	{ .frequency = 1134000 },
+	{ .frequency = 1242000 },
+	{ .frequency = 1350000 },
+	{ .frequency = 1458000 },
+	{ .frequency = 1566000 },
+	{ .frequency = 1674000 },
+	{ .frequency = 1782000 },
+	{ .frequency = 1890000 },
+	{ .frequency = CPUFREQ_TABLE_END }
+};
+
 static int msm_cpufreq_init(struct cpufreq_policy *policy)
 {
-	struct cpufreq_frequency_table *mx_freq_table;
 	int ret = 0;
 
 	if (cpu_out_of_range(policy->cpu)) {
@@ -1367,15 +1359,11 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 		goto out;
 	}
 
-	mx_freq_table = machinex_freq_table();
-	ret = cpufreq_table_validate_and_show(policy, mx_freq_table);
+	ret = cpufreq_table_validate_and_show(policy, freq_table);
 	if (ret) {
 		pr_err("%s: invalid frequency table: %d\n", __func__, ret);
-		return ret;
+		goto out;
 	}
-
-	return 0;
-
 out:
 	return ret;
 }
