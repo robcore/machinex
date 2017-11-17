@@ -1613,6 +1613,37 @@ static void cpufreq_policy_free(struct cpufreq_policy *policy)
 	kfree(policy);
 }
 
+static void init_hardlimits(struct cpufreq_policy *policy)
+{
+	/*
+	 * First boot, set defaults because they haven't been set yet.
+	 */
+	if (!policy->hlimit_max_screen_on)
+		policy->hlimit_max_screen_on = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
+
+	if (!policy->hlimit_max_screen_off)
+		policy->hlimit_max_screen_off = CPUFREQ_HARDLIMIT_MAX_SCREEN_OFF_STOCK;
+
+	if (!policy->hlimit_min_screen_on)
+		policy->hlimit_min_screen_on = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
+
+	if (!policy->hlimit_min_screen_off)
+		policy->hlimit_min_screen_off = CPUFREQ_HARDLIMIT_MIN_SCREEN_OFF_STOCK;
+
+	if (!policy->curr_limit_max)
+		policy->curr_limit_max = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
+
+	if (!policy->curr_limit_min)
+		policy->curr_limit_min = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
+
+	if (!policy->input_boost_limit)
+		policy->input_boost_limit = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
+
+	if (!policy->limited_max_freq_thermal)
+		policy->limited_max_freq_thermal = is_display_on() ? CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK : 
+										   CPUFREQ_HARDLIMIT_MAX_SCREEN_OFF_STOCK;
+}
+
 static int cpufreq_online(unsigned int cpu)
 {
 	struct cpufreq_policy *policy;
@@ -1667,35 +1698,10 @@ static int cpufreq_online(unsigned int cpu)
 	 */
 	cpumask_and(policy->cpus, policy->cpus, cpu_online_mask);
 
-	/*
-	 * First boot, set defaults because they haven't been set yet.
-	 */
-	if (!policy->hlimit_max_screen_on)
-		policy->hlimit_max_screen_on = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
+	init_hardlimits(policy);
 
-	if (!policy->hlimit_max_screen_off)
-		policy->hlimit_max_screen_off = CPUFREQ_HARDLIMIT_MAX_SCREEN_OFF_STOCK;
-
-	if (!policy->hlimit_min_screen_on)
-		policy->hlimit_min_screen_on = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
-
-	if (!policy->hlimit_min_screen_off)
-		policy->hlimit_min_screen_off = CPUFREQ_HARDLIMIT_MIN_SCREEN_OFF_STOCK;
-
-	if (!policy->curr_limit_max)
-		policy->curr_limit_max = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
-
-	if (!policy->curr_limit_min)
-		policy->curr_limit_min = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
-
-	if (!policy->input_boost_limit)
-		policy->input_boost_limit = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
-
-	if (!policy->limited_max_freq_thermal)
-		policy->limited_max_freq_thermal = is_display_on() ? CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK : 
-										   CPUFREQ_HARDLIMIT_MAX_SCREEN_OFF_STOCK;
-
-	hardlimit_ready[policy->cpu] = 1;
+	if (!hardlimit_ready[policy->cpu])
+		hardlimit_ready[policy->cpu] = 1;
 
 	reapply_hard_limits(policy, false);
 
