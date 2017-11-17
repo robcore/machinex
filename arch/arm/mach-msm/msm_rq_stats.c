@@ -256,6 +256,10 @@ static int system_suspend_handler(struct notifier_block *nb,
 	return NOTIFY_OK;
 }
 
+static struct notifier_block rq_stats_pm_notifier = {
+	.notifier_call = system_suspend_handler,
+};
+
 static ssize_t hotplug_disable_show(struct kobject *kobj,
 				    struct kobj_attribute *attr, char *buf)
 {
@@ -457,21 +461,24 @@ static struct attribute_group rq_attr_group = {
 static int init_rq_attribs(void)
 {
 	int err;
+	unsigned int cpu;
 
 	rq_info.rq_avg = 0;
 	rq_info.attr_group = &rq_attr_group;
 
 	/* Create /sys/devices/system/cpu/cpu0/rq-stats/... */
-	rq_info.kobj = kobject_create_and_add("rq-stats",
-			&get_cpu_device(0)->kobj);
-	if (!rq_info.kobj)
-		return -ENOMEM;
+	for_each_possible_cpu(cpu) {
+		rq_info.kobj = kobject_create_and_add("rq-stats",
+				&get_cpu_device(cpu)->kobj);
+		if (!rq_info.kobj)
+			return -ENOMEM;
 
-	err = sysfs_create_group(rq_info.kobj, rq_info.attr_group);
-	if (err)
-		kobject_put(rq_info.kobj);
-	else
-		kobject_uevent(rq_info.kobj, KOBJ_ADD);
+		err = sysfs_create_group(rq_info.kobj, rq_info.attr_group);
+		if (err)
+			kobject_put(rq_info.kobj);
+		else
+			kobject_uevent(rq_info.kobj, KOBJ_ADD);
+	}
 
 	return err;
 }
@@ -481,12 +488,6 @@ static int __init msm_rq_stats_init(void)
 	int ret;
 	int i;
 	struct cpufreq_policy cpu_policy;
-
-#ifndef CONFIG_SMP
-	/* Bail out if this is not an SMP Target */
-	rq_info.init = 0;
-	return -ENOSYS;
-#endif
 
 	rq_wq = create_singlethread_workqueue("rq_stats");
 	BUG_ON(!rq_wq);
@@ -517,20 +518,7 @@ static int __init msm_rq_stats_init(void)
 	cpufreq_register_notifier(&freq_transition,
 					CPUFREQ_TRANSITION_NOTIFIER);
 	register_hotcpu_notifier(&cpu_hotplug);
-
+	register_pm_notifier(&rq_stats_pm_notifier);
 	return ret;
 }
 late_initcall(msm_rq_stats_init);
-
-static int __init msm_rq_stats_early_init(void)
-{
-#ifndef CONFIG_SMP
-	/* Bail out if this is not an SMP Target */
-	rq_info.init = 0;
-	return -ENOSYS;
-#endif
-
-	pm_notifier(system_suspend_handler, 0);
-	return 0;
-}
-core_initcall(msm_rq_stats_early_init);
