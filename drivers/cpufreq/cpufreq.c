@@ -32,29 +32,16 @@
 #include <linux/prometheus.h>
 #include <linux/display_state.h>
 
-#define DEFAULT_MAX_FREQ 1890000
-#define DEFAULT_MIN_FREQ 384000
-#define DEFAULT_INPUT_FREQ 1350000
 
 extern unsigned long acpuclk_get_rate(int cpu);
 extern ssize_t get_gpu_vdd_levels_str(char *buf);
 extern void set_gpu_vdd_levels(int uv_tbl[]);
 
 static unsigned int hardlimit_ready[NR_CPUS] = {0, 0, 0, 0};
-unsigned int curr_limit_max[NR_CPUS];
-unsigned int curr_limit_min[NR_CPUS];
-unsigned int hlimit_max_screen_on[NR_CPUS] = { DEFAULT_MAX_FREQ, DEFAULT_MAX_FREQ, DEFAULT_MAX_FREQ, DEFAULT_MAX_FREQ };
-unsigned int hlimit_max_screen_off[NR_CPUS] = { DEFAULT_MAX_FREQ, DEFAULT_MAX_FREQ, DEFAULT_MAX_FREQ, DEFAULT_MAX_FREQ };
-unsigned int hlimit_min_screen_on[NR_CPUS] = { DEFAULT_MIN_FREQ, DEFAULT_MIN_FREQ, DEFAULT_MIN_FREQ, DEFAULT_MIN_FREQ };
-unsigned int hlimit_min_screen_off[NR_CPUS] = { DEFAULT_MIN_FREQ, DEFAULT_MIN_FREQ, DEFAULT_MIN_FREQ, DEFAULT_MIN_FREQ };
-unsigned int curr_limit_max[NR_CPUS] = { DEFAULT_MAX_FREQ, DEFAULT_MAX_FREQ, DEFAULT_MAX_FREQ, DEFAULT_MAX_FREQ };
-unsigned int curr_limit_min[NR_CPUS] = { DEFAULT_MIN_FREQ, DEFAULT_MIN_FREQ, DEFAULT_MIN_FREQ, DEFAULT_MIN_FREQ };
-unsigned int input_boost_limit[NR_CPUS] = { DEFAULT_INPUT_FREQ, DEFAULT_INPUT_FREQ, DEFAULT_INPUT_FREQ, DEFAULT_INPUT_FREQ };
-unsigned int input_boost_freq[NR_CPUS] = { DEFAULT_INPUT_FREQ, DEFAULT_INPUT_FREQ, DEFAULT_INPUT_FREQ, DEFAULT_INPUT_FREQ };
-unsigned int limited_max_freq_thermal[NR_CPUS] = { DEFAULT_MAX_FREQ, DEFAULT_MAX_FREQ, DEFAULT_MAX_FREQ, DEFAULT_MAX_FREQ };
 unsigned int current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON;
-
+#define DEFAULT_INPUT_FREQ 1350000
 static struct workqueue_struct *cpu_boost_wq;
+
 static struct delayed_work input_boost_work;
 static struct delayed_work input_boost_rem;
 
@@ -69,8 +56,6 @@ static u64 last_input_time;
 
 static unsigned int min_input_interval = 200;
 module_param(min_input_interval, uint, 0644);
-static u64 min_interval;
-static u64 now;
 
 static LIST_HEAD(cpufreq_policy_list);
 
@@ -356,9 +341,9 @@ static bool thermal_disables_boost = true;
 module_param(thermal_disables_boost, bool, 0644);
 
 /* Update limits in cpufreq */
-static void reapply_hard_limits(unsigned int cpu, bool update_policy)
+static void reapply_hard_limits(struct cpufreq_policy *policy, bool update_policy)
 {
-	if (!hardlimit_ready[cpu])
+	if (!hardlimit_ready[policy->cpu])
 		return;
 
 	/* Recalculate the currently applicable min/max */
@@ -397,7 +382,7 @@ static void reapply_hard_limits(unsigned int cpu, bool update_policy)
 	policy->user_policy.max = policy->max = policy->curr_limit_max;
 
 	if (update_policy)
-		cpufreq_update_policy(cpu);
+		cpufreq_update_policy(policy->cpu);
 }
 EXPORT_SYMBOL(reapply_hard_limits);
 
@@ -476,6 +461,9 @@ static void do_input_boost(struct work_struct *work)
 	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_rem,
 					msecs_to_jiffies(input_boost_ms));
 }
+
+u64 min_interval;
+u64 now;
 
 void cpu_boost_event(void)
 {
