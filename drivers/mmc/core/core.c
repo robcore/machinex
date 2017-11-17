@@ -3544,7 +3544,7 @@ static int __init mmc_init(void)
 {
 	int ret;
 
-	mx_mmc = create_freezable_workqueue("mx_mmc_wq");
+	mx_mmc = create_singlethread_workqueue("mx_mmc");
 
 	if (!mx_mmc)
 		return -ENOMEM;

@@ -49,6 +49,11 @@
 #define QSEOS_VERSION_14		0x14
 #define QSEOS_CHECK_VERSION_CMD		0x00001803;
 
+#define QSEECOM_STATE_NOT_READY         0
+#define QSEECOM_STATE_SUSPEND           1
+#define QSEECOM_STATE_READY             2
+#define QSEECOM_ICE_FDE_KEY_SIZE_MASK   2
+
 enum qseecom_command_scm_resp_type {
 	QSEOS_APP_ID = 0xEE01,
 	QSEOS_LISTENER_ID
@@ -201,6 +206,7 @@ struct qseecom_control {
 	uint32_t          qseos_version;
 	struct device *pdev;
 	struct cdev cdev;
+	atomic_t qseecom_state;
 };
 
 struct qseecom_client_handle {
@@ -1592,6 +1598,12 @@ int qseecom_start_app(struct qseecom_handle **handle,
 	uint32_t len;
 	ion_phys_addr_t pa;
 
+	if (atomic_read(&qseecom.qseecom_state) != QSEECOM_STATE_READY) {
+		pr_debug("Not allowed to be called in %d state\n",
+				atomic_read(&qseecom.qseecom_state));
+		return -EPERM;
+	}
+
 	if (qseecom.qseos_version == QSEOS_VERSION_13) {
 		pr_debug("This functionality is UNSUPPORTED in version 1.3\n");
 		return -EINVAL;
@@ -1728,12 +1740,18 @@ int qseecom_shutdown_app(struct qseecom_handle **handle)
 	unsigned long flags = 0;
 	bool found_handle = false;
 
+	if (atomic_read(&qseecom.qseecom_state) != QSEECOM_STATE_READY) {
+		pr_debug("Not allowed to be called in %d state\n",
+				atomic_read(&qseecom.qseecom_state));
+		return -EPERM;
+	}
+
 	if (qseecom.qseos_version == QSEOS_VERSION_13) {
 		pr_debug("This functionality is UNSUPPORTED in version 1.3\n");
 		return -EINVAL;
 	}
 
-	if (*handle == NULL) {
+	if ((handle == NULL)  || (*handle == NULL)) {
 		pr_debug("Handle is not initialized\n");
 		return -EINVAL;
 	}
@@ -1770,6 +1788,12 @@ int qseecom_send_command(struct qseecom_handle *handle, void *send_buf,
 	int ret = 0;
 	struct qseecom_send_cmd_req req = {0, 0, 0, 0};
 	struct qseecom_dev_handle *data;
+
+	if (atomic_read(&qseecom.qseecom_state) != QSEECOM_STATE_READY) {
+		pr_debug("Not allowed to be called in %d state\n",
+				atomic_read(&qseecom.qseecom_state));
+		return -EPERM;
+	}
 
 	if (qseecom.qseos_version == QSEOS_VERSION_13) {
 		pr_debug("This functionality is UNSUPPORTED in version 1.3\n");
@@ -2574,6 +2598,7 @@ static int qseecom_probe(struct platform_device *pdev)
 
 	qsee_bw_count = 0;
 	qsee_perf_client = 0;
+	atomic_set(&qseecom.qseecom_state, QSEECOM_STATE_NOT_READY);
 
 	rc = alloc_chrdev_region(&qseecom_device_no, 0, 1, QSEECOM_DEV);
 	if (rc < 0) {
@@ -2654,6 +2679,8 @@ static int qseecom_probe(struct platform_device *pdev)
 
 	if (!qsee_perf_client)
 		pr_debug("Unable to register bus client\n");
+
+	atomic_set(&qseecom.qseecom_state, QSEECOM_STATE_READY);
 	return 0;
 
 exit_destroy_ion_client:
@@ -2675,6 +2702,7 @@ static int qseecom_remove(struct platform_device *pdev)
 	unsigned long flags = 0;
 	int ret = 0;
 
+	atomic_set(&qseecom.qseecom_state, QSEECOM_STATE_NOT_READY);
 	spin_lock_irqsave(&qseecom.registered_kclient_list_lock, flags);
 
 	list_for_each_entry(kclient, &qseecom.registered_kclient_list_head,
@@ -2727,6 +2755,18 @@ exit_irqrestore:
 	return ret;
 }
 
+static int qseecom_suspend(struct platform_device *pdev, pm_message_t state)
+{
+	atomic_set(&qseecom.qseecom_state, QSEECOM_STATE_SUSPEND);
+	return 0;
+}
+
+static int qseecom_resume(struct platform_device *pdev)
+{
+	atomic_set(&qseecom.qseecom_state, QSEECOM_STATE_READY);
+
+	return 0;
+}
 static struct of_device_id qseecom_match[] = {
 	{
 		.compatible = "qcom,qseecom",
@@ -2737,6 +2777,8 @@ static struct of_device_id qseecom_match[] = {
 static struct platform_driver qseecom_plat_driver = {
 	.probe = qseecom_probe,
 	.remove = qseecom_remove,
+	.suspend = qseecom_suspend,
+	.resume = qseecom_resume,
 	.driver = {
 		.name = "qseecom",
 		.owner = THIS_MODULE,
