@@ -139,9 +139,6 @@ struct kobject *get_governor_parent_kobj(struct cpufreq_policy *policy)
 }
 EXPORT_SYMBOL_GPL(get_governor_parent_kobj);
 
-static bool mx_governor_override = true;
-module_param(mx_governor_override, bool, 0644);
-
 enum {
 	ONDEMAND = 0,
 	CONSERVATIVE = 1,
