@@ -116,12 +116,6 @@ extern unsigned int mx_cpufreq_governor[NR_CPUS];
  */
 static BLOCKING_NOTIFIER_HEAD(cpufreq_policy_notifier_list);
 static struct srcu_notifier_head cpufreq_transition_notifier_list;
-/*
-static struct mxpol {
-	char hardname[CPUFREQ_NAME_LEN];
-};
-static DEFINE_PER_CPU(struct mxpol *, mxpolicy);
-*/
 static bool init_cpufreq_transition_notifier_list_called;
 static int __init init_cpufreq_transition_notifier_list(void)
 {
