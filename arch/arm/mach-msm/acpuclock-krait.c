@@ -1285,13 +1285,15 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 {
 	int ret = 0;
 	struct cpufreq_freqs freqs;
+	unsigned long new_freq_copy;
 
 	freqs.old = policy->cur;
 	freqs.new = new_freq;
 	freqs.cpu = policy->cpu;
 
 	cpufreq_freq_transition_begin(policy, &freqs);
-	ret = acpuclk_set_rate(policy->cpu, new_freq, SETRATE_CPUFREQ);
+	new_freq_copy = new_freq;
+	ret = acpuclk_set_rate(policy->cpu, new_freq_copy, SETRATE_CPUFREQ);
 	cpufreq_freq_transition_end(policy, &freqs, ret);
 
 	return ret;
@@ -1399,9 +1401,12 @@ static struct cpufreq_driver msm_cpufreq_driver = {
 
 static int __init msm_cpufreq_register(void)
 {
-	if (!cpufreq_register_driver(&msm_cpufreq_driver))
+	if (!cpufreq_register_driver(&msm_cpufreq_driver)) {
 		msm_thermal_init();
-	return 0;
+		return 0;
+	}
+
+	return -EINVAL;
 }
 
 late_initcall(msm_cpufreq_register);
