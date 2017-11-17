@@ -1331,6 +1331,9 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 	int index;
 	struct cpufreq_frequency_table *table;
 
+	if (target_freq == policy->cur)
+		goto done;
+
 	table = policy->freq_table;
 	index = cpufreq_frequency_table_target(policy,
 			target_freq,
