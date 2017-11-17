@@ -406,7 +406,7 @@ ssize_t get_gpu_vdd_levels_str(char *buf)
 void set_gpu_vdd_levels(int uv_tbl[])
 {
 	int i;
-	for (i = 1; i <= 3; i++)
+	for (i = 1; i < 4; i++)
 	{
 		vdd_uv[i] = uv_tbl[i - 1];
 	}
