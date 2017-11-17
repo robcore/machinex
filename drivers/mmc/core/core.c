@@ -349,7 +349,7 @@ void mmc_start_delayed_bkops(struct mmc_card *card)
 	 * it was removed from the queue work but not started yet
 	 */
 	card->bkops_info.cancel_delayed_work = false;
-	queue_delayed_work(mx_mmc, &card->bkops_info.dw,
+	mmc_schedule_delayed_work(&card->bkops_info.dw,
 			   msecs_to_jiffies(
 				   card->bkops_info.delay_ms));
 }
@@ -2592,7 +2592,7 @@ static void mmc_clk_scale_work(struct work_struct *work)
 
 	if (!mmc_try_claim_host(host)) {
 		/* retry after a timer tick */
-		queue_delayed_work(mx_mmc, &host->clk_scaling.work, 1);
+		mmc_schedule_delayed_work(&host->clk_scaling.work, 1);
 		goto out;
 	}
 
@@ -2747,8 +2747,7 @@ static void mmc_clk_scaling(struct mmc_host *host, bool from_wq)
 			 * work, so delay atleast one timer tick to release
 			 * host and re-claim while scaling down the clocks.
 			 */
-			queue_delayed_work(mx_mmc,
-					&host->clk_scaling.work, 1);
+			mmc_schedule_delayed_work(&host->clk_scaling.work, 1);
 			goto no_reset_stats;
 		}
 	}
@@ -3545,7 +3544,7 @@ static int __init mmc_init(void)
 {
 	int ret;
 
-	mx_mmc = create_singlethread_workqueue("_mx_mmc");
+	mx_mmc = create_freezable_workqueue("mx_mmc_wq");
 
 	if (!mx_mmc)
 		return -ENOMEM;
