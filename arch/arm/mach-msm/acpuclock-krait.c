@@ -1041,7 +1041,7 @@ void acpuclk_set_vdd(unsigned int khz, int vdd_uv) {
 
 static struct cpufreq_frequency_table freq_table[NR_CPUS][35];
 static struct cpufreq_frequency_table *
-machinex_freq_table(const struct cpufreq_policy *policy)
+machinex_freq_table(void)
 {
 	int cpu;
 	for_each_possible_cpu(cpu) {
@@ -1062,9 +1062,8 @@ machinex_freq_table(const struct cpufreq_policy *policy)
 		freq_table[cpu][freq_cnt].driver_data = freq_cnt;
 		freq_table[cpu][freq_cnt].frequency = CPUFREQ_TABLE_END;
 	}
-	cpu = cpumask_first(cpu_possible_mask);
 	/* Register table with CPUFreq. */
-	return freq_table[cpu];
+	return freq_table[0];
 }
 static void __init cpufreq_table_init(void)
 {
@@ -1365,7 +1364,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 		goto out;
 	}
 
-	mx_freq_table = machinex_freq_table(policy);
+	mx_freq_table = machinex_freq_table();
 
 	ret = cpufreq_table_validate_and_show(policy, mx_freq_table);
 	if (ret) {
