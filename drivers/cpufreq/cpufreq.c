@@ -32,7 +32,6 @@
 #include <linux/prometheus.h>
 #include <linux/display_state.h>
 
-
 extern unsigned long acpuclk_get_rate(int cpu);
 extern ssize_t get_gpu_vdd_levels_str(char *buf);
 extern void set_gpu_vdd_levels(int uv_tbl[]);
@@ -254,11 +253,8 @@ EXPORT_SYMBOL_GPL(cpufreq_cpu_get_raw);
 
 unsigned int cpufreq_generic_get(unsigned int cpu)
 {
-	struct cpufreq_policy *policy = cpufreq_cpu_get_raw(cpu);
-
-	if (!policy || !cpu_online(cpu)) {
+	if (!cpu_online(cpu))
 		return 0;
-	}
 
 	return acpuclk_get_rate(cpu);
 }
