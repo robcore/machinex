@@ -64,17 +64,8 @@ struct cpufreq_user_policy {
 	unsigned int		max;    /* in kHz */
 };
 #ifdef CONFIG_CPUFREQ_HARDLIMIT
-extern unsigned int curr_limit_max[NR_CPUS];
-extern unsigned int curr_limit_min[NR_CPUS];
-extern unsigned int hlimit_max_screen_on[NR_CPUS];
-extern unsigned int hlimit_max_screen_off[NR_CPUS];
-extern unsigned int hlimit_min_screen_on[NR_CPUS];
-extern unsigned int hlimit_min_screen_off[NR_CPUS];
-extern unsigned int curr_limit_max[NR_CPUS];
-extern unsigned int curr_limit_min[NR_CPUS];
-extern unsigned int input_boost_limit[NR_CPUS];
-extern unsigned int input_boost_freq[NR_CPUS];
-extern unsigned int limited_max_freq_thermal[NR_CPUS];
+extern unsigned int curr_limit_max;
+extern unsigned int curr_limit_min;
 extern unsigned int current_screen_state;
 #endif /* CONFIG_CPUFREQ_HARDLIMIT */
 
@@ -160,6 +151,15 @@ struct cpufreq_policy {
 
 	/* For cpufreq driver's internal use */
 	void			*driver_data;
+	unsigned int hlimit_max_screen_on;
+	unsigned int hlimit_max_screen_off;
+	unsigned int hlimit_min_screen_on;
+	unsigned int hlimit_min_screen_off;
+	unsigned int curr_limit_max;
+	unsigned int curr_limit_min;
+	unsigned int input_boost_limit;
+	unsigned int input_boost_freq;
+	unsigned int limited_max_freq_thermal;
 };
 
 /* Only for ACPI */
