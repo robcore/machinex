@@ -176,21 +176,6 @@ store_one_cpu3_clamp(sync_freq, 0, 1890000);
 store_one_cpu3_clamp(up_threshold_any_cpu_freq, 0, 1890000);
 store_cpu3_governor(mx_cpufreq_governor, 0, 7);
 
-#define MX_CPU0_ATTR_RW(_name) \
-static struct kobj_attribute cpu0_##_name##_attr = \
-	__ATTR(cpu0_##_name, 0644, show_cpu0_##_name, store_cpu0_##_name)
-
-#define MX_CPU1_ATTR_RW(_name) \
-static struct kobj_attribute cpu1_##_name##_attr = \
-	__ATTR(cpu1_##_name, 0644, show_cpu1_##_name, store_cpu1_##_name)
-
-#define MX_CPU2_ATTR_RW(_name) \
-static struct kobj_attribute cpu2_##_name##_attr = \
-	__ATTR(cpu2_##_name, 0644, show_cpu2_##_name, store_cpu2_##_name)
-
-#define MX_CPU3_ATTR_RW(_name) \
-static struct kobj_attribute cpu3_##_name##_attr = \
-	__ATTR(cpu3_##_name, 0644, show_cpu3_##_name, store_cpu3_##_name)
 MX_CPU0_ATTR_RW(dbs_cpu_sampling_rate);
 MX_CPU0_ATTR_RW(dbs_up_threshold);
 MX_CPU0_ATTR_RW(dbs_micro_up_threshold);

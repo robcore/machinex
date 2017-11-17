@@ -514,7 +514,6 @@ static int __ref do_freq_control(void)
 	unsigned int cpu = smp_processor_id();
 	long freq_temp, delta;
 	unsigned int hotplug_check_needed = 0;
-	struct cpufreq_policy policy;
 
 	if (thermal_suspended) {
 		pr_err("frequency control not ready!\n");		
@@ -528,10 +527,8 @@ static int __ref do_freq_control(void)
 	for_each_possible_cpu(cpu) {
 		if (cpu_out_of_range(cpu))
 			break;
-		ret = cpufreq_get_policy(&policy, cpu);
-		if (ret)
-			continue;
-		resolve_max_freq[cpu] = policy.limited_max_freq_thermal;
+
+		resolve_max_freq[cpu] = limited_max_freq_thermal[cpu];
 		freq_temp = evaluate_temp(cpu);
 		if (freq_temp <= 0) {
 			hotplug_check_needed++;
@@ -549,22 +546,22 @@ static int __ref do_freq_control(void)
 				hotplug_check_needed++;
 		} else if (freq_temp < delta) {
 				if (limit_idx[cpu] == MAX_IDX) {
-					resolve_max_freq[cpu] = is_display_on() ? policy.hlimit_max_screen_on : 
-										   policy.hlimit_max_screen_off;
+					resolve_max_freq[cpu] = is_display_on() ? hlimit_max_screen_on[cpu] : 
+										   hlimit_max_screen_off[cpu];
 					continue;
 				}
 				limit_idx[cpu] += msm_thermal_info.freq_step;
 				if (limit_idx[cpu] >= MAX_IDX) {
 					limit_idx[cpu] = MAX_IDX;
-					resolve_max_freq[cpu] = is_display_on() ? policy.hlimit_max_screen_on : 
-										   policy.hlimit_max_screen_off;
+					resolve_max_freq[cpu] = is_display_on() ? hlimit_max_screen_on[cpu] : 
+										   hlimit_max_screen_off[cpu];
 				} else {
 					resolve_max_freq[cpu] = therm_table[limit_idx[cpu]].frequency;
 					hotplug_check_needed++;
 				}
 		}
 
-		if (resolve_max_freq[cpu] == policy.limited_max_freq_thermal)
+		if (resolve_max_freq[cpu] == limited_max_freq_thermal[cpu])
 			continue;
 
 		set_thermal_policy(cpu, resolve_max_freq[cpu]);
@@ -674,7 +671,6 @@ reschedule:
 static void __ref disable_msm_thermal(void)
 {
 	unsigned int cpu = smp_processor_id();
-	struct cpufreq_policy *policy;
 	unsigned int tempfreq;
 
 	cancel_delayed_work_sync(&check_temp_work);
@@ -684,16 +680,13 @@ static void __ref disable_msm_thermal(void)
 	for_each_possible_cpu(cpu) {
 		if (cpu_out_of_range(cpu))
 			break;
-		policy = cpufreq_cpu_get_raw(cpu);
-		if (policy == NULL)
-			continue;
 		
-		if ((is_display_on() && policy->limited_max_freq_thermal == policy->hlimit_max_screen_on) ||
-			(!is_display_on() && policy->limited_max_freq_thermal == policy->hlimit_max_screen_off))
+		if ((is_display_on() && limited_max_freq_thermal[cpu] == hlimit_max_screen_on[cpu]) ||
+			(!is_display_on() && limited_max_freq_thermal[cpu] == hlimit_max_screen_off[cpu]))
 			continue;
 
-		tempfreq = is_display_on() ? policy->hlimit_max_screen_on : 
-										   policy->hlimit_max_screen_off;
+		tempfreq = is_display_on() ? hlimit_max_screen_on[cpu] : 
+										   hlimit_max_screen_off[cpu];
 
 		set_thermal_policy(cpu, tempfreq);
 	}
