@@ -66,8 +66,6 @@ static u64 last_input_time;
 static unsigned int min_input_interval = 200;
 module_param(min_input_interval, uint, 0644);
 
-struct cpufreq_frequency_table *permtable;
-
 static LIST_HEAD(cpufreq_policy_list);
 
 static inline bool policy_is_inactive(struct cpufreq_policy *policy)
@@ -948,14 +946,16 @@ struct device_attribute *attr,	\
 const char *buf, size_t count)			\
 {	\
 	unsigned int new_hardlimit, i;	\
+	struct cpufreq_frequency_table *permtable;	\
 	if (!sscanf(buf, "%u", &new_hardlimit))	\
 		return -EINVAL;	\
+	permtable = cpufreq_frequency_get_table(0);	\
 	if (permtable == NULL)	\
 		return -EINVAL;	\
 	for (i = 0; (permtable[i].frequency != CPUFREQ_TABLE_END); i++)	\
 		if (permtable[i].frequency == new_hardlimit) {	\
-				hardlimit_max_screen_on[(dev->id)] = new_hardlimit;	\
-				reapply_hard_limits((dev->id), false);	\
+				hardlimit_max_screen_on[dev->id] = new_hardlimit;	\
+				reapply_hard_limits(dev->id, false);	\
 				return count;	\
 		}	\
 	return -EINVAL;	\
@@ -1514,28 +1514,16 @@ static void cpufreq_policy_free(struct cpufreq_policy *policy)
 }
 
 static unsigned int hdev_added[NR_CPUS] = { 0, 0, 0, 0 };
-static unsigned int table_ready = 0;
-
-static void setup_perm_table(void)
-{
-	permtable = cpufreq_frequency_get_table(0);
-	BUG_ON(permtable == NULL);
-	table_ready = 1;
-}
-
 static void hardlimit_add_dev(unsigned int cpu)
 {
-	struct device *dev = get_cpu_device(cpu);
-	WARN_ON_ONCE(sysfs_create_group(&dev->kobj, &hardlimit_attr_group));
-	hdev_added[cpu] = 1;
+
 }
 
 static int hardlimit_attr_init(unsigned int cpu)
 {
-	if (!table_ready)
-		setup_perm_table();
-
-	hardlimit_add_dev(cpu);
+	struct device *dev = get_cpu_device(cpu);
+	WARN_ON_ONCE(sysfs_create_group(&dev->kobj, &hardlimit_attr_group));
+	hdev_added[cpu] = 1;
 	return 0;
 }
 
@@ -1580,10 +1568,10 @@ static int cpufreq_online(unsigned int cpu)
 		goto out_free_policy;
 	}
 
+	down_write(&policy->rwsem);
+
 	if (!hdev_added[policy->cpu])
 		hardlimit_attr_init(policy->cpu);
-
-	down_write(&policy->rwsem);
 
 	if (new_policy) {
 		/* related_cpus should at least include policy->cpus. */
