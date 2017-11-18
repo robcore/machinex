@@ -14,6 +14,7 @@
 
 #ifndef _CPUFREQ_MACHINEX_GOV_ATTR_H_
 #define _CPUFREQ_MACHINEX_GOV_ATTR_H_
+#include <linux/device.h>
 
 /**
  * I have a very specific, hacked kernel configuration.
@@ -27,227 +28,61 @@
  * are built by a crazy person (me).
  */
 
-#define show_one_cpu0(object)				\
-static ssize_t show_cpu0_##object					\
-(struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
+#define show_one_cpu(object)				\
+static ssize_t object##_show(struct device *dev,			\
+		struct device_attribute *attr, char *buf)	\
 {								\
-	return sprintf(buf, "%u\n", object[0]);			\
+	return sprintf(buf, "%u\n", object[(dev->id)]);	\
 }
 
-#define show_one_cpu1(object)				\
-static ssize_t show_cpu1_##object					\
-(struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
-{								\
-	return sprintf(buf, "%u\n", object[1]);			\
-}
-
-#define show_one_cpu2(object)				\
-static ssize_t show_cpu2_##object					\
-(struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
-{								\
-	return sprintf(buf, "%u\n", object[2]);			\
-}
-
-#define show_one_cpu3(object)				\
-static ssize_t show_cpu3_##object					\
-(struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
-{								\
-	return sprintf(buf, "%u\n", object[3]);			\
-}
-
-#define store_one_cpu0_clamp(name, min, max)		\
-static ssize_t store_cpu0_##name		\
-(struct kobject *kobj,				\
- struct kobj_attribute *attr,			\
- const char *buf, size_t count)			\
+#define store_one_cpu_clamp(name, min, max)		\
+static ssize_t name##_store		\
+(struct device *dev,	\
+struct device_attribute *attr,	\
+const char *buf, size_t count)			\
 {						\
-	unsigned int input;			\
+	unsigned int input, cpu;			\
 	int ret;				\
+	cpu = dev->id;	\
 	ret = sscanf(buf, "%u", &input);	\
 	if (ret != 1)			\
 		return -EINVAL;			\
-	if (input == name[0])			\
+	if (input == name[(cpu)])			\
 		return count;			\
 	if (input <= min)	\
 		input = min;	\
 	if (input >= max)		\
 			input = max;		\
-	name[0] = input;				\
+	name[(cpu)] = input;				\
 	return count;				\
 }
 
-#define store_one_cpu1_clamp(name, min, max)		\
-static ssize_t store_cpu1_##name		\
-(struct kobject *kobj,				\
- struct kobj_attribute *attr,			\
- const char *buf, size_t count)			\
-{						\
-	unsigned int input;			\
-	int ret;				\
-	ret = sscanf(buf, "%u", &input);	\
-	if (ret != 1)			\
-		return -EINVAL;			\
-	if (input == name[1])			\
-		return count;			\
-	if (input <= min)	\
-		input = min;	\
-	if (input >= max)		\
-			input = max;		\
-	name[1] = input;				\
-	return count;				\
-}
-
-#define store_one_cpu2_clamp(name, min, max)		\
-static ssize_t store_cpu2_##name		\
-(struct kobject *kobj,				\
- struct kobj_attribute *attr,			\
- const char *buf, size_t count)			\
-{						\
-	unsigned int input;			\
-	int ret;				\
-	ret = sscanf(buf, "%u", &input);	\
-	if (ret != 1)			\
-		return -EINVAL;			\
-	if (input == name[2])			\
-		return count;			\
-	if (input <= min)	\
-		input = min;	\
-	if (input >= max)		\
-			input = max;		\
-	name[2] = input;				\
-	return count;				\
-}
-
-#define store_one_cpu3_clamp(name, min, max)		\
-static ssize_t store_cpu3_##name		\
-(struct kobject *kobj,				\
- struct kobj_attribute *attr,			\
- const char *buf, size_t count)			\
-{						\
-	unsigned int input;			\
-	int ret;				\
-	ret = sscanf(buf, "%u", &input);	\
-	if (ret != 1)			\
-		return -EINVAL;			\
-	if (input == name[3])			\
-		return count;			\
-	if (input <= min)	\
-		input = min;	\
-	if (input >= max)		\
-			input = max;		\
-	name[3] = input;				\
-	return count;				\
-}
-
-#define show_one_long_cpu0(object)				\
-static ssize_t show_cpu0_##object					\
-(struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
+#define show_one_long_cpu(object)				\
+static ssize_t object##_show(struct device *dev,			\
+		struct device_attribute *attr, char *buf)	\
 {								\
-	return sprintf(buf, "%lu\n", object[0]);			\
+	return sprintf(buf, "%lu\n", object[(dev->id)]);	\
 }
 
-#define show_one_long_cpu1(object)				\
-static ssize_t show_cpu1_##object					\
-(struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
-{								\
-	return sprintf(buf, "%lu\n", object[1]);			\
-}
-
-#define show_one_long_cpu2(object)				\
-static ssize_t show_cpu2_##object					\
-(struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
-{								\
-	return sprintf(buf, "%lu\n", object[2]);			\
-}
-
-#define show_one_long_cpu3(object)				\
-static ssize_t show_cpu3_##object					\
-(struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
-{								\
-	return sprintf(buf, "%lu\n", object[3]);			\
-}
-
-#define store_one_long_cpu0_clamp(name, min, max)		\
-static ssize_t store_cpu0_##name		\
-(struct kobject *kobj,				\
- struct kobj_attribute *attr,			\
- const char *buf, size_t count)			\
+#define store_one_long_cpu_clamp(name, min, max)		\
+static ssize_t name##_store		\
+(struct device *dev,	\
+struct device_attribute *attr,	\
+const char *buf, size_t count)			\
 {						\
-	unsigned long input;			\
+	unsigned long input, cpu;			\
 	int ret;				\
+	cpu = dev->id;	\
 	ret = sscanf(buf, "%lu", &input);	\
 	if (ret != 1)			\
 		return -EINVAL;			\
-	if (input == name[0])			\
+	if (input == name[(cpu)])			\
 		return count;			\
 	if (input <= min)	\
 		input = min;	\
 	if (input >= max)		\
 			input = max;		\
-	name[0] = input;				\
-	return count;				\
-}
-
-#define store_one_long_cpu1_clamp(name, min, max)		\
-static ssize_t store_cpu1_##name		\
-(struct kobject *kobj,				\
- struct kobj_attribute *attr,			\
- const char *buf, size_t count)			\
-{						\
-	unsigned long input;			\
-	int ret;				\
-	ret = sscanf(buf, "%lu", &input);	\
-	if (ret != 1)			\
-		return -EINVAL;			\
-	if (input == name[1])			\
-		return count;			\
-	if (input <= min)	\
-		input = min;	\
-	if (input >= max)		\
-			input = max;		\
-	name[1] = input;				\
-	return count;				\
-}
-
-#define store_one_long_cpu2_clamp(name, min, max)		\
-static ssize_t store_cpu2_##name		\
-(struct kobject *kobj,				\
- struct kobj_attribute *attr,			\
- const char *buf, size_t count)			\
-{						\
-	unsigned long input;			\
-	int ret;				\
-	ret = sscanf(buf, "%lu", &input);	\
-	if (ret != 1)			\
-		return -EINVAL;			\
-	if (input == name[2])			\
-		return count;			\
-	if (input <= min)	\
-		input = min;	\
-	if (input >= max)		\
-			input = max;		\
-	name[2] = input;				\
-	return count;				\
-}
-
-#define store_one_long_cpu3_clamp(name, min, max)		\
-static ssize_t store_cpu3_##name		\
-(struct kobject *kobj,				\
- struct kobj_attribute *attr,			\
- const char *buf, size_t count)			\
-{						\
-	unsigned long input;			\
-	int ret;				\
-	ret = sscanf(buf, "%lu", &input);	\
-	if (ret != 1)			\
-		return -EINVAL;			\
-	if (input == name[3])			\
-		return count;			\
-	if (input <= min)	\
-		input = min;	\
-	if (input >= max)		\
-			input = max;		\
-	name[3] = input;				\
+	name[(cpu)] = input;				\
 	return count;				\
 }
 
