@@ -364,7 +364,7 @@ static void reapply_hard_limits(unsigned int cpu, bool update_policy)
 				current_limit_min[cpu] = hardlimit_min_screen_on[cpu];
 		}
 	} else if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_OFF) {
-		if (limited_max_freq_thermal[cpu] >= policy->cpuinfo.min_freq &&
+		if (limited_max_freq_thermal[cpu] >= DEFAULT_MIN &&
 			limited_max_freq_thermal[cpu] < hardlimit_max_screen_off[cpu])
 			current_limit_max[cpu] = limited_max_freq_thermal[cpu];
 		else
@@ -838,34 +838,20 @@ EXPORT_SYMBOL(cpufreq_verify_within_cpu_limits);
 /* Powersuspend callback functions                                                */
 /* ------------------------------------------------------------------------------ */
 
-static void hardlimit_suspend_resume(unsigned int screenstate)
-{
-	unsigned int cpu = smp_processor_id();
-
-	current_screen_state = screenstate;
-
-	switch (current_screen_state) {
-	case CPUFREQ_HARDLIMIT_SCREEN_OFF:
-		for_each_possible_cpu(cpu)
-			reapply_hard_limits(cpu, false);
-
-		break;
-	case CPUFREQ_HARDLIMIT_SCREEN_ON:
-		for_each_possible_cpu(cpu)
-			reapply_hard_limits(cpu, false);
-		break;
-	default:
-		break;
-	}
-}
 void cpufreq_hardlimit_suspend(void)
 {
-	hardlimit_suspend_resume(CPUFREQ_HARDLIMIT_SCREEN_OFF);
+	unsigned int cpu;
+	current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_OFF;
+	for_each_possible_cpu(cpu)
+		reapply_hard_limits(cpu, false);
 }
 
 void cpufreq_hardlimit_resume(void)
 {
-	hardlimit_suspend_resume(CPUFREQ_HARDLIMIT_SCREEN_ON);
+	unsigned int cpu;
+	current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON;
+	for_each_possible_cpu(cpu)
+		reapply_hard_limits(cpu, true);
 }
 #endif /*CONFIG_CPUFREQ_HARDLIMIT*/
 /**
@@ -1570,10 +1556,9 @@ static int cpufreq_online(unsigned int cpu)
 	if (!hdev_added[policy->cpu])
 		hardlimit_attr_init(policy->cpu);
 
-	if (new_policy) {
-		/* related_cpus should at least include policy->cpus. */
+	/* related_cpus should at least include policy->cpus. */
+	if (new_policy)
 		cpumask_copy(policy->related_cpus, policy->cpus);
-	}
 
 	/*
 	 * affected cpus must always be the one, which are online. We aren't
@@ -1601,6 +1586,8 @@ static int cpufreq_online(unsigned int cpu)
 		pr_err("%s: ->get() failed\n", __func__);
 		goto out_exit_policy;
 	}
+	if (policy->cur < current_limit_min[cpu] || policy->cur > current_limit_max[cpu])
+		cpufreq_update_policy(policy->cpu);
 
 	if (new_policy) {
 		ret = cpufreq_add_dev_interface(policy);
