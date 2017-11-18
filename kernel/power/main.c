@@ -97,7 +97,7 @@ static ssize_t pm_async_store(struct kobject *kobj, struct kobj_attribute *attr,
 
 power_attr(pm_async);
 
-unsigned int strict_wl_perms = 1;
+unsigned int strict_wl_perms = 0;
 
 static ssize_t strict_wl_perms_show(struct kobject *kobj, struct kobj_attribute *attr,
 			     char *buf)
