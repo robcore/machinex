@@ -377,21 +377,18 @@ static void reapply_hard_limits(unsigned int cpu, bool update_policy)
 	if (policy == NULL)
 		return;
 
-	policy->user_policy.min = policy->min = current_limit_min[policy->cpu];
-	policy->user_policy.max = policy->max = current_limit_max[policy->cpu];
+	policy->user_policy.min = policy->min = current_limit_min[cpu];
+	policy->user_policy.max = policy->max = current_limit_max[cpu];
 
 	if (update_policy)
-		cpufreq_update_policy(policy->cpu);
+		cpufreq_update_policy(cpu);
 }
 EXPORT_SYMBOL(reapply_hard_limits);
 
 /* Sanitize cpufreq to hardlimits */
 static unsigned int check_cpufreq_hardlimit(unsigned int cpu, unsigned int freq)
 {
-	struct cpufreq_policy *policy = cpufreq_cpu_get_raw(cpu);
-	if (policy == NULL)
-		return freq;
-	sanitize_min_max(freq, current_limit_min[policy->cpu], current_limit_max[policy->cpu]);
+	sanitize_min_max(freq, current_limit_min[cpu], current_limit_max[cpu]);
 	return freq;
 }
 EXPORT_SYMBOL(check_cpufreq_hardlimit);
