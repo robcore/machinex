@@ -1555,9 +1555,6 @@ static int cpufreq_online(unsigned int cpu)
 
 	down_write(&policy->rwsem);
 
-	if (!hdev_added[policy->cpu])
-		hardlimit_attr_init(policy->cpu);
-
 	/* related_cpus should at least include policy->cpus. */
 	if (new_policy)
 		cpumask_copy(policy->related_cpus, policy->cpus);
@@ -1611,6 +1608,9 @@ static int cpufreq_online(unsigned int cpu)
 		new_policy = false;
 		goto out_exit_policy;
 	}
+
+	if (!hdev_added[policy->cpu])
+		hardlimit_attr_init(policy->cpu);
 
 	up_write(&policy->rwsem);
 
