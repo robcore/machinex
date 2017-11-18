@@ -345,7 +345,7 @@ static void reapply_hard_limits(unsigned int cpu, bool update_policy)
 	struct cpufreq_policy *policy;
 	/* Recalculate the currently applicable min/max */
 	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON) {
-		if (limited_max_freq_thermal[cpu] >= policy->cpuinfo.min_freq &&
+		if (limited_max_freq_thermal[cpu] >= DEFAULT_MIN &&
 			limited_max_freq_thermal[cpu] < hardlimit_max_screen_on[cpu])
 			current_limit_max[cpu] = limited_max_freq_thermal[cpu];
 		else
@@ -857,7 +857,7 @@ static void hardlimit_suspend_resume(unsigned int screenstate)
 		break;
 	case CPUFREQ_HARDLIMIT_SCREEN_ON:
 		for_each_possible_cpu(cpu)
-			reapply_hard_limits(cpu, true);
+			reapply_hard_limits(cpu, false);
 		break;
 	default:
 		break;
@@ -950,10 +950,12 @@ const char *buf, size_t count)			\
 	unsigned int new_hardlimit, i;	\
 	if (!sscanf(buf, "%u", &new_hardlimit))	\
 		return -EINVAL;	\
+	if (permtable == NULL)	\
+		return -EINVAL;	\
 	for (i = 0; (permtable[i].frequency != CPUFREQ_TABLE_END); i++)	\
 		if (permtable[i].frequency == new_hardlimit) {	\
 				hardlimit_max_screen_on[(dev->id)] = new_hardlimit;	\
-				reapply_hard_limits(dev->id, true);	\
+				reapply_hard_limits((dev->id), false);	\
 				return count;	\
 		}	\
 	return -EINVAL;	\
@@ -1388,23 +1390,6 @@ static int cpufreq_init_policy(struct cpufreq_policy *policy)
 	new_policy.governor = get_mx_governor(policy->cpu);
 	/* set default policy */
 	return cpufreq_set_policy(policy, &new_policy);
-#if 0
-	/* Update governor of new_policy to the governor used before hotplug */
-	gov = find_governor(policy->last_governor);
-	if (gov) {
-		pr_debug("Restoring governor %s for cpu %d\n",
-				policy->governor->name, policy->cpu);
-	} else {
-		gov = cpufreq_default_governor();
-		if (!gov)
-			return -ENODATA;
-	}
-
-	new_policy.governor = gov;
-
-	/* set default policy */
-	return cpufreq_set_policy(policy, &new_policy);
-#endif
 }
 
 static int cpufreq_add_policy_cpu(struct cpufreq_policy *policy, unsigned int cpu)
@@ -1528,6 +1513,32 @@ static void cpufreq_policy_free(struct cpufreq_policy *policy)
 	kfree(policy);
 }
 
+static unsigned int hdev_added[NR_CPUS] = { 0, 0, 0, 0 };
+static unsigned int table_ready = 0;
+
+static void setup_perm_table(void)
+{
+	permtable = cpufreq_frequency_get_table(0);
+	BUG_ON(permtable == NULL);
+	table_ready = 1;
+}
+
+static void hardlimit_add_dev(unsigned int cpu)
+{
+	struct device *dev = get_cpu_device(cpu);
+	WARN_ON_ONCE(sysfs_create_group(&dev->kobj, &hardlimit_attr_group));
+	hdev_added[cpu] = 1;
+}
+
+static int hardlimit_attr_init(unsigned int cpu)
+{
+	if (!table_ready)
+		setup_perm_table();
+
+	hardlimit_add_dev(cpu);
+	return 0;
+}
+
 static int cpufreq_online(unsigned int cpu)
 {
 	struct cpufreq_policy *policy;
@@ -1568,6 +1579,9 @@ static int cpufreq_online(unsigned int cpu)
 		pr_debug("initialization failed\n");
 		goto out_free_policy;
 	}
+
+	if (!hdev_added[policy->cpu])
+		hardlimit_attr_init(policy->cpu);
 
 	down_write(&policy->rwsem);
 
@@ -2865,29 +2879,3 @@ static int __init cpufreq_core_init(void)
 	return 0;
 }
 core_initcall(cpufreq_core_init);
-
-static void hardlimit_add_dev(unsigned int cpu)
-{
-	struct device *dev = get_cpu_device(cpu);
-	WARN_ON_ONCE(sysfs_create_group(&dev->kobj, &hardlimit_attr_group));
-}
-
-static void setup_perm_table(void)
-{
-	permtable = cpufreq_frequency_get_table(0);
-	BUG_ON(permtable == NULL);
-}
-
-static int __init hardlimit_attr_init(void)
-{
-	unsigned int cpu;
-
-	setup_perm_table();
-	for_each_possible_cpu(cpu) {
-		if (cpu_out_of_range(cpu))
-			break;
-		hardlimit_add_dev(cpu);
-	}
-	return 0;
-}
-late_initcall_sync(hardlimit_attr_init);
