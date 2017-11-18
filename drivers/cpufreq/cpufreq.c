@@ -1585,8 +1585,6 @@ static int cpufreq_online(unsigned int cpu)
 		pr_err("%s: ->get() failed\n", __func__);
 		goto out_exit_policy;
 	}
-	if (policy->cur < current_limit_min[policy->cpu] || policy->cur > current_limit_max[policy->cpu])
-		cpufreq_update_policy(policy->cpu);
 
 	if (new_policy) {
 		ret = cpufreq_add_dev_interface(policy);
