@@ -324,7 +324,7 @@ EXPORT_SYMBOL_GPL(cpufreq_frequency_get_table);
 /* Yank555.lu : CPU Hardlimit - Hook to force scaling_min/max_freq to be updated on Hardlimit change */
 #ifdef CONFIG_CPUFREQ_HARDLIMIT
 /* Disable Input boost while thermal limiting */
-static bool thermal_disables_boost = true;
+static bool thermal_disables_boost __read_mostly = true;
 module_param(thermal_disables_boost, bool, 0644);
 
 /* Update limits in cpufreq */
