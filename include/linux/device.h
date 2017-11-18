@@ -558,6 +558,62 @@ ssize_t device_show_bool(struct device *dev, struct device_attribute *attr,
 ssize_t device_store_bool(struct device *dev, struct device_attribute *attr,
 			 const char *buf, size_t count);
 
+#define show_one_cpu(object)				\
+static ssize_t object##_show(struct device *dev,			\
+		struct device_attribute *attr, char *buf)	\
+{								\
+	return sprintf(buf, "%u\n", object[(dev->id)]);	\
+}
+
+#define store_one_cpu_clamp(name, min, max)		\
+static ssize_t name##_store		\
+(struct device *dev,	\
+struct device_attribute *attr,	\
+const char *buf, size_t count)			\
+{						\
+	unsigned int input;			\
+	int ret;				\
+	ret = sscanf(buf, "%u", &input);	\
+	if (ret != 1)			\
+		return -EINVAL;			\
+	if (input == name[(dev->id)])			\
+		return count;			\
+	if (input <= min)	\
+		input = min;	\
+	if (input >= max)		\
+			input = max;		\
+	name[(dev->id)] = input;				\
+	return count;				\
+}
+
+#define show_one_long_cpu(object)				\
+static ssize_t object##_show(struct device *dev,			\
+		struct device_attribute *attr, char *buf)	\
+{								\
+	return sprintf(buf, "%lu\n", object[(dev->id)]);	\
+}
+
+#define store_one_long_cpu_clamp(name, min, max)		\
+static ssize_t name##_store		\
+(struct device *dev,	\
+struct device_attribute *attr,	\
+const char *buf, size_t count)			\
+{						\
+	unsigned long input;			\
+	int ret;				\
+	ret = sscanf(buf, "%lu", &input);	\
+	if (ret != 1)			\
+		return -EINVAL;			\
+	if (input == name[(dev->id)])			\
+		return count;			\
+	if (input <= min)	\
+		input = min;	\
+	if (input >= max)		\
+			input = max;		\
+	name[(dev->id)] = input;				\
+	return count;				\
+}
+
 #define DEVICE_ATTR(_name, _mode, _show, _store) \
 	struct device_attribute dev_attr_##_name = __ATTR(_name, _mode, _show, _store)
 #define DEVICE_ATTR_RW(_name) \

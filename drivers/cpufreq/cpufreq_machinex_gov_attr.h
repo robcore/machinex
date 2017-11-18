@@ -15,6 +15,7 @@
 #ifndef _CPUFREQ_MACHINEX_GOV_ATTR_H_
 #define _CPUFREQ_MACHINEX_GOV_ATTR_H_
 #include <linux/device.h>
+#include <linux/sysfs.h>
 
 /**
  * I have a very specific, hacked kernel configuration.
@@ -27,64 +28,6 @@
  * my concern for your hardware, and sanity, as my drivers
  * are built by a crazy person (me).
  */
-
-#define show_one_cpu(object)				\
-static ssize_t object##_show(struct device *dev,			\
-		struct device_attribute *attr, char *buf)	\
-{								\
-	return sprintf(buf, "%u\n", object[(dev->id)]);	\
-}
-
-#define store_one_cpu_clamp(name, min, max)		\
-static ssize_t name##_store		\
-(struct device *dev,	\
-struct device_attribute *attr,	\
-const char *buf, size_t count)			\
-{						\
-	unsigned int input, cpu;			\
-	int ret;				\
-	cpu = dev->id;	\
-	ret = sscanf(buf, "%u", &input);	\
-	if (ret != 1)			\
-		return -EINVAL;			\
-	if (input == name[(cpu)])			\
-		return count;			\
-	if (input <= min)	\
-		input = min;	\
-	if (input >= max)		\
-			input = max;		\
-	name[(cpu)] = input;				\
-	return count;				\
-}
-
-#define show_one_long_cpu(object)				\
-static ssize_t object##_show(struct device *dev,			\
-		struct device_attribute *attr, char *buf)	\
-{								\
-	return sprintf(buf, "%lu\n", object[(dev->id)]);	\
-}
-
-#define store_one_long_cpu_clamp(name, min, max)		\
-static ssize_t name##_store		\
-(struct device *dev,	\
-struct device_attribute *attr,	\
-const char *buf, size_t count)			\
-{						\
-	unsigned long input, cpu;			\
-	int ret;				\
-	cpu = dev->id;	\
-	ret = sscanf(buf, "%lu", &input);	\
-	if (ret != 1)			\
-		return -EINVAL;			\
-	if (input == name[(cpu)])			\
-		return count;			\
-	if (input <= min)	\
-		input = min;	\
-	if (input >= max)		\
-			input = max;		\
-	name[(cpu)] = input;				\
-	return count;				\
-}
 
 extern unsigned int mx_cpufreq_governor[NR_CPUS];
 
