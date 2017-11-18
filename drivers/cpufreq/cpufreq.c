@@ -372,18 +372,18 @@ static void reapply_hard_limits(unsigned int cpu, bool update_policy)
 
 		current_limit_min[cpu] = hardlimit_min_screen_off[cpu];
 	}
+	if (!cpu_online(cpu))
+		return;
 
-	policy = cpufreq_cpu_get(cpu);
+	policy = cpufreq_cpu_get_raw(cpu);
 	if (!policy)
 		return;
-	if (cpu_online(policy->cpu)) {
-		policy->user_policy.min = policy->min = current_limit_min[cpu];
-		policy->user_policy.max = policy->max = current_limit_max[cpu];
-		if (update_policy)
-			cpufreq_update_policy(cpu);
-	}
-	cpufreq_cpu_put(policy);
-	
+
+	policy->user_policy.min = policy->min = current_limit_min[cpu];
+	policy->user_policy.max = policy->max = current_limit_max[cpu];
+
+	if (update_policy)
+		cpufreq_update_policy(cpu);
 }
 EXPORT_SYMBOL(reapply_hard_limits);
 
@@ -1588,7 +1588,7 @@ static int cpufreq_online(unsigned int cpu)
 		pr_err("%s: ->get() failed\n", __func__);
 		goto out_exit_policy;
 	}
-	if (policy->cur < current_limit_min[cpu] || policy->cur > current_limit_max[cpu])
+	if (policy->cur < current_limit_min[policy->cpu] || policy->cur > current_limit_max[policy->cpu])
 		cpufreq_update_policy(policy->cpu);
 
 	if (new_policy) {
