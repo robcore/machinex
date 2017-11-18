@@ -135,4 +135,4 @@ static int __init cpufreq_mx_attr_init(void)
 	}
 	return 0;
 }
-core_initcall(cpufreq_mx_attr_init);
+late_initcall(cpufreq_mx_attr_init);
