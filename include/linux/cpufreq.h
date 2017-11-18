@@ -149,16 +149,17 @@ struct cpufreq_policy {
 
 	/* For cpufreq driver's internal use */
 	void			*driver_data;
-	unsigned int hlimit_max_screen_on;
-	unsigned int hlimit_max_screen_off;
-	unsigned int hlimit_min_screen_on;
-	unsigned int hlimit_min_screen_off;
-	unsigned int curr_limit_max;
-	unsigned int curr_limit_min;
-	unsigned int input_boost_limit;
-	unsigned int input_boost_freq;
-	unsigned int limited_max_freq_thermal;
 };
+
+extern unsigned int hardlimit_max_screen_on[NR_CPUS];
+extern unsigned int hardlimit_max_screen_off[NR_CPUS];
+extern unsigned int hardlimit_min_screen_on[NR_CPUS];
+extern unsigned int hardlimit_min_screen_off[NR_CPUS];
+extern unsigned int current_limit_max[NR_CPUS];
+extern unsigned int current_limit_min[NR_CPUS];
+extern unsigned int input_boost_limit[NR_CPUS];
+extern unsigned int input_boost_frequency[NR_CPUS];
+extern unsigned int limited_max_freq_thermal[NR_CPUS];
 
 /* Only for ACPI */
 #define CPUFREQ_SHARED_TYPE_NONE (0) /* None */
@@ -593,6 +594,8 @@ struct cpufreq_frequency_table {
 	unsigned int	frequency; /* kHz - doesn't need to be in ascending
 				    * order */
 };
+
+extern struct cpufreq_frequency_table *permtable;
 
 #if defined(CONFIG_CPU_FREQ) && defined(CONFIG_PM_OPP)
 int dev_pm_opp_init_cpufreq_table(struct device *dev,

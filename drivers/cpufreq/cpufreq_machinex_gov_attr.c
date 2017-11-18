@@ -116,8 +116,6 @@ static struct attribute_group mx_cpufreq_attr_group = {
 	.name = "mx_cpufreq"
 };
 
-static struct kobject *mx_cpufreq_kobj;
-
 static void mx_cpufreq_add_dev(unsigned int cpu)
 {
 	struct device *dev = get_cpu_device(cpu);
