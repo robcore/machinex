@@ -373,15 +373,17 @@ static void reapply_hard_limits(unsigned int cpu, bool update_policy)
 		current_limit_min[cpu] = hardlimit_min_screen_off[cpu];
 	}
 
-	policy = cpufreq_cpu_get_raw(cpu);
-	if (policy == NULL)
+	policy = cpufreq_cpu_get(cpu);
+	if (!policy)
 		return;
-
-	policy->user_policy.min = policy->min = current_limit_min[cpu];
-	policy->user_policy.max = policy->max = current_limit_max[cpu];
-
-	if (update_policy)
-		cpufreq_update_policy(cpu);
+	if (cpu_online(policy->cpu)) {
+		policy->user_policy.min = policy->min = current_limit_min[cpu];
+		policy->user_policy.max = policy->max = current_limit_max[cpu];
+		if (update_policy)
+			cpufreq_update_policy(cpu);
+	}
+	cpufreq_cpu_put(policy);
+	
 }
 EXPORT_SYMBOL(reapply_hard_limits);
 
