@@ -161,6 +161,7 @@ struct hardlimit_policy {
 	unsigned int input_boost_limit;
 	unsigned int input_boost_frequency;
 	unsigned int limited_max_freq_thermal;
+	struct rw_semaphore	rwsem;
 };
 
 /* Only for ACPI */
