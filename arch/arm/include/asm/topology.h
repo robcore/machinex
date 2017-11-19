@@ -27,7 +27,7 @@ extern struct cputopo_arm cpu_topology[NR_CPUS];
 void init_cpu_topology(void);
 void store_cpu_topology(unsigned int cpuid);
 const struct cpumask *cpu_coregroup_mask(int cpu);
-
+#if 0
 #include <linux/arch_topology.h>
 
 /* Replace task scheduler's default frequency-invariant accounting */
@@ -35,7 +35,7 @@ const struct cpumask *cpu_coregroup_mask(int cpu);
 
 /* Replace task scheduler's default cpu-invariant accounting */
 #define arch_scale_cpu_capacity topology_get_cpu_scale
-
+#endif
 #else
 
 static inline void init_cpu_topology(void) { }
