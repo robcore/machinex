@@ -123,7 +123,7 @@ if [ -e $MYSCRIPT ]; then
 	rm $MYSCRIPT
 fi
 
-if [[ "$ONLINE" != "$RECOV"]]; then
+if [[ "$ONLINE" != "$RECOV" ]]; then
 	wakeme
 fi
 
