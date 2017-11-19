@@ -403,7 +403,21 @@ void set_thermal_policy(unsigned int cpu, unsigned int freq)
 	per_cpu(cpufreq_hardlimit_data, cpu).limited_max_freq_thermal = freq;
 	reapply_hard_limits(cpu, true);
 }
-	
+
+unsigned int get_thermal_frequency(unsigned int cpu)
+{
+	return per_cpu(cpufreq_hardlimit_data, cpu).limited_max_freq_thermal;
+}
+
+unsigned int get_hardlimit_max_screen_on(unsigned int cpu)
+{
+	return per_cpu(cpufreq_hardlimit_data, cpu).hardlimit_max_screen_on;
+}
+
+unsigned int get_hardlimit_max_screen_off(unsigned int cpu)
+{
+	return per_cpu(cpufreq_hardlimit_data, cpu).hardlimit_max_screen_off;
+}
 
 static void do_input_boost_rem(struct work_struct *work)
 {
@@ -2831,6 +2845,22 @@ static struct syscore_ops cpufreq_syscore_ops = {
 struct kobject *cpufreq_global_kobject;
 EXPORT_SYMBOL(cpufreq_global_kobject);
 
+static void setup_hardlimits(void)
+{
+	unsigned int cpu;
+	for_each_possible_cpu(cpu) {
+		per_cpu(cpufreq_hardlimit_data, cpu).hardlimit_max_screen_on = DEFAULT_MAX;
+		per_cpu(cpufreq_hardlimit_data, cpu).hardlimit_max_screen_off = DEFAULT_MAX;
+		per_cpu(cpufreq_hardlimit_data, cpu).hardlimit_min_screen_on = DEFAULT_MIN;
+		per_cpu(cpufreq_hardlimit_data, cpu).hardlimit_min_screen_off = DEFAULT_MIN;
+		per_cpu(cpufreq_hardlimit_data, cpu).current_limit_max = DEFAULT_MAX;
+		per_cpu(cpufreq_hardlimit_data, cpu).current_limit_min = DEFAULT_MIN;
+		per_cpu(cpufreq_hardlimit_data, cpu).input_boost_limit = DEFAULT_MIN;
+		per_cpu(cpufreq_hardlimit_data, cpu).input_boost_frequency = DEFAULT_INPUT_FREQ;
+		per_cpu(cpufreq_hardlimit_data, cpu).limited_max_freq_thermal = DEFAULT_MAX;
+	}
+}
+
 static int __init cpufreq_core_init(void)
 {
 #ifdef CONFIG_CPU_VOLTAGE_TABLE
@@ -2851,7 +2881,7 @@ static int __init cpufreq_core_init(void)
 
 	INIT_DELAYED_WORK(&input_boost_work, do_input_boost);
 	INIT_DELAYED_WORK(&input_boost_rem, do_input_boost_rem);
-
+	setup_hardlimits();
 	return 0;
 }
 core_initcall(cpufreq_core_init);
