@@ -35,7 +35,7 @@ static inline const struct cpumask *housekeeping_cpumask(void)
 	return cpu_possible_mask;
 }
 
-static inline bool is_housekeeping_cpu(int cpu)
+static inline bool housekeeping_cpu(int cpu)
 {
 #ifdef CONFIG_NO_HZ_FULL
 	if (tick_nohz_full_enabled())
