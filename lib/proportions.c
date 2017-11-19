@@ -241,7 +241,7 @@ void prop_norm_percpu(struct prop_global *pg, struct prop_local_percpu *pl)
 		if (val < (nr_cpu_ids * PROP_BATCH))
 			val = percpu_counter_sum(&pl->events);
 
-		__percpu_counter_add(&pl->events, -val + (val >> period),
+		percpu_counter_add_batch(&pl->events, -val + (val >> period),
 					PROP_BATCH);
 	} else
 		percpu_counter_set(&pl->events, 0);
@@ -258,7 +258,7 @@ void __prop_inc_percpu(struct prop_descriptor *pd, struct prop_local_percpu *pl)
 	struct prop_global *pg = prop_get_global(pd);
 
 	prop_norm_percpu(pg, pl);
-	__percpu_counter_add(&pl->events, 1, PROP_BATCH);
+	percpu_counter_add_batch(&pl->events, 1, PROP_BATCH);
 	percpu_counter_add(&pg->events, 1);
 	prop_put_global(pd, pg);
 }
