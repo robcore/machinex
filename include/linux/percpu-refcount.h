@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
  * Percpu refcounts:
  * (C) 2012 Google, Inc.
@@ -29,7 +30,7 @@
  * calls io_destroy() or the process exits.
  *
  * In the aio code, kill_ioctx() is called when we wish to destroy a kioctx; it
- * calls percpu_ref_kill(), then hlist_del_rcu() and sychronize_rcu() to remove
+ * calls percpu_ref_kill(), then hlist_del_rcu() and synchronize_rcu() to remove
  * the kioctx from the proccess's list of kioctxs - after that, there can't be
  * any new users of the kioctx (from lookup_ioctx()) and it's then safe to drop
  * the initial ref with percpu_ref_put().
@@ -99,6 +100,7 @@ int __must_check percpu_ref_init(struct percpu_ref *ref,
 void percpu_ref_exit(struct percpu_ref *ref);
 void percpu_ref_switch_to_atomic(struct percpu_ref *ref,
 				 percpu_ref_func_t *confirm_switch);
+void percpu_ref_switch_to_atomic_sync(struct percpu_ref *ref);
 void percpu_ref_switch_to_percpu(struct percpu_ref *ref);
 void percpu_ref_kill_and_confirm(struct percpu_ref *ref,
 				 percpu_ref_func_t *confirm_kill);
@@ -116,7 +118,7 @@ void percpu_ref_reinit(struct percpu_ref *ref);
  */
 static inline void percpu_ref_kill(struct percpu_ref *ref)
 {
-	return percpu_ref_kill_and_confirm(ref, NULL);
+	percpu_ref_kill_and_confirm(ref, NULL);
 }
 
 /*
@@ -128,9 +130,19 @@ static inline void percpu_ref_kill(struct percpu_ref *ref)
 static inline bool __ref_is_percpu(struct percpu_ref *ref,
 					  unsigned long __percpu **percpu_countp)
 {
-	unsigned long percpu_ptr = ACCESS_ONCE(ref->percpu_count_ptr);
+	unsigned long percpu_ptr;
 
-	/* paired with smp_store_release() in percpu_ref_reinit() */
+	/*
+	 * The value of @ref->percpu_count_ptr is tested for
+	 * !__PERCPU_REF_ATOMIC, which may be set asynchronously, and then
+	 * used as a pointer.  If the compiler generates a separate fetch
+	 * when using it as a pointer, __PERCPU_REF_ATOMIC may be set in
+	 * between contaminating the pointer value, meaning that
+	 * READ_ONCE() is required when fetching it.
+	 */
+	percpu_ptr = READ_ONCE(ref->percpu_count_ptr);
+
+	/* paired with smp_store_release() in __percpu_ref_switch_to_percpu() */
 	smp_read_barrier_depends();
 
 	/*
@@ -194,12 +206,12 @@ static inline void percpu_ref_get(struct percpu_ref *ref)
 static inline bool percpu_ref_tryget(struct percpu_ref *ref)
 {
 	unsigned long __percpu *percpu_count;
-	int ret;
+	bool ret;
 
 	rcu_read_lock_sched();
 
 	if (__ref_is_percpu(ref, &percpu_count)) {
-		__this_cpu_inc(*percpu_count);
+		this_cpu_inc(*percpu_count);
 		ret = true;
 	} else {
 		ret = atomic_long_inc_not_zero(&ref->count);
@@ -228,14 +240,14 @@ static inline bool percpu_ref_tryget(struct percpu_ref *ref)
 static inline bool percpu_ref_tryget_live(struct percpu_ref *ref)
 {
 	unsigned long __percpu *percpu_count;
-	int ret = false;
+	bool ret = false;
 
 	rcu_read_lock_sched();
 
 	if (__ref_is_percpu(ref, &percpu_count)) {
 		this_cpu_inc(*percpu_count);
 		ret = true;
-	} else if (!(ACCESS_ONCE(ref->percpu_count_ptr) & __PERCPU_REF_DEAD)) {
+	} else if (!(ref->percpu_count_ptr & __PERCPU_REF_DEAD)) {
 		ret = atomic_long_inc_not_zero(&ref->count);
 	}
 
@@ -280,6 +292,20 @@ static inline void percpu_ref_put_many(struct percpu_ref *ref, unsigned long nr)
 static inline void percpu_ref_put(struct percpu_ref *ref)
 {
 	percpu_ref_put_many(ref, 1);
+}
+
+/**
+ * percpu_ref_is_dying - test whether a percpu refcount is dying or dead
+ * @ref: percpu_ref to test
+ *
+ * Returns %true if @ref is dying or dead.
+ *
+ * This function is safe to call as long as @ref is between init and exit
+ * and the caller is responsible for synchronizing against state changes.
+ */
+static inline bool percpu_ref_is_dying(struct percpu_ref *ref)
+{
+	return ref->percpu_count_ptr & __PERCPU_REF_DEAD;
 }
 
 /**
