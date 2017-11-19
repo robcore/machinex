@@ -156,16 +156,12 @@ else
 	echo "install /external_sd/$2" > $MYSCRIPT
 	echo "reboot" >> $MYSCRIPT
 	adb push $1 /storage/extSdCard 2> /dev/null
-	adb push $MYSCRIPT /cache/recovery 2> /dev/null
-	echo "Push Status: $?"
-	adb disconnect
-	adb kill-server
+	if [[ $? -eq 0 ]]; then
+		adb push $MYSCRIPT /cache/recovery 2> /dev/null
+		echo "Push Status: $?"
+		adb disconnect
+		adb kill-server
 		mv -f $MYSCRIPT $MYSCRIPT-last.txt
-	if [ -e adbtmp ]; then
-		rm adbtmp
-	fi
-	if [ -e devtmp ]; then
-		rm devtmp
 	fi
 fi
 if [ -e adbtmp ]; then
