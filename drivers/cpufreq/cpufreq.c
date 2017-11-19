@@ -57,13 +57,13 @@ static struct delayed_work input_boost_rem;
 static bool input_boost_enabled = false;
 module_param(input_boost_enabled, bool, 0644);
 
-static unsigned int input_boost_ms = 100;
+static unsigned int input_boost_ms = 250;
 module_param(input_boost_ms, uint, 0644);
 
 static struct delayed_work input_boost_rem;
 static u64 last_input_time;
 
-static unsigned int min_input_interval = 200;
+static unsigned int min_input_interval = 300;
 module_param(min_input_interval, uint, 0644);
 
 static LIST_HEAD(cpufreq_policy_list);
