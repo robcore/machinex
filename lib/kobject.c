@@ -256,23 +256,34 @@ static int kobject_add_internal(struct kobject *kobj)
 int kobject_set_name_vargs(struct kobject *kobj, const char *fmt,
 				  va_list vargs)
 {
-	const char *old_name = kobj->name;
-	char *s;
+	const char *s;
 
 	if (kobj->name && !fmt)
 		return 0;
 
-	kobj->name = kvasprintf(GFP_KERNEL, fmt, vargs);
-	if (!kobj->name) {
-		kobj->name = old_name;
+	s = kvasprintf_const(GFP_KERNEL, fmt, vargs);
+	if (!s)
 		return -ENOMEM;
+
+	/*
+	 * ewww... some of these buggers have '/' in the name ... If
+	 * that's the case, we need to make sure we have an actual
+	 * allocated copy to modify, since kvasprintf_const may have
+	 * returned something from .rodata.
+	 */
+	if (strchr(s, '/')) {
+		char *t;
+
+		t = kstrdup(s, GFP_KERNEL);
+		kfree_const(s);
+		if (!t)
+			return -ENOMEM;
+		strreplace(t, '/', '!');
+		s = t;
 	}
+	kfree_const(kobj->name);
+	kobj->name = s;
 
-	/* ewww... some of these buggers have '/' in the name ... */
-	while ((s = strchr(kobj->name, '/')))
-		s[0] = '!';
-
-	kfree(old_name);
 	return 0;
 }
 
@@ -577,13 +588,18 @@ EXPORT_SYMBOL(kobject_del);
  */
 struct kobject *kobject_get(struct kobject *kobj)
 {
-	if (kobj)
+	if (kobj) {
+		if (!kobj->state_initialized)
+			WARN(1, KERN_WARNING "kobject: '%s' (%p): is not "
+			       "initialized, yet kobject_get() is being "
+			       "called.\n", kobject_name(kobj), kobj);
 		kref_get(&kobj->kref);
+	}
 	return kobj;
 }
 EXPORT_SYMBOL(kobject_get);
 
-static struct kobject *kobject_get_unless_zero(struct kobject *kobj)
+struct kobject * __must_check kobject_get_unless_zero(struct kobject *kobj)
 {
 	if (!kobj)
 		return NULL;
@@ -591,6 +607,7 @@ static struct kobject *kobject_get_unless_zero(struct kobject *kobj)
 		kobj = NULL;
 	return kobj;
 }
+EXPORT_SYMBOL(kobject_get_unless_zero);
 
 /*
  * kobject_cleanup - free kobject resources.
@@ -601,8 +618,8 @@ static void kobject_cleanup(struct kobject *kobj)
 	struct kobj_type *t = get_ktype(kobj);
 	const char *name = kobj->name;
 
-	pr_debug("kobject: '%s' (%p): %s\n",
-		 kobject_name(kobj), kobj, __func__);
+	pr_debug("kobject: '%s' (%p): %s, parent %p\n",
+		 kobject_name(kobj), kobj, __func__, kobj->parent);
 
 	if (t && !t->release)
 		pr_debug("kobject: '%s' (%p): does not have a release() "
@@ -632,13 +649,14 @@ static void kobject_cleanup(struct kobject *kobj)
 	/* free name if we allocated it */
 	if (name) {
 		pr_debug("kobject: '%s': free name\n", name);
-		kfree(name);
+		kfree_const(name);
 	}
 }
 
 static void kobject_release(struct kref *kref)
 {
-	kobject_cleanup(container_of(kref, struct kobject, kref));
+	struct kobject *kobj = container_of(kref, struct kobject, kref);
+	kobject_cleanup(kobj);
 }
 
 /**
@@ -766,6 +784,7 @@ const struct sysfs_ops kobj_sysfs_ops = {
 	.show	= kobj_attr_show,
 	.store	= kobj_attr_store,
 };
+EXPORT_SYMBOL_GPL(kobj_sysfs_ops);
 
 /**
  * kset_register - initialize and add a kset.
@@ -785,6 +804,7 @@ int kset_register(struct kset *k)
 	kobject_uevent(&k->kobj, KOBJ_ADD);
 	return 0;
 }
+EXPORT_SYMBOL(kset_register);
 
 /**
  * kset_unregister - remove a kset.
@@ -797,6 +817,7 @@ void kset_unregister(struct kset *k)
 	kobject_del(&k->kobj);
 	kobject_put(&k->kobj);
 }
+EXPORT_SYMBOL(kset_unregister);
 
 /**
  * kset_find_obj - search for object in kset.
