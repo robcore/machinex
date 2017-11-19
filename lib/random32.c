@@ -53,8 +53,7 @@ static DEFINE_PER_CPU(struct rnd_state, net_rand_state);
  */
 u32 prandom_u32_state(struct rnd_state *state)
 {
-#define TAUSWORTHE(s,a,b,c,d) ((s&c)<<d) ^ (((s <<a) ^ s)>>b)
-
+#define TAUSWORTHE(s, a, b, c, d) ((s & c) << d) ^ (((s << a) ^ s) >> b)
 	state->s1 = TAUSWORTHE(state->s1,  6U, 13U, 4294967294U, 18U);
 	state->s2 = TAUSWORTHE(state->s2,  2U, 27U, 4294967288U,  2U);
 	state->s3 = TAUSWORTHE(state->s3, 13U, 21U, 4294967280U,  7U);
@@ -93,27 +92,23 @@ EXPORT_SYMBOL(prandom_u32);
  *	This is used for pseudo-randomness with no outside seeding.
  *	For more random results, use prandom_bytes().
  */
-void prandom_bytes_state(struct rnd_state *state, void *buf, int bytes)
+void prandom_bytes_state(struct rnd_state *state, void *buf, size_t bytes)
 {
-	unsigned char *p = buf;
-	int i;
+	u8 *ptr = buf;
 
-	for (i = 0; i < round_down(bytes, sizeof(u32)); i += sizeof(u32)) {
-		u32 random = prandom_u32_state(state);
-		int j;
-
-		for (j = 0; j < sizeof(u32); j++) {
-			p[i + j] = random;
-			random >>= BITS_PER_BYTE;
-		}
+	while (bytes >= sizeof(u32)) {
+		put_unaligned(prandom_u32_state(state), (u32 *) ptr);
+		ptr += sizeof(u32);
+		bytes -= sizeof(u32);
 	}
-	if (i < bytes) {
-		u32 random = prandom_u32_state(state);
 
-		for (; i < bytes; i++) {
-			p[i] = random;
-			random >>= BITS_PER_BYTE;
-		}
+	if (bytes > 0) {
+		u32 rem = prandom_u32_state(state);
+		do {
+			*ptr++ = (u8) rem;
+			bytes--;
+			rem >>= BITS_PER_BYTE;
+		} while (bytes > 0);
 	}
 }
 EXPORT_SYMBOL(prandom_bytes_state);
@@ -123,7 +118,7 @@ EXPORT_SYMBOL(prandom_bytes_state);
  *	@buf: where to copy the pseudo-random bytes to
  *	@bytes: the requested number of bytes
  */
-void prandom_bytes(void *buf, int bytes)
+void prandom_bytes(void *buf, size_t bytes)
 {
 	struct rnd_state *state = &get_cpu_var(net_rand_state);
 
@@ -134,7 +129,7 @@ EXPORT_SYMBOL(prandom_bytes);
 
 static void prandom_warmup(struct rnd_state *state)
 {
-	/* Calling RNG ten times to satify recurrence condition */
+	/* Calling RNG ten times to satisfy recurrence condition */
 	prandom_u32_state(state);
 	prandom_u32_state(state);
 	prandom_u32_state(state);
@@ -210,6 +205,7 @@ static int __init prandom_init(void)
 core_initcall(prandom_init);
 
 static void __prandom_timer(unsigned long dontcare);
+
 static DEFINE_TIMER(seed_timer, __prandom_timer);
 
 static void __prandom_timer(unsigned long dontcare)
@@ -233,7 +229,7 @@ static void __init __prandom_start_seed_timer(void)
 	add_timer(&seed_timer);
 }
 
-static void prandom_seed_full_state(struct rnd_state __percpu *pcpu_state)
+void prandom_seed_full_state(struct rnd_state __percpu *pcpu_state)
 {
 	int i;
 
@@ -250,6 +246,7 @@ static void prandom_seed_full_state(struct rnd_state __percpu *pcpu_state)
 		prandom_warmup(state);
 	}
 }
+EXPORT_SYMBOL(prandom_seed_full_state);
 
 /*
  *	Generate better values after random number generator
