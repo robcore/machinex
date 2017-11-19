@@ -714,7 +714,7 @@ static int __noreturn rcu_tasks_kthread(void *arg)
 	LIST_HEAD(rcu_tasks_holdouts);
 
 	/* Run on housekeeping CPUs by default.  Sysadm can move if desired. */
-	housekeeping_affine(current, HK_FLAG_RCU);
+	housekeeping_affine(current);
 
 	/*
 	 * Each pass through the following loop makes one check for
