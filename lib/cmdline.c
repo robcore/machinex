@@ -160,8 +160,6 @@ unsigned long long memparse(const char *ptr, char **retptr)
 
 	return ret;
 }
-
-
 EXPORT_SYMBOL(memparse);
 
 /**
@@ -246,5 +244,4 @@ char *next_arg(char *args, char **param, char **val)
 
 	/* Chew up trailing spaces. */
 	return skip_spaces(next);
-	//return next;
 }
