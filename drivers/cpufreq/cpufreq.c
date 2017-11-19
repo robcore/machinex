@@ -394,9 +394,7 @@ EXPORT_SYMBOL(reapply_hard_limits);
 static unsigned int check_cpufreq_hardlimit(unsigned int cpu, unsigned int freq)
 {
 	struct hardlimit_policy *hpolicy = &per_cpu(cpufreq_hardlimit_data, cpu);
-	down_read(&hpolicy->rwsem);
 	sanitize_min_max(freq, hpolicy->current_limit_min, hpolicy->current_limit_max);
-	up_read(&hpolicy->rwsem);
 	return freq;
 }
 #endif
@@ -404,47 +402,26 @@ static unsigned int check_cpufreq_hardlimit(unsigned int cpu, unsigned int freq)
 void set_thermal_policy(unsigned int cpu, unsigned int freq)
 {
 	struct hardlimit_policy *hpolicy = &per_cpu(cpufreq_hardlimit_data, cpu);
-
-	down_write(&hpolicy->rwsem);
 	hpolicy->limited_max_freq_thermal = freq;
 	reapply_hard_limits(cpu, true);
-	up_write(&hpolicy->rwsem);
 }
 
 unsigned int get_thermal_frequency(unsigned int cpu)
 {
-	unsigned int ret;
 	struct hardlimit_policy *hpolicy = &per_cpu(cpufreq_hardlimit_data, cpu);
-
-	down_read(&hpolicy->rwsem);
-	ret = hpolicy->limited_max_freq_thermal;
-	up_read(&hpolicy->rwsem);
-
-	return ret;
+	return hpolicy->limited_max_freq_thermal;
 }
 
 unsigned int get_hardlimit_max_screen_on(unsigned int cpu)
 {
-	unsigned int ret;
 	struct hardlimit_policy *hpolicy = &per_cpu(cpufreq_hardlimit_data, cpu);
-
-	down_read(&hpolicy->rwsem);
-	ret = hpolicy->hardlimit_max_screen_on;
-	up_read(&hpolicy->rwsem);
-
-	return ret;
+	return hpolicy->hardlimit_max_screen_on;
 }
 
 unsigned int get_hardlimit_max_screen_off(unsigned int cpu)
 {
-	unsigned int ret;
 	struct hardlimit_policy *hpolicy = &per_cpu(cpufreq_hardlimit_data, cpu);
-
-	down_read(&hpolicy->rwsem);
-	ret = hpolicy->hardlimit_max_screen_off;
-	up_read(&hpolicy->rwsem);
-
-	return ret;
+	return hpolicy->hardlimit_max_screen_off;
 }
 
 static void do_input_boost_rem(struct work_struct *work)
@@ -458,10 +435,8 @@ static void do_input_boost_rem(struct work_struct *work)
 	for_each_possible_cpu(cpu) {
 		hpolicy = &per_cpu(cpufreq_hardlimit_data, cpu);
 		/* Reset the input_boost_limit for all CPUs in the system */
-		down_write(&hpolicy->rwsem);
 		hpolicy->input_boost_limit = hpolicy->hardlimit_min_screen_on;
 		reapply_hard_limits(cpu, true);
-		up_write(&hpolicy->rwsem);
 	}
 }
 
@@ -476,10 +451,8 @@ static void do_input_boost(struct work_struct *work)
 	/* Set the input_boost_limit for all CPUs in the system */
 	for_each_possible_cpu(cpu) {
 		hpolicy = &per_cpu(cpufreq_hardlimit_data, cpu);
-		down_write(&hpolicy->rwsem);
 		hpolicy->input_boost_limit = hpolicy->input_boost_frequency;
 		reapply_hard_limits(cpu, true);
-		up_write(&hpolicy->rwsem);
 	}
 
 	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_rem,
@@ -983,7 +956,6 @@ static ssize_t store_##file_name					\
 }
 
 #ifdef CONFIG_CPUFREQ_HARDLIMIT
-
 #define store_one_hardlimit(name)		\
 static ssize_t name##_store		\
 (struct device *dev,	\
@@ -992,7 +964,6 @@ const char *buf, size_t count)			\
 {	\
 	unsigned int new_hardlimit, i;	\
 	struct cpufreq_frequency_table *permtable;	\
-	struct hardlimit_policy *hpolicy = &per_cpu(cpufreq_hardlimit_data, dev->id);	\
 	if (!sscanf(buf, "%u", &new_hardlimit))	\
 		return -EINVAL;	\
 	permtable = cpufreq_frequency_get_table(0);	\
@@ -1000,10 +971,8 @@ const char *buf, size_t count)			\
 		return -EINVAL;	\
 	for (i = 0; (permtable[i].frequency != CPUFREQ_TABLE_END); i++)	\
 		if (permtable[i].frequency == new_hardlimit) {	\
-				down_write(&hpolicy->rwsem);	\
-				hpolicy->name = new_hardlimit;	\
+				per_cpu(cpufreq_hardlimit_data, dev->id).name = new_hardlimit;	\
 				reapply_hard_limits(dev->id, false);	\
-				up_write(&hpolicy->rwsem);	\
 				return count;	\
 		}	\
 	return -EINVAL;	\
@@ -1017,7 +986,6 @@ const char *buf, size_t count)			\
 {	\
 	unsigned int new_hardlimit, i;	\
 	struct cpufreq_frequency_table *permtable;	\
-	struct hardlimit_policy *hpolicy = &per_cpu(cpufreq_hardlimit_data, dev->id);	\
 	if (!sscanf(buf, "%u", &new_hardlimit))	\
 		return -EINVAL;	\
 	permtable = cpufreq_frequency_get_table(0);	\
@@ -1025,9 +993,7 @@ const char *buf, size_t count)			\
 		return -EINVAL;	\
 	for (i = 0; (permtable[i].frequency != CPUFREQ_TABLE_END); i++)	\
 		if (permtable[i].frequency == new_hardlimit) {	\
-				down_write(&hpolicy->rwsem);	\
-				hpolicy->name = new_hardlimit;	\
-				up_write(&hpolicy->rwsem);	\
+				per_cpu(cpufreq_hardlimit_data, dev->id).name = new_hardlimit;	\
 				return count;	\
 		}	\
 	return -EINVAL;	\
