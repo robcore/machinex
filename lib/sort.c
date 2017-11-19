@@ -1,8 +1,11 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * A fast, small, non-recursive O(nlog n) sort for the Linux kernel
  *
  * Jan 23 2005  Matt Mackall <mpm@selenic.com>
  */
+
+#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
 #include <linux/types.h>
 #include <linux/export.h>

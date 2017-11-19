@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0
 #include <linux/export.h>
 #include <linux/lockref.h>
 
@@ -18,7 +19,7 @@
 #define CMPXCHG_LOOP(CODE, SUCCESS) do {					\
 	struct lockref old;							\
 	BUILD_BUG_ON(sizeof(old) != 8);						\
-	old.lock_count = ACCESS_ONCE(lockref->lock_count);			\
+	old.lock_count = READ_ONCE(lockref->lock_count);			\
 	while (likely(arch_spin_value_unlocked(old.lock.rlock.raw_lock))) {  	\
 		struct lockref new = old, prev = old;				\
 		CODE								\
@@ -28,6 +29,7 @@
 		if (likely(old.lock_count == prev.lock_count)) {		\
 			SUCCESS;						\
 		}								\
+		cpu_relax();							\
 	}									\
 } while (0)
 
@@ -164,6 +166,7 @@ void lockref_mark_dead(struct lockref *lockref)
 	assert_spin_locked(&lockref->lock);
 	lockref->count = -128;
 }
+EXPORT_SYMBOL(lockref_mark_dead);
 
 /**
  * lockref_get_not_dead - Increments count unless the ref is dead
