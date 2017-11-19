@@ -58,12 +58,12 @@ static bool default_suspend_ok(struct device *dev)
 	}
 	td->constraint_changed = false;
 	td->cached_suspend_ok = false;
-	td->effective_constraint_ns = -1;
+	td->effective_constraint_ns = 0;
 	constraint_ns = __dev_pm_qos_read_value(dev);
 
 	spin_unlock_irqrestore(&dev->power.lock, flags);
 
-	if (constraint_ns < 0)
+	if (constraint_ns == 0)
 		return false;
 
 	constraint_ns *= NSEC_PER_USEC;
