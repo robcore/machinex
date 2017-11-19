@@ -268,6 +268,9 @@ do {									\
 	: "r" (addr), "i" (-EFAULT)				\
 	: "cc")
 
+#define __get_user_asm_byte(x, addr, err)			\
+	__get_user_asm(x, addr, err, ldrb)
+
 #ifndef __ARMEB__
 #define __get_user_asm_half(x, __gu_addr, err)			\
 ({								\
