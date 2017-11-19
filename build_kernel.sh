@@ -98,6 +98,8 @@ RECOV=recovery
 DEVS=device
 USBB=usb:5-4
 UNKNOW=unknown
+RUNTIMEPATH=`cat /root/androidruntimeusb`
+RECOVPATH=`cat /root/androidrecovusb`
 
 if [ -e adbtmp ]; then
 	rm adbtmp
@@ -121,9 +123,10 @@ if [ -e $MYSCRIPT ]; then
 	rm $MYSCRIPT
 fi
 
-if [[ $ONLINE != $RECOV ]]; then
+if [[ $RECOVPATH -eq 0 ]]; then
 	wakeme
 fi
+
 if [[ $ONLINE = $RECOV ]] && [[ $DEVICE = $USBB ]]; then #if we are in recovery
 		echo "recovery connected"
 		echo "pushing $1"
