@@ -545,11 +545,11 @@ static int __ref do_freq_control(void)
 			hotplug_check_needed++;
 			continue;
 		}
-		resolve_max_freq[cpu] = get_thermal_policy(cpu);
+		resolve_max_freq[cpu] = limited_max_freq_thermal[cpu];
 		if (freq_temp >= msm_thermal_info.limit_temp_degC) {
 				if (limit_idx[cpu] <= thermal_limit_low[cpu]) {
 					limit_idx[cpu] = thermal_limit_low[cpu];
-					if (unlikely(get_thermal_policy(cpu) > resolve_max_freq[cpu]))
+					if (unlikely(limited_max_freq_thermal[cpu] > resolve_max_freq[cpu]))
 						set_thermal_policy(cpu, resolve_max_freq[cpu]);
 					hotplug_check_needed++;
 					continue;
@@ -567,7 +567,7 @@ static int __ref do_freq_control(void)
 					/* Satisfy suspend/resume type cases where we haven't updated the
 					 * thermal limit in time. ie. suspend/resume
 					 */
-					if (unlikely(get_thermal_policy(cpu) < resolve_max_freq[cpu]))
+					if (unlikely(limited_max_freq_thermal[cpu] < resolve_max_freq[cpu]))
 						set_thermal_policy(cpu, resolve_max_freq[cpu]);
 					continue;
 				}
@@ -582,7 +582,7 @@ static int __ref do_freq_control(void)
 				}
 		}
 
-		if (resolve_max_freq[cpu] != get_thermal_policy(cpu))
+		if (resolve_max_freq[cpu] != limited_max_freq_thermal[cpu])
 			set_thermal_policy(cpu, resolve_max_freq[cpu]);
 	}
 
@@ -701,7 +701,7 @@ static void __ref disable_msm_thermal(void)
 	for_each_possible_cpu(cpu) {
 		if (cpu_out_of_range(cpu))
 			break;
-		if (get_thermal_policy(cpu) == get_hardlimit_max(cpu))
+		if (limited_max_freq_thermal[cpu] == get_hardlimit_max(cpu))
 			continue;
 
 		tempfreq = get_hardlimit_max(cpu);

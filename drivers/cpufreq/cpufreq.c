@@ -38,6 +38,7 @@ extern void set_gpu_vdd_levels(int uv_tbl[]);
 
 static unsigned int current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON;
 static struct hardlimit_policy hl[NR_CPUS];
+unsigned int limited_max_freq_thermal[NR_CPUS] = { DEFAULT_HARD_MAX, DEFAULT_HARD_MAX, DEFAULT_HARD_MAX, DEFAULT_HARD_MAX };
 static struct workqueue_struct *cpu_boost_wq;
 static struct delayed_work input_boost_work;
 static struct delayed_work input_boost_rem;
@@ -331,16 +332,16 @@ static void reapply_hard_limits(unsigned int cpu, bool update_policy)
 	struct cpufreq_policy *policy;
 	/* Recalculate the currently applicable min/max */
 	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON) {
-		if (hl[cpu].limited_max_freq_thermal >= DEFAULT_HARD_MIN &&
-			hl[cpu].limited_max_freq_thermal < hl[cpu].hardlimit_max_screen_on)
-			hl[cpu].current_limit_max = hl[cpu].limited_max_freq_thermal;
+		if (limited_max_freq_thermal[cpu] >= DEFAULT_HARD_MIN &&
+			limited_max_freq_thermal[cpu] < hl[cpu].hardlimit_max_screen_on)
+			hl[cpu].current_limit_max = limited_max_freq_thermal[cpu];
 		else
 			hl[cpu].current_limit_max = hl[cpu].hardlimit_max_screen_on;
 
 		if (thermal_disables_boost) {
 			if (hl[cpu].input_boost_limit > hl[cpu].hardlimit_min_screen_on &&
 				hl[cpu].input_boost_limit <= hl[cpu].current_limit_max &&
-				hl[cpu].limited_max_freq_thermal == hl[cpu].hardlimit_max_screen_on)
+				limited_max_freq_thermal[cpu] == hl[cpu].hardlimit_max_screen_on)
 				hl[cpu].current_limit_min = hl[cpu].input_boost_limit;
 			else
 				hl[cpu].current_limit_min = hl[cpu].hardlimit_min_screen_on;
@@ -352,9 +353,9 @@ static void reapply_hard_limits(unsigned int cpu, bool update_policy)
 				hl[cpu].current_limit_min = hl[cpu].hardlimit_min_screen_on;
 		}
 	} else if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_OFF) {
-		if (hl[cpu].limited_max_freq_thermal >= DEFAULT_HARD_MIN &&
-			hl[cpu].limited_max_freq_thermal < hl[cpu].hardlimit_max_screen_off)
-			hl[cpu].current_limit_max = hl[cpu].limited_max_freq_thermal;
+		if (limited_max_freq_thermal[cpu] >= DEFAULT_HARD_MIN &&
+			limited_max_freq_thermal[cpu] < hl[cpu].hardlimit_max_screen_off)
+			hl[cpu].current_limit_max = limited_max_freq_thermal[cpu];
 		else
 			hl[cpu].current_limit_max = hl[cpu].hardlimit_max_screen_off;
 
@@ -386,13 +387,8 @@ EXPORT_SYMBOL(check_cpufreq_hardlimit);
 
 void set_thermal_policy(unsigned int cpu, unsigned int freq)
 {
-	hl[cpu].limited_max_freq_thermal = freq;
+	limited_max_freq_thermal[cpu] = freq;
 	reapply_hard_limits(cpu, true);
-}
-
-unsigned int get_thermal_policy(unsigned int cpu)
-{
-	return hl[cpu].limited_max_freq_thermal;
 }
 
 unsigned int get_hardlimit_max(unsigned int cpu)
@@ -1538,7 +1534,6 @@ static void hardlimit_add_dev(unsigned int cpu)
 	hl[cpu].current_limit_min = DEFAULT_HARD_MIN,
 	hl[cpu].input_boost_limit = DEFAULT_HARD_MIN,
 	hl[cpu].input_boost_frequency = DEFAULT_INPUT_FREQ,
-	hl[cpu].limited_max_freq_thermal = DEFAULT_HARD_MAX,
 	hlim_initialized[cpu] = 1;
 }
 

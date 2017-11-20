@@ -936,8 +936,8 @@ struct hardlimit_policy {
 	unsigned int current_limit_min;
 	unsigned int input_boost_limit;
 	unsigned int input_boost_frequency;
-	unsigned int limited_max_freq_thermal;
 };
+extern unsigned int limited_max_freq_thermal[NR_CPUS];
 
 void cpu_boost_event(void);
 void intelli_boost(void);
@@ -972,7 +972,6 @@ const char *buf, size_t count)			\
 }
 
 unsigned int check_cpufreq_hardlimit(unsigned int cpu, unsigned int freq);
-unsigned int get_thermal_policy(unsigned int cpu);
 unsigned int get_hardlimit_max(unsigned int cpu);
 #endif /* CONFIG_CPUFREQ_HARDLIMIT*/
 #endif /* _LINUX_CPUFREQ_H */
