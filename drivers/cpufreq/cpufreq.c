@@ -37,9 +37,10 @@ extern ssize_t get_gpu_vdd_levels_str(char *buf);
 extern void set_gpu_vdd_levels(int uv_tbl[]);
 unsigned int current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON;
 
-#define DEFAULT_MAX 1890000
-#define DEFAULT_MIN 384000
-#define DEFAULT_INPUT_FREQ 1350000 /*
+static const unsigned int DEFAULT_MAX = 1890000;
+static const unsigned int DEFAULT_MIN = 384000;
+static const unsigned int DEFAULT_INPUT_FREQ = 1350000;
+/*
 unsigned int hardlimit_max_screen_on[NR_CPUS] = {DEFAULT_MAX, DEFAULT_MAX, DEFAULT_MAX, DEFAULT_MAX};
 unsigned int hardlimit_max_screen_off[NR_CPUS] = {DEFAULT_MAX, DEFAULT_MAX, DEFAULT_MAX, DEFAULT_MAX};
 unsigned int hardlimit_min_screen_on[NR_CPUS] = {DEFAULT_MIN, DEFAULT_MIN, DEFAULT_MIN, DEFAULT_MIN};
@@ -2745,6 +2746,28 @@ static int cpuhp_cpufreq_offline(unsigned int cpu)
 
 	return 0;
 }
+
+static void setup_hardlimits(void)
+{
+	unsigned int cpu = 0;
+	struct hardlimit_policy *hpolicy;
+	for_each_possible_cpu(cpu) {
+		if (cpu_out_of_range(cpu))
+			break;
+		hpolicy = kzalloc(sizeof(*hpolicy), GFP_KERNEL);
+		BUG_ON(!hpolicy);
+		hpolicy->hardlimit_max_screen_on = DEFAULT_MAX;
+		hpolicy->hardlimit_max_screen_off = DEFAULT_MAX;
+		hpolicy->hardlimit_min_screen_on = DEFAULT_MIN;
+		hpolicy->hardlimit_min_screen_off = DEFAULT_MIN;
+		hpolicy->current_limit_max = DEFAULT_MAX;
+		hpolicy->current_limit_min = DEFAULT_MIN;
+		hpolicy->input_boost_limit = DEFAULT_MIN;
+		hpolicy->input_boost_frequency = DEFAULT_INPUT_FREQ;
+		hpolicy->limited_max_freq_thermal = DEFAULT_MAX;
+	}
+}
+
 /*********************************************************************
  *               REGISTER / UNREGISTER CPUFREQ DRIVER                *
  *********************************************************************/
@@ -2826,6 +2849,8 @@ err_null_driver:
 	write_unlock_irqrestore(&cpufreq_driver_lock, flags);
 out:
 	cpus_read_unlock();
+	if (ret == 0)
+		setup_hardlimits();
 	return ret;
 }
 EXPORT_SYMBOL_GPL(cpufreq_register_driver);
@@ -2875,24 +2900,6 @@ static struct syscore_ops cpufreq_syscore_ops = {
 struct kobject *cpufreq_global_kobject;
 EXPORT_SYMBOL(cpufreq_global_kobject);
 
-static void setup_hardlimits(void)
-{
-	unsigned int cpu;
-	struct hardlimit_policy *hpolicy;
-	for_each_possible_cpu(cpu) {
-		hpolicy = &per_cpu(cpufreq_hardlimit_data, cpu);
-		hpolicy->hardlimit_max_screen_on = DEFAULT_MAX;
-		hpolicy->hardlimit_max_screen_off = DEFAULT_MAX;
-		hpolicy->hardlimit_min_screen_on = DEFAULT_MIN;
-		hpolicy->hardlimit_min_screen_off = DEFAULT_MIN;
-		hpolicy->current_limit_max = DEFAULT_MAX;
-		hpolicy->current_limit_min = DEFAULT_MIN;
-		hpolicy->input_boost_limit = DEFAULT_MIN;
-		hpolicy->input_boost_frequency = DEFAULT_INPUT_FREQ;
-		hpolicy->limited_max_freq_thermal = DEFAULT_MAX;
-	}
-}
-
 static int __init cpufreq_core_init(void)
 {
 #ifdef CONFIG_CPU_VOLTAGE_TABLE
@@ -2913,7 +2920,6 @@ static int __init cpufreq_core_init(void)
 
 	INIT_DELAYED_WORK(&input_boost_work, do_input_boost);
 	INIT_DELAYED_WORK(&input_boost_rem, do_input_boost_rem);
-	setup_hardlimits();
 	return 0;
 }
 core_initcall(cpufreq_core_init);
