@@ -37,8 +37,7 @@ extern ssize_t get_gpu_vdd_levels_str(char *buf);
 extern void set_gpu_vdd_levels(int uv_tbl[]);
 
 static unsigned int current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON;
-extern struct hardlimit_policy hl[NR_CPUS];
-
+static struct hardlimit_policy hl[NR_CPUS];
 static struct workqueue_struct *cpu_boost_wq;
 static struct delayed_work input_boost_work;
 static struct delayed_work input_boost_rem;
@@ -1516,10 +1515,21 @@ static void cpufreq_policy_free(struct cpufreq_policy *policy)
 	kfree(policy);
 }
 
+static unsigned int hlim_initialized[NR_CPUS] = {0, 0, 0, 0};
 static unsigned int hdev_added[NR_CPUS] = { 0, 0, 0, 0 };
+
 static void hardlimit_add_dev(unsigned int cpu)
 {
-
+	hl[cpu].hardlimit_max_screen_on = DEFAULT_HARD_MAX,
+	hl[cpu].hardlimit_max_screen_off = DEFAULT_HARD_MAX,
+	hl[cpu].hardlimit_min_screen_on = DEFAULT_HARD_MIN,
+	hl[cpu].hardlimit_min_screen_off = DEFAULT_HARD_MIN,
+	hl[cpu].current_limit_max = DEFAULT_HARD_MAX,
+	hl[cpu].current_limit_min = DEFAULT_HARD_MIN,
+	hl[cpu].input_boost_limit = DEFAULT_HARD_MIN,
+	hl[cpu].input_boost_frequency = DEFAULT_INPUT_FREQ,
+	hl[cpu].limited_max_freq_thermal = DEFAULT_HARD_MAX,
+	hlim_initialized[cpu] = 1;
 }
 
 static int hardlimit_attr_init(unsigned int cpu)
@@ -1582,6 +1592,9 @@ static int cpufreq_online(unsigned int cpu)
 	 * managing offline cpus here.
 	 */
 	cpumask_and(policy->cpus, policy->cpus, cpu_online_mask);
+
+	if (!hlim_initialized[cpu])
+		hardlimit_add_dev(policy->cpu);
 
 	reapply_hard_limits(policy->cpu, false);
 

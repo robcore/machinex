@@ -937,17 +937,8 @@ struct hardlimit_policy {
 	unsigned int input_boost_limit;
 	unsigned int input_boost_frequency;
 	unsigned int limited_max_freq_thermal;
-} hlimit = {
-	.hardlimit_max_screen_on = DEFAULT_HARD_MAX,
-	.hardlimit_max_screen_off = DEFAULT_HARD_MAX,
-	.hardlimit_min_screen_on = DEFAULT_HARD_MIN,
-	.hardlimit_min_screen_off = DEFAULT_HARD_MIN,
-	.current_limit_max = DEFAULT_HARD_MAX,
-	.current_limit_min = DEFAULT_HARD_MIN,
-	.input_boost_limit = DEFAULT_HARD_MIN,
-	.input_boost_frequency = DEFAULT_INPUT_FREQ,
-	.limited_max_freq_thermal = DEFAULT_HARD_MAX,
 };
+
 void cpu_boost_event(void);
 void intelli_boost(void);
 #ifdef CONFIG_AUTOSMP
