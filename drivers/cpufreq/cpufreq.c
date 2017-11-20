@@ -36,6 +36,7 @@ extern unsigned long acpuclk_get_rate(int cpu);
 extern ssize_t get_gpu_vdd_levels_str(char *buf);
 extern void set_gpu_vdd_levels(int uv_tbl[]);
 
+static unsigned int current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON;
 static struct workqueue_struct *cpu_boost_wq;
 static struct delayed_work input_boost_work;
 static struct delayed_work input_boost_rem;

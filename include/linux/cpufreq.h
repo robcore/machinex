@@ -63,9 +63,6 @@ struct cpufreq_user_policy {
 	unsigned int		min;    /* in kHz */
 	unsigned int		max;    /* in kHz */
 };
-#ifdef CONFIG_CPUFREQ_HARDLIMIT
-extern unsigned int current_screen_state;
-#endif /* CONFIG_CPUFREQ_HARDLIMIT */
 
 struct cpufreq_policy {
 	/* CPUs sharing clock, require sw coordination */
