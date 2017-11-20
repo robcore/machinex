@@ -464,6 +464,14 @@ config NEED_PER_CPU_KM
 	bool
 	default y
 
+config PERCPU_STATS
+	bool "Collect percpu memory statistics"
+	default n
+	help
+	  This feature collects and exposes statistics via debugfs. The
+	  information includes global and per chunk statistics, which can
+	  be used to help understand percpu memory usage.
+
 config CLEANCACHE
 	bool "Enable cleancache driver to cache clean pages if tmem is present"
 	default n
