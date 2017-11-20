@@ -37,9 +37,9 @@ extern ssize_t get_gpu_vdd_levels_str(char *buf);
 extern void set_gpu_vdd_levels(int uv_tbl[]);
 unsigned int current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON;
 
-static const unsigned int DEFAULT_MAX = 1890000;
-static const unsigned int DEFAULT_MIN = 384000;
-static const unsigned int DEFAULT_INPUT_FREQ = 1350000;
+static unsigned int DEFAULT_MAX = 1890000;
+static unsigned int DEFAULT_MIN = 384000;
+static unsigned int DEFAULT_INPUT_FREQ = 1350000;
 /*
 unsigned int hardlimit_max_screen_on[NR_CPUS] = {DEFAULT_MAX, DEFAULT_MAX, DEFAULT_MAX, DEFAULT_MAX};
 unsigned int hardlimit_max_screen_off[NR_CPUS] = {DEFAULT_MAX, DEFAULT_MAX, DEFAULT_MAX, DEFAULT_MAX};
@@ -1553,6 +1553,23 @@ static void cpufreq_policy_free(struct cpufreq_policy *policy)
 }
 
 static unsigned int hdev_added[NR_CPUS] = { 0, 0, 0, 0 };
+
+static void setup_hardlimits(unsigned int cpu)
+{
+	struct hardlimit_policy *hpolicy = &per_cpu(cpufreq_hardlimit_data, cpu);
+
+	BUG_ON(hpolicy == NULL);
+	hpolicy->hardlimit_max_screen_on = DEFAULT_MAX;
+	hpolicy->hardlimit_max_screen_off = DEFAULT_MAX;
+	hpolicy->hardlimit_min_screen_on = DEFAULT_MIN;
+	hpolicy->hardlimit_min_screen_off = DEFAULT_MIN;
+	hpolicy->current_limit_max = DEFAULT_MAX;
+	hpolicy->current_limit_min = DEFAULT_MIN;
+	hpolicy->input_boost_limit = DEFAULT_MIN;
+	hpolicy->input_boost_frequency = DEFAULT_INPUT_FREQ;
+	hpolicy->limited_max_freq_thermal = DEFAULT_MAX;
+}
+
 static int hardlimit_attr_init(unsigned int cpu)
 {
 	struct device *dev = get_cpu_device(cpu);
@@ -1614,6 +1631,8 @@ static int cpufreq_online(unsigned int cpu)
 	 */
 	cpumask_and(policy->cpus, policy->cpus, cpu_online_mask);
 
+	if (!hdev_added[policy->cpu])
+		
 	reapply_hard_limits(policy->cpu, false);
 
 	if (new_policy) {
@@ -2747,27 +2766,6 @@ static int cpuhp_cpufreq_offline(unsigned int cpu)
 	return 0;
 }
 
-static void setup_hardlimits(void)
-{
-	unsigned int cpu = 0;
-	struct hardlimit_policy *hpolicy;
-	for_each_possible_cpu(cpu) {
-		if (cpu_out_of_range(cpu))
-			break;
-		hpolicy = kzalloc(sizeof(*hpolicy), GFP_KERNEL);
-		BUG_ON(!hpolicy);
-		hpolicy->hardlimit_max_screen_on = DEFAULT_MAX;
-		hpolicy->hardlimit_max_screen_off = DEFAULT_MAX;
-		hpolicy->hardlimit_min_screen_on = DEFAULT_MIN;
-		hpolicy->hardlimit_min_screen_off = DEFAULT_MIN;
-		hpolicy->current_limit_max = DEFAULT_MAX;
-		hpolicy->current_limit_min = DEFAULT_MIN;
-		hpolicy->input_boost_limit = DEFAULT_MIN;
-		hpolicy->input_boost_frequency = DEFAULT_INPUT_FREQ;
-		hpolicy->limited_max_freq_thermal = DEFAULT_MAX;
-	}
-}
-
 /*********************************************************************
  *               REGISTER / UNREGISTER CPUFREQ DRIVER                *
  *********************************************************************/
@@ -2849,8 +2847,7 @@ err_null_driver:
 	write_unlock_irqrestore(&cpufreq_driver_lock, flags);
 out:
 	cpus_read_unlock();
-	if (ret == 0)
-		setup_hardlimits();
+
 	return ret;
 }
 EXPORT_SYMBOL_GPL(cpufreq_register_driver);
