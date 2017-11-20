@@ -23,14 +23,11 @@ struct pcpu_chunk {
 	void			*data;		/* chunk data */
 	int			first_free;	/* no free below this */
 	bool			immutable;	/* no [de]population allowed */
-	int			start_offset;	/* the overlap with the previous
-						   region to have a page aligned
-						   base_addr */
-	int			end_offset;	/* additional area required to
-						   have the region end page
-						   aligned */
-
-	int			nr_pages;	/* # of pages served by this chunk */
+	bool			has_reserved;	/* Indicates if chunk has reserved space
+						   at the beginning. Reserved chunk will
+						   contain reservation for static chunk.
+						   Dynamic chunk will contain reservation
+						   for static and reserved chunks. */
 	int			nr_populated;	/* # of populated pages */
 	unsigned long		populated[];	/* populated bitmap */
 };

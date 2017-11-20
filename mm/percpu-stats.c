@@ -51,19 +51,18 @@ static int find_max_map_used(void)
 static void chunk_map_stats(struct seq_file *m, struct pcpu_chunk *chunk,
 			    int *buffer)
 {
-	int i, s_index, e_index, last_alloc, alloc_sign, as_len;
+	int i, s_index, last_alloc, alloc_sign, as_len;
 	int *alloc_sizes, *p;
 	/* statistics */
 	int sum_frag = 0, max_frag = 0;
 	int cur_min_alloc = 0, cur_med_alloc = 0, cur_max_alloc = 0;
 
 	alloc_sizes = buffer;
-	s_index = (chunk->start_offset) ? 1 : 0;
-	e_index = chunk->map_used - ((chunk->end_offset) ? 1 : 0);
+	s_index = chunk->has_reserved ? 1 : 0;
 
 	/* find last allocation */
 	last_alloc = -1;
-	for (i = e_index - 1; i >= s_index; i--) {
+	for (i = chunk->map_used - 1; i >= s_index; i--) {
 		if (chunk->map[i] & 1) {
 			last_alloc = i;
 			break;
