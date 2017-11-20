@@ -670,12 +670,14 @@ reschedule:
 static void __ref get_table(struct work_struct *work)
 {
 	int ret;
+	unsigned int i;
 	ret = msm_thermal_get_freq_table();
 	if (ret)
 		goto reschedule;
 initchecker:
-	if (!get_thermal_policy(cpu))
-		goto initchecker;
+	for (i = 0; (i < 3); i++)
+		if (!get_thermal_policy(i))
+			goto initchecker;
 	queue_delayed_work(intellithermal_wq, &check_temp_work, 0);
 	return;
 reschedule:
