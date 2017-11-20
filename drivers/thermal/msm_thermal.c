@@ -441,10 +441,9 @@ static int msm_thermal_get_freq_table(void)
 	if (!therm_table)
 		return -ENOMEM;
 
-	for (i = 0; (therm_table[i].frequency != CPUFREQ_TABLE_END); i++) {
+	for (i = 0; (therm_table[i].frequency != CPUFREQ_TABLE_END); i++)
 			if (therm_table[i].frequency == DEFAULT_THERMIN)
 				templow = i;
-	}
 
 	if (templow == 4) {
 		pr_info("MSM Thermal: Initial thermal_limit_low is %u\n", therm_table[thermal_limit_low[0]].frequency);
