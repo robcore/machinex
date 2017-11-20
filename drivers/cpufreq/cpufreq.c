@@ -1632,7 +1632,8 @@ static int cpufreq_online(unsigned int cpu)
 	cpumask_and(policy->cpus, policy->cpus, cpu_online_mask);
 
 	if (!hdev_added[policy->cpu])
-		
+		setup_hardlimits(policy->cpu);
+
 	reapply_hard_limits(policy->cpu, false);
 
 	if (new_policy) {
