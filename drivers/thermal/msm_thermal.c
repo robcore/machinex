@@ -426,7 +426,6 @@ module_param_cb(poll_ms, &param_ops_poll_ms, NULL, 0644);
 /*************************************************************************
  *                       END Module Parameters                           *
  *************************************************************************/
-#define DEFAULT_THERMIN 810000
 static int msm_thermal_get_freq_table(void)
 {
 	struct cpufreq_policy *policy;
@@ -527,7 +526,7 @@ static int __ref do_freq_control(void)
 	for_each_possible_cpu(cpu) {
 		if (cpu_out_of_range(cpu))
 			break;
-		resolve_max_freq[cpu] = limited_max_freq_thermal[cpu];
+		resolve_max_freq[cpu] = hl[cpu].limited_max_freq_thermal;
 		freq_temp = evaluate_temp(cpu);
 		if (freq_temp <= 0) {
 			hotplug_check_needed++;
@@ -545,22 +544,22 @@ static int __ref do_freq_control(void)
 				hotplug_check_needed++;
 		} else if (freq_temp < delta) {
 				if (limit_idx[cpu] == MAX_IDX) {
-					resolve_max_freq[cpu] = is_display_on() ? hardlimit_max_screen_on[cpu] : 
-										   hardlimit_max_screen_off[cpu];
+					resolve_max_freq[cpu] = is_display_on() ? hl[cpu].hardlimit_max_screen_on : 
+										   hl[cpu].hardlimit_max_screen_off;
 					continue;
 				}
 				limit_idx[cpu] += msm_thermal_info.freq_step;
 				if (limit_idx[cpu] >= MAX_IDX) {
 					limit_idx[cpu] = MAX_IDX;
-					resolve_max_freq[cpu] = is_display_on() ? hardlimit_max_screen_on[cpu] : 
-										   hardlimit_max_screen_off[cpu];
+					resolve_max_freq[cpu] = is_display_on() ? hl[cpu].hardlimit_max_screen_on : 
+										   hl[cpu].hardlimit_max_screen_off;
 				} else {
 					resolve_max_freq[cpu] = therm_table[limit_idx[cpu]].frequency;
 					hotplug_check_needed++;
 				}
 		}
 
-		if (resolve_max_freq[cpu] == limited_max_freq_thermal[cpu])
+		if (resolve_max_freq[cpu] == hl[cpu].limited_max_freq_thermal)
 			continue;
 
 		set_thermal_policy(cpu, resolve_max_freq[cpu]);
@@ -679,12 +678,12 @@ static void __ref disable_msm_thermal(void)
 	for_each_possible_cpu(cpu) {
 		if (cpu_out_of_range(cpu))
 			break;
-		if ((is_display_on() && limited_max_freq_thermal[cpu] == hardlimit_max_screen_on[cpu]) ||
-			(!is_display_on() && limited_max_freq_thermal[cpu] == hardlimit_max_screen_off[cpu]))
+		if ((is_display_on() && hl[cpu].limited_max_freq_thermal == hl[cpu].hardlimit_max_screen_on) ||
+			(!is_display_on() && hl[cpu].limited_max_freq_thermal == hl[cpu].hardlimit_max_screen_off))
 			continue;
 
-		tempfreq = is_display_on() ? hardlimit_max_screen_on[cpu] : 
-										   hardlimit_max_screen_off[cpu];
+		tempfreq = is_display_on() ? hl[cpu].hardlimit_max_screen_on : 
+										   hl[cpu].hardlimit_max_screen_off;
 
 		set_thermal_policy(cpu, tempfreq);
 	}

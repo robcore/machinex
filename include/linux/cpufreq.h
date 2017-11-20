@@ -151,16 +151,6 @@ struct cpufreq_policy {
 	void			*driver_data;
 };
 
-extern unsigned int hardlimit_max_screen_on[NR_CPUS];
-extern unsigned int hardlimit_max_screen_off[NR_CPUS];
-extern unsigned int hardlimit_min_screen_on[NR_CPUS];
-extern unsigned int hardlimit_min_screen_off[NR_CPUS];
-extern unsigned int current_limit_max[NR_CPUS];
-extern unsigned int current_limit_min[NR_CPUS];
-extern unsigned int input_boost_limit[NR_CPUS];
-extern unsigned int input_boost_frequency[NR_CPUS];
-extern unsigned int limited_max_freq_thermal[NR_CPUS];
-
 /* Only for ACPI */
 #define CPUFREQ_SHARED_TYPE_NONE (0) /* None */
 #define CPUFREQ_SHARED_TYPE_HW	 (1) /* HW does needed coordination */
@@ -926,19 +916,43 @@ int cpufreq_generic_init(struct cpufreq_policy *policy,
 		struct cpufreq_frequency_table *table,
 		unsigned int transition_latency);
 
+struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu);
+
 #ifdef CONFIG_CPUFREQ_HARDLIMIT
 #define CPUFREQ_HARDLIMIT_VERSION "v2.3 by Yank555.lu, with updates by Robcore."
 
 /* Default frequencies for MACH_JF */
-#define CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK	1890000
-#define CPUFREQ_HARDLIMIT_MAX_SCREEN_OFF_STOCK	1890000
-#define CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK	384000
-#define CPUFREQ_HARDLIMIT_MIN_SCREEN_OFF_STOCK	384000
-#define CPUFREQ_HARDLIMIT_THERMAL_MIN 810000
-#define CPUFREQ_HARDLIMIT_THERMAL_MAX 1890000
+#define DEFAULT_HARD_MAX 1890000U
+#define DEFAULT_HARD_MIN 384000U
+#define DEFAULT_INPUT_FREQ 1350000U
+#define DEFAULT_THERMIN 810000U
 
 #define CPUFREQ_HARDLIMIT_SCREEN_ON	0		/* default, consider we boot with screen on */
 #define CPUFREQ_HARDLIMIT_SCREEN_OFF	1
+
+struct hardlimit_policy {
+	unsigned int hardlimit_max_screen_on;
+	unsigned int hardlimit_max_screen_off;
+	unsigned int hardlimit_min_screen_on;
+	unsigned int hardlimit_min_screen_off;
+	unsigned int current_limit_max;
+	unsigned int current_limit_min;
+	unsigned int input_boost_limit;
+	unsigned int input_boost_frequency;
+	unsigned int limited_max_freq_thermal;
+} hlimit = {
+	.hardlimit_max_screen_on = DEFAULT_HARD_MAX,
+	.hardlimit_max_screen_off = DEFAULT_HARD_MAX,
+	.hardlimit_min_screen_on = DEFAULT_HARD_MIN,
+	.hardlimit_min_screen_off = DEFAULT_HARD_MIN,
+	.current_limit_max = DEFAULT_HARD_MAX,
+	.current_limit_min = DEFAULT_HARD_MIN,
+	.input_boost_limit = DEFAULT_HARD_MIN,
+	.input_boost_frequency = DEFAULT_INPUT_FREQ,
+	.limited_max_freq_thermal = DEFAULT_HARD_MAX,
+};
+
+struct hardlimit_policy hl[NR_CPUS];
 
 void cpu_boost_event(void);
 void intelli_boost(void);
@@ -972,8 +986,6 @@ const char *buf, size_t count)			\
 	return count;				\
 }
 
-/* Hook in cpufreq for scaling min./max. */
-void update_scaling_limits(unsigned int cpu, unsigned int freq_min, unsigned int freq_max);
+unsigned int check_cpufreq_hardlimit(unsigned int cpu, unsigned int freq);
 #endif /* CONFIG_CPUFREQ_HARDLIMIT*/
-struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu);
 #endif /* _LINUX_CPUFREQ_H */
