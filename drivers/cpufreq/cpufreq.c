@@ -389,7 +389,17 @@ void set_thermal_policy(unsigned int cpu, unsigned int freq)
 	hl[cpu].limited_max_freq_thermal = freq;
 	reapply_hard_limits(cpu, true);
 }
-	
+
+unsigned int get_thermal_policy(unsigned int cpu)
+{
+	return hl[cpu].limited_max_freq_thermal;
+}
+
+unsigned int get_hardlimit_max(unsigned int cpu)
+{
+	return is_display_on() ? hl[cpu].hardlimit_max_screen_on :
+		    hl[cpu].hardlimit_max_screen_off;
+}
 
 static void do_input_boost_rem(struct work_struct *work)
 {

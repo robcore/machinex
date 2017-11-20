@@ -972,5 +972,7 @@ const char *buf, size_t count)			\
 }
 
 unsigned int check_cpufreq_hardlimit(unsigned int cpu, unsigned int freq);
+unsigned int get_thermal_policy(unsigned int cpu);
+unsigned int get_hardlimit_max(unsigned int cpu);
 #endif /* CONFIG_CPUFREQ_HARDLIMIT*/
 #endif /* _LINUX_CPUFREQ_H */

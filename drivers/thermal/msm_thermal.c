@@ -41,7 +41,6 @@
 #define SHUTOFF_TEMP 85
 
 static int enabled;
-static struct hardlimit_policy hl[NR_CPUS];
 static struct msm_thermal_data msm_thermal_info = {
 	.poll_ms = 320,
 	.limit_temp_degC = 65,
@@ -522,16 +521,15 @@ static int __ref do_freq_control(void)
 	delta = (msm_thermal_info.limit_temp_degC -
 			 msm_thermal_info.temp_hysteresis_degC);
 
-	get_online_cpus();
 	for_each_possible_cpu(cpu) {
 		if (cpu_out_of_range(cpu))
 			break;
-		resolve_max_freq[cpu] = hl[cpu].limited_max_freq_thermal;
 		freq_temp = evaluate_temp(cpu);
 		if (freq_temp <= 0) {
 			hotplug_check_needed++;
 			continue;
 		}
+		resolve_max_freq[cpu] = get_thermal_policy(cpu);
 		if (freq_temp >= msm_thermal_info.limit_temp_degC) {
 				if (limit_idx[cpu] == thermal_limit_low[cpu]) {
 					hotplug_check_needed++;
@@ -544,27 +542,29 @@ static int __ref do_freq_control(void)
 				hotplug_check_needed++;
 		} else if (freq_temp < delta) {
 				if (limit_idx[cpu] == MAX_IDX) {
-					resolve_max_freq[cpu] = is_display_on() ? hl[cpu].hardlimit_max_screen_on : 
-										   hl[cpu].hardlimit_max_screen_off;
+					resolve_max_freq[cpu] = get_hardlimit_max(cpu);
+					/* Satisfy suspend/resume type cases where we haven't updated the
+					 * thermal limit in time. ie. suspend/resume
+					 */
+					if (unlikely(get_thermal_policy(cpu) < get_hardlimit_max(cpu)))
+						set_thermal_policy(cpu, resolve_max_freq[cpu]);
 					continue;
 				}
 				limit_idx[cpu] += msm_thermal_info.freq_step;
 				if (limit_idx[cpu] >= MAX_IDX) {
 					limit_idx[cpu] = MAX_IDX;
-					resolve_max_freq[cpu] = is_display_on() ? hl[cpu].hardlimit_max_screen_on : 
-										   hl[cpu].hardlimit_max_screen_off;
+					resolve_max_freq[cpu] = get_hardlimit_max(cpu);
 				} else {
 					resolve_max_freq[cpu] = therm_table[limit_idx[cpu]].frequency;
 					hotplug_check_needed++;
 				}
 		}
 
-		if (resolve_max_freq[cpu] == hl[cpu].limited_max_freq_thermal)
+		if (resolve_max_freq[cpu] == get_thermal_policy(cpu))
 			continue;
 
 		set_thermal_policy(cpu, resolve_max_freq[cpu]);
 	}
-	put_online_cpus();
 
 	sanitize_min_max(hotplug_check_needed, 0, 1)
 	return hotplug_check_needed;
@@ -678,12 +678,10 @@ static void __ref disable_msm_thermal(void)
 	for_each_possible_cpu(cpu) {
 		if (cpu_out_of_range(cpu))
 			break;
-		if ((is_display_on() && hl[cpu].limited_max_freq_thermal == hl[cpu].hardlimit_max_screen_on) ||
-			(!is_display_on() && hl[cpu].limited_max_freq_thermal == hl[cpu].hardlimit_max_screen_off))
+		if (get_thermal_policy(cpu) == get_hardlimit_max(cpu))
 			continue;
 
-		tempfreq = is_display_on() ? hl[cpu].hardlimit_max_screen_on : 
-										   hl[cpu].hardlimit_max_screen_off;
+		tempfreq = get_hardlimit_max(cpu);
 
 		set_thermal_policy(cpu, tempfreq);
 	}
@@ -834,11 +832,13 @@ done_cc_nodes:
 static int msm_thermal_pm_event(struct notifier_block *this,
 				unsigned long event, void *ptr)
 {
+	unsigned int cpu;
+
 	switch (event) {
-	case PM_SUSPEND_PREPARE:
+	case PM_PROACTIVE_SUSPEND:
 		thermal_suspended = true;
 		break;
-	case PM_POST_SUSPEND:
+	case PM_PROACTIVE_RESUME:
 		thermal_suspended = false;
 		if (mutex_trylock(&core_control_mutex)) {
 			update_offline_cores();
@@ -846,7 +846,6 @@ static int msm_thermal_pm_event(struct notifier_block *this,
 		}
 		mod_delayed_work(intellithermal_wq, &check_temp_work, 0);
 		break;
-
 	default:
 		break;
 	}
