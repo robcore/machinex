@@ -446,7 +446,7 @@ static int msm_thermal_get_freq_table(void)
 				templow = i;
 
 	if (templow == 4) {
-		pr_info("MSM Thermal: Initial thermal_limit_low is %u\n", therm_table[thermal_limit_low[0]].frequency);
+		pr_info("MSM Thermal: Initial thermal_limit_low is %u\n", therm_table[templow].frequency);
 		smartlow = templow;
 	}
 
