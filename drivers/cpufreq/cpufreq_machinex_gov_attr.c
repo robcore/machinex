@@ -85,12 +85,12 @@ const char *buf, size_t count)
 	if (ret != 1)
 		return -EINVAL;
 
-	if (input == name[dev->id])
+	if (input == mx_cpufreq_governor[dev->id])
 		return count;
 
 	sanitize_min_max(input, 0, 7);
 
-	name[dev->id] = input;
+	mx_cpufreq_governor[dev->id] = input;
 
 	if (cpu_online(dev->id))
 		mx_update_policy(dev->id);
