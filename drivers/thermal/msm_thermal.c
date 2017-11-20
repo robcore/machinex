@@ -41,6 +41,7 @@
 #define SHUTOFF_TEMP 85
 
 static int enabled;
+extern struct hardlimit_policy hl[NR_CPUS];
 
 static struct msm_thermal_data msm_thermal_info = {
 	.poll_ms = 320,

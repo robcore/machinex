@@ -927,7 +927,7 @@ struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu);
 #define CPUFREQ_HARDLIMIT_SCREEN_ON	0		/* default, consider we boot with screen on */
 #define CPUFREQ_HARDLIMIT_SCREEN_OFF	1
 
-static struct hardlimit_policy {
+struct hardlimit_policy {
 	unsigned int hardlimit_max_screen_on;
 	unsigned int hardlimit_max_screen_off;
 	unsigned int hardlimit_min_screen_on;
@@ -948,9 +948,6 @@ static struct hardlimit_policy {
 	.input_boost_frequency = DEFAULT_INPUT_FREQ,
 	.limited_max_freq_thermal = DEFAULT_HARD_MAX,
 };
-
-static struct hardlimit_policy hl[NR_CPUS];
-
 void cpu_boost_event(void);
 void intelli_boost(void);
 #ifdef CONFIG_AUTOSMP
