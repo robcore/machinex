@@ -72,9 +72,6 @@ static struct pcpu_chunk *pcpu_create_chunk(void)
 	pcpu_chunk_populated(chunk, 0, nr_pages);
 	spin_unlock_irq(&pcpu_lock);
 
-	pcpu_stats_chunk_alloc();
-	trace_percpu_create_chunk(chunk->base_addr);
-
 	return chunk;
 }
 
@@ -82,13 +79,7 @@ static void pcpu_destroy_chunk(struct pcpu_chunk *chunk)
 {
 	const int nr_pages = pcpu_group_sizes[0] >> PAGE_SHIFT;
 
-	if (!chunk)
-		return;
-
-	pcpu_stats_chunk_dealloc();
-	trace_percpu_destroy_chunk(chunk->base_addr);
-
-	if (chunk->data)
+	if (chunk && chunk->data)
 		__free_pages(chunk->data, order_base_2(nr_pages));
 	pcpu_free_chunk(chunk);
 }
