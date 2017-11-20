@@ -151,17 +151,15 @@ struct cpufreq_policy {
 	void			*driver_data;
 };
 
-struct hardlimit_policy {
-	unsigned int hardlimit_max_screen_on;
-	unsigned int hardlimit_max_screen_off;
-	unsigned int hardlimit_min_screen_on;
-	unsigned int hardlimit_min_screen_off;
-	unsigned int current_limit_max;
-	unsigned int current_limit_min;
-	unsigned int input_boost_limit;
-	unsigned int input_boost_frequency;
-	unsigned int limited_max_freq_thermal;
-};
+extern unsigned int hardlimit_max_screen_on[NR_CPUS];
+extern unsigned int hardlimit_max_screen_off[NR_CPUS];
+extern unsigned int hardlimit_min_screen_on[NR_CPUS];
+extern unsigned int hardlimit_min_screen_off[NR_CPUS];
+extern unsigned int current_limit_max[NR_CPUS];
+extern unsigned int current_limit_min[NR_CPUS];
+extern unsigned int input_boost_limit[NR_CPUS];
+extern unsigned int input_boost_frequency[NR_CPUS];
+extern unsigned int limited_max_freq_thermal[NR_CPUS];
 
 /* Only for ACPI */
 #define CPUFREQ_SHARED_TYPE_NONE (0) /* None */
@@ -928,6 +926,26 @@ int cpufreq_generic_init(struct cpufreq_policy *policy,
 		struct cpufreq_frequency_table *table,
 		unsigned int transition_latency);
 
+#ifdef CONFIG_CPUFREQ_HARDLIMIT
+#define CPUFREQ_HARDLIMIT_VERSION "v2.3 by Yank555.lu, with updates by Robcore."
+
+/* Default frequencies for MACH_JF */
+#define CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK	1890000
+#define CPUFREQ_HARDLIMIT_MAX_SCREEN_OFF_STOCK	1890000
+#define CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK	384000
+#define CPUFREQ_HARDLIMIT_MIN_SCREEN_OFF_STOCK	384000
+#define CPUFREQ_HARDLIMIT_THERMAL_MIN 810000
+#define CPUFREQ_HARDLIMIT_THERMAL_MAX 1890000
+
+#define CPUFREQ_HARDLIMIT_SCREEN_ON	0		/* default, consider we boot with screen on */
+#define CPUFREQ_HARDLIMIT_SCREEN_OFF	1
+
+void cpu_boost_event(void);
+void intelli_boost(void);
+#ifdef CONFIG_AUTOSMP
+void autosmp_input_boost(void);
+#endif
+
 extern int mx_update_policy(unsigned int cpu);
 
 #define store_cpu_governor(name, min, max)		\
@@ -954,22 +972,8 @@ const char *buf, size_t count)			\
 	return count;				\
 }
 
-#ifdef CONFIG_CPUFREQ_HARDLIMIT
-enum {
-	CPUFREQ_HARDLIMIT_SCREEN_ON = 0,
-	CPUFREQ_HARDLIMIT_SCREEN_OFF = 1
-};
-
-void cpu_boost_event(void);
-void intelli_boost(void);
-#ifdef CONFIG_AUTOSMP
-void autosmp_input_boost(void);
-#endif
 /* Hook in cpufreq for scaling min./max. */
 void update_scaling_limits(unsigned int cpu, unsigned int freq_min, unsigned int freq_max);
-unsigned int get_thermal_frequency(unsigned int cpu);
-unsigned int get_hardlimit_max_screen_on(unsigned int cpu);
-unsigned int get_hardlimit_max_screen_off(unsigned int cpu);
 #endif /* CONFIG_CPUFREQ_HARDLIMIT*/
 struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu);
 #endif /* _LINUX_CPUFREQ_H */
