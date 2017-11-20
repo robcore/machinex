@@ -1379,7 +1379,8 @@ static int msm_cpufreq_resume(struct cpufreq_policy *policy)
 	 * in policy->cur violating min/max constraint.
 	 * Correct the frequency as soon as possible.
 	 */
-	if (policy->cur <= check_cpufreq_hardlimit(policy->cpu, policy->max) && policy->cur >= check_cpufreq_hardlimit(policy->cpu, policy->min))
+	if (policy->cur <= check_cpufreq_hardlimit(policy->cpu, policy->max) &&
+		policy->cur >= check_cpufreq_hardlimit(policy->cpu, policy->min))
 		return 0;
 
 	cpufreq_update_policy(cpu);
