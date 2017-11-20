@@ -450,16 +450,20 @@ static int msm_thermal_get_freq_table(void)
 		pr_info("MSM Thermal: Initial thermal_limit_low is %u\n", therm_table[thermal_limit_low[0]].frequency);
 		smartlow = templow;
 	}
+
+	smartcheck = i - 1;
+
 	for_each_possible_cpu(cpu) {
 		if (cpu_out_of_range(cpu))
 			break;
 		if (smartlow) {
 			thermal_limit_low[cpu] = smartlow;
+			sanitize_min_max(thermal_limit_low[cpu], smartlow, smartlow);
 		} else {
 			thermal_limit_low[cpu] = 4;
+			sanitize_min_max(thermal_limit_low[cpu], 4, 4);
 			pr_info("MSM Thermal: WARNING! Initial freq count FAILED! Value was %u\n and is fixed", templow);
 		}
-		smartcheck = i - 1;
 		if (unlikely(smartcheck != MAX_IDX)) {
 			limit_idx[cpu] = MAX_IDX;
 			sanitize_min_max(limit_idx[cpu], MAX_IDX, MAX_IDX);
@@ -558,7 +562,7 @@ static int __ref do_freq_control(void)
 				resolve_max_freq[cpu] = therm_table[limit_idx[cpu]].frequency;
 				hotplug_check_needed++;
 		} else if (freq_temp < delta) {
-				if (limit_idx[cpu] => MAX_IDX) {
+				if (limit_idx[cpu] >= MAX_IDX) {
 					limit_idx[cpu] = MAX_IDX;
 					resolve_max_freq[cpu] = get_hardlimit_max(cpu);
 					/* Satisfy suspend/resume type cases where we haven't updated the
@@ -579,10 +583,8 @@ static int __ref do_freq_control(void)
 				}
 		}
 
-		if (resolve_max_freq[cpu] == get_thermal_policy(cpu))
-			continue;
-
-		set_thermal_policy(cpu, resolve_max_freq[cpu]);
+		if (resolve_max_freq[cpu] != get_thermal_policy(cpu))
+			set_thermal_policy(cpu, resolve_max_freq[cpu]);
 	}
 
 	sanitize_min_max(hotplug_check_needed, 0, 1)
