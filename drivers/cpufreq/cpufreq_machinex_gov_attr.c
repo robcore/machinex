@@ -72,7 +72,31 @@ store_one_cpu_clamp(two_phase_freq, 0, 1890000);
 store_one_cpu_clamp(up_threshold_any_cpu_load, 1, 80);
 store_one_cpu_clamp(sync_freq, 0, 1890000);
 store_one_cpu_clamp(up_threshold_any_cpu_freq, 0, 1890000);
-store_cpu_governor(mx_cpufreq_governor, 0, 7);
+
+static ssize_t mx_cpufreq_governor_store
+(struct device *dev,
+struct device_attribute *attr,
+const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+
+	ret = sscanf(buf, "%u", &input);
+	if (ret != 1)
+		return -EINVAL;
+
+	if (input == name[dev->id])
+		return count;
+
+	sanitize_min_max(input, 0, 7);
+
+	name[dev->id] = input;
+
+	if (cpu_online(dev->id))
+		mx_update_policy(dev->id);
+
+	return count;
+}
 
 DEVICE_ATTR_RW(dbs_cpu_sampling_rate);
 DEVICE_ATTR_RW(dbs_up_threshold);

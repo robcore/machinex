@@ -947,30 +947,6 @@ void autosmp_input_boost(void);
 
 extern int mx_update_policy(unsigned int cpu);
 
-#define store_cpu_governor(name, min, max)		\
-static ssize_t name##_store		\
-(struct device *dev,	\
-struct device_attribute *attr,	\
-const char *buf, size_t count)			\
-{						\
-	unsigned int input, cpu;			\
-	int ret;				\
-	cpu = dev->id;	\
-	ret = sscanf(buf, "%u", &input);	\
-	if (ret != 1)			\
-		return -EINVAL;			\
-	if (input == name[(cpu)])			\
-		return count;			\
-	if (input <= min)	\
-		input = min;	\
-	if (input >= max)		\
-			input = max;		\
-	name[(cpu)] = input;				\
-	if (cpu_online(cpu))			\
-		mx_update_policy(cpu);		\
-	return count;				\
-}
-
 unsigned int check_cpufreq_hardlimit(unsigned int cpu, unsigned int freq);
 unsigned int get_hardlimit_max(unsigned int cpu);
 #endif /* CONFIG_CPUFREQ_HARDLIMIT*/
