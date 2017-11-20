@@ -675,9 +675,10 @@ static void __ref get_table(struct work_struct *work)
 	if (ret)
 		goto reschedule;
 initchecker:
-	for (i = 0; (i < 3); i++)
+	for_each_possible_cpu(i) {
 		if (!get_thermal_policy(i))
 			goto initchecker;
+	}
 	queue_delayed_work(intellithermal_wq, &check_temp_work, 0);
 	return;
 reschedule:
