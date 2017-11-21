@@ -702,7 +702,7 @@ int __init arm_add_memory(u64 start, u64 size)
 	 * Ensure that start/size are aligned to a page boundary.
 	 * Size is appropriately rounded down, start is rounded up.
 	 */
-	size -= start & ~PAGE_MASK;
+	size -= offset_in_page(start);
 	aligned_start = PAGE_ALIGN(start);
 
 #ifndef CONFIG_ARCH_PHYS_ADDR_T_64BIT
