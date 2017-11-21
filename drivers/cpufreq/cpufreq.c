@@ -38,7 +38,7 @@ extern void set_gpu_vdd_levels(int uv_tbl[]);
 
 static unsigned int current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON;
 
-struct hardlimit_policy {
+static struct hardlimit_policy {
 	unsigned int hardlimit_max_screen_on;
 	unsigned int hardlimit_max_screen_off;
 	unsigned int hardlimit_min_screen_on;
