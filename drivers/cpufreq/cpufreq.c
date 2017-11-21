@@ -1580,18 +1580,6 @@ static void cpufreq_policy_free(struct cpufreq_policy *policy)
 	kfree(policy);
 }
 
-static unsigned int hdev_added[NR_CPUS] = { 0, 0, 0, 0 };
-
-static void hardlimit_add_dev(unsigned int cpu)
-{
-	struct hardlimit_policy *hpolicy = hardlimit_get_raw(cpu);
-
-	if (hpolicy == NULL) {
-		pr_warn("WARNING! HARDLIMIT called before allocation!\n");
-		return;
-	}
-}
-
 static struct hardlimit_policy *hardlimit_policy_alloc(unsigned int cpu)
 {
 	struct hardlimit_policy *hpolicy;
@@ -1616,7 +1604,6 @@ static int hardlimit_attr_init(unsigned int cpu)
 {
 	struct device *dev = get_cpu_device(cpu);
 	WARN_ON_ONCE(sysfs_create_group(&dev->kobj, &hardlimit_attr_group));
-	hdev_added[cpu] = 1;
 	return 0;
 }
 
@@ -1679,7 +1666,8 @@ static int cpufreq_online(unsigned int cpu)
 		hpolicy = hardlimit_policy_alloc(policy->cpu);
 		if (!hpolicy)
 			return -ENOMEM;
-		hardlimit_attr_init(policy->cpu);
+		if (hardlimit_attr_init(policy->cpu))
+			return -ENOMEM;
 	} else {
 		reapply_hard_limits(policy->cpu, false);
 	}
