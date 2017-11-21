@@ -1604,11 +1604,11 @@ static int hardlimit_attr_init(unsigned int cpu)
 static int cpufreq_online(unsigned int cpu)
 {
 	struct cpufreq_policy *policy;
-	struct hardlimit_policy *hpolicy;
 	bool new_policy;
 	unsigned long flags;
 	unsigned int j;
 	int ret;
+	struct hardlimit_policy *hpolicy = per_cpu(hdata, cpu);
 
 	pr_debug("%s: bringing CPU%u online\n", __func__, cpu);
 
@@ -1634,7 +1634,6 @@ static int cpufreq_online(unsigned int cpu)
 
 	cpumask_copy(policy->cpus, cpumask_of(cpu));
 
-	hpolicy = per_cpu(hdata, cpu);
 	if (!hpolicy) {
 		hpolicy = hardlimit_policy_alloc(policy->cpu);
 		BUG_ON(!hpolicy);
