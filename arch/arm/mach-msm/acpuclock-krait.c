@@ -1370,23 +1370,47 @@ out:
 	return ret;
 }
 
-static int msm_cpufreq_resume(struct cpufreq_policy *policy)
+static int msm_cpufreq_resume(void)
 {
 	int cpu;
+	struct cpufreq_policy *policy;
 
 	/*
 	 * Freq request might be rejected during suspend, resulting
 	 * in policy->cur violating min/max constraint.
 	 * Correct the frequency as soon as possible.
 	 */
-	if (policy->cur <= check_cpufreq_hardlimit(policy->cpu, policy->max) &&
-		policy->cur >= check_cpufreq_hardlimit(policy->cpu, policy->min))
-		return 0;
+	get_online_cpus();
+	for_each_possible_cpu(cpu) {
+		policy = cpufreq_cpu_get_raw(cpu);
+		if (!policy)
+			continue;
+		if (policy->cur <= check_cpufreq_hardlimit_safe(policy->cpu, policy->max) &&
+			policy->cur >= check_cpufreq_hardlimit_safe(policy->cpu, policy->min))
+			continue;
 
-	cpufreq_update_policy(cpu);
+		reapply_hard_limits_safe(cpu, true);
+	}
+	put_online_cpus();
 
-	return 0;
+	return NOTIFY_DONE;
 }
+
+static int msm_cpufreq_pm_event(struct notifier_block *this,
+				unsigned long event, void *ptr)
+{
+	switch (event) {
+	case PM_PROACTIVE_RESUME:
+		return msm_cpufreq_resume();
+	default:
+		return NOTIFY_DONE;
+	}
+}
+
+static struct notifier_block msm_cpufreq_pm_notifier = {
+	.notifier_call = msm_cpufreq_pm_event,
+};
+
 
 static struct cpufreq_driver msm_cpufreq_driver = {
 	.flags		= CPUFREQ_STICKY | CPUFREQ_CONST_LOOPS |
@@ -1397,12 +1421,12 @@ static struct cpufreq_driver msm_cpufreq_driver = {
 	.get		= msm_cpufreq_get_freq,
 	.name		= "msm",
 	.attr		= cpufreq_generic_attr,
-	.resume		= msm_cpufreq_resume,
 };
 
 static int __init msm_cpufreq_register(void)
 {
 	if (!cpufreq_register_driver(&msm_cpufreq_driver)) {
+		register_pm_notifier(&msm_cpufreq_pm_notifier);
 		msm_thermal_init();
 		return 0;
 	}
