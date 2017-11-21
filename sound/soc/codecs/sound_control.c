@@ -25,7 +25,7 @@
 #include <linux/timed_output.h>
 
 #define SOUND_CONTROL_MAJOR_VERSION	5
-#define SOUND_CONTROL_MINOR_VERSION	4
+#define SOUND_CONTROL_MINOR_VERSION	5
 
 extern struct snd_soc_codec *snd_engine_codec_ptr;
 
@@ -37,6 +37,8 @@ unsigned int vib_feedback = 0;
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
 		unsigned int value);
+
+#define simpleclamp(val) clamp_val(val, 0, 1)
 
 #define REG_SZ 5
 static unsigned int cached_regs[REG_SZ] = { 0, 0, 0, 0, 0 };
@@ -119,6 +121,8 @@ static int show_sound_value(int val)
 	return val;
 }
 
+#define human_readable(regval) show_sound_value(tabla_read(snd_engine_codec_ptr, regval))
+
 static ssize_t sound_control_snd_vib_feedback_timeout_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -128,14 +132,14 @@ static ssize_t sound_control_snd_vib_feedback_timeout_show(struct kobject *kobj,
 static ssize_t sound_control_snd_vib_feedback_timeout_store(struct kobject *kobj,
         struct kobj_attribute *attr, const char *buf, size_t count)
 {
-    int val;
+    unsigned int val;
 
     sscanf(buf, "%d", &val);
 
-    if (val >= 60000)
-        val = 60000;
-	else if (val <= 0)
-		val = 0;
+	simpleclamp(val);
+
+	if (val == feedback_val)
+		return count;
 
     feedback_val = val;
 
@@ -158,13 +162,10 @@ static ssize_t sound_control_snd_vib_feedback_store(struct kobject *kobj,
 
     sscanf(buf, "%u", &val);
 
-    if (val >= 1) {
-        val = 1;
-	}
+	simpleclamp(val);
 
-	if (val == 0) {
-		val = 0;
-	}
+	if (val == vib_feedback)
+		return count;
 
     vib_feedback = val;
 
@@ -187,19 +188,15 @@ static ssize_t sound_control_enabled_store(struct kobject *kobj,
 
     sscanf(buf, "%u", &val);
 
-    if (val >= 1) {
-        val = 1;
-		snd_ctrl_locked = 1;
-	}
+	simpleclamp(val);
+	if (val == snd_ctrl_enabled)
+		return count;
 
-	if (val == 0) {
-		val = 0;
-		snd_ctrl_locked = 0;
-	}
+	snd_ctrl_locked = val ? 1 : 0;
 
     snd_ctrl_enabled = val;
 
-	if (vib_feedback)
+	if (vib_feedback && feedback_val)
 		machinex_vibrator(feedback_val);
 
     return count;
@@ -211,8 +208,7 @@ static ssize_t speaker_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
 	return sprintf(buf, "%d\n",
-			show_sound_value(tabla_read(snd_engine_codec_ptr,
-				TABLA_A_CDC_RX5_VOL_CTL_B2_CTL)));
+			human_readable(TABLA_A_CDC_RX5_VOL_CTL_B2_CTL));
 }
 
 static ssize_t speaker_gain_store(struct kobject *kobj,
@@ -220,32 +216,33 @@ static ssize_t speaker_gain_store(struct kobject *kobj,
 {
 	int val;
 	int addval, checksum;
-	int lval, rval;
+	int lrval;
 
 	sscanf(buf, "%d", &val);
 
 	if (!snd_ctrl_enabled)
 		return count;
 
-	lval = val;
-	rval = val;
+	if (val == human_readable(TABLA_A_CDC_RX5_VOL_CTL_B2_CTL))
+		return count;
 
-	addval = lval + rval;
+	lrval = val;
+
+	addval = lrval + lrval;
 	checksum = 255 - addval;
 	if (checksum > 255) {
 		checksum -=256;
-		lval += 256;
-		rval += 256;
+		lrval += 256;
 	}
 
 	snd_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, lval);
+		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, lrval);
 	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, rval);
+		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, lrval);
 	snd_ctrl_locked = 1;
 
-	if (vib_feedback)
+	if (vib_feedback && feedback_val)
 		machinex_vibrator(feedback_val);
 
 	count = checksum;
@@ -257,8 +254,7 @@ static ssize_t headphone_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
 	return sprintf(buf, "%d\n",
-			show_sound_value(tabla_read(snd_engine_codec_ptr,
-				TABLA_A_CDC_RX1_VOL_CTL_B2_CTL)));
+			human_readable(TABLA_A_CDC_RX1_VOL_CTL_B2_CTL));
 }
 
 static ssize_t headphone_gain_store(struct kobject *kobj,
@@ -266,32 +262,34 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 {
 	int val;
 	int addval, checksum;
-	int lval, rval;
+	int lrval;
 
 	sscanf(buf, "%d", &val);
 
 	if (!snd_ctrl_enabled)
 		return count;
 
-	lval = val;
-	rval = val;
+	if (val == human_readable(TABLA_A_CDC_RX1_VOL_CTL_B2_CTL) &&
+		val == human_readable(TABLA_A_CDC_RX2_VOL_CTL_B2_CTL))
+		return count;
 
-	addval = lval + rval;
+	lrval = val;
+
+	addval = lrval + lrval;
 	checksum = 255 - addval;
 	if (checksum > 255) {
 		checksum -=256;
-		lval += 256;
-		rval += 256;
+		lrval += 256;
 	}
 
 	snd_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_RX1_VOL_CTL_B2_CTL, lval);
+		TABLA_A_CDC_RX1_VOL_CTL_B2_CTL, lrval);
 	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_RX2_VOL_CTL_B2_CTL, rval);
+		TABLA_A_CDC_RX2_VOL_CTL_B2_CTL, lrval);
 	snd_ctrl_locked = 1;
 
-	if (vib_feedback)
+	if (vib_feedback && feedback_val)
 		machinex_vibrator(feedback_val);
 
 	count = checksum;
@@ -303,8 +301,7 @@ static ssize_t cam_mic_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
 	return sprintf(buf, "%d\n",
-		show_sound_value(tabla_read(snd_engine_codec_ptr,
-			TABLA_A_CDC_TX6_VOL_CTL_GAIN)));
+		human_readable(TABLA_A_CDC_TX6_VOL_CTL_GAIN));
 }
 
 static ssize_t cam_mic_gain_store(struct kobject *kobj,
@@ -316,6 +313,9 @@ static ssize_t cam_mic_gain_store(struct kobject *kobj,
 	sscanf(buf, "%d", &val);
 
 	if (!snd_ctrl_enabled)
+		return count;
+
+	if (val == human_readable(TABLA_A_CDC_TX6_VOL_CTL_GAIN))
 		return count;
 
 	checksum = 255 - val;
@@ -330,7 +330,7 @@ static ssize_t cam_mic_gain_store(struct kobject *kobj,
 		TABLA_A_CDC_TX6_VOL_CTL_GAIN, val);
 	snd_ctrl_locked = 1;
 
-	if (vib_feedback)
+	if (vib_feedback && feedback_val)
 		machinex_vibrator(feedback_val);
 
 	count = checksum;
@@ -342,8 +342,7 @@ static ssize_t mic_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
 	return sprintf(buf, "%d\n",
-		show_sound_value(tabla_read(snd_engine_codec_ptr,
-			TABLA_A_CDC_TX7_VOL_CTL_GAIN)));
+		human_readable(TABLA_A_CDC_TX7_VOL_CTL_GAIN));
 }
 
 static ssize_t mic_gain_store(struct kobject *kobj,
@@ -355,6 +354,9 @@ static ssize_t mic_gain_store(struct kobject *kobj,
 	sscanf(buf, "%d", &val);
 
 	if (!snd_ctrl_enabled)
+		return count;
+
+	if (val == human_readable(TABLA_A_CDC_TX7_VOL_CTL_GAIN))
 		return count;
 
 	checksum = 255 - val;
@@ -369,7 +371,7 @@ static ssize_t mic_gain_store(struct kobject *kobj,
 		TABLA_A_CDC_TX7_VOL_CTL_GAIN, val);
 	snd_ctrl_locked = 1;
 
-	if (vib_feedback)
+	if (vib_feedback && feedback_val)
 		machinex_vibrator(feedback_val);
 
 	count = checksum;
@@ -501,15 +503,9 @@ static int sound_control_init(void)
 	return 0;
 }
 
-static void sound_control_exit(void)
-{
-	if (sound_control_kobj != NULL)
-		kobject_put(sound_control_kobj);
-}
 late_initcall(sound_control_init);
-module_exit(sound_control_exit);
 
 MODULE_LICENSE("GPL v2");
 MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>");
-MODULE_DESCRIPTION("WCD93xx Sound Engine v4.x");
-
+MODULE_AUTHOR("Rob Patershuk <robpatershuk@gmail.com>");
+MODULE_DESCRIPTION("WCD93xx Sound Engine v5.x");
