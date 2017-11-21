@@ -1574,15 +1574,11 @@ static void cpufreq_policy_free(struct cpufreq_policy *policy)
 	kfree(policy);
 }
 
-static struct hardlimit_policy *hardlimit_policy_alloc(unsigned int cpu)
+static unsigned int hardlimit_ready[NR_CPUS] = {0, 0, 0, 0};
+static void hardlimit_policy_alloc(unsigned int cpu)
 {
-	struct hardlimit_policy *hpolicy;
-	int ret;
-
-	hpolicy = kzalloc(sizeof(struct hardlimit_policy), GFP_KERNEL);
-	if (!hpolicy)
-		return NULL;
-
+	struct hardlimit_policy *hpolicy = hardlimit_get_raw(cpu);
+	BUG_ON(!hpolicy);
 	hpolicy->hardlimit_max_screen_on = DEFAULT_HARD_MAX;
 	hpolicy->hardlimit_max_screen_off = DEFAULT_HARD_MAX;
 	hpolicy->hardlimit_min_screen_on = DEFAULT_HARD_MIN;
@@ -1591,7 +1587,6 @@ static struct hardlimit_policy *hardlimit_policy_alloc(unsigned int cpu)
 	hpolicy->current_limit_min = DEFAULT_HARD_MIN;
 	hpolicy->input_boost_limit = DEFAULT_HARD_MIN;
 	hpolicy->input_boost_frequency = DEFAULT_INPUT_FREQ;
-	return hpolicy;
 }
 
 static int hardlimit_attr_init(unsigned int cpu)
@@ -1610,6 +1605,7 @@ static int cpufreq_online(unsigned int cpu)
 	int ret;
 	struct hardlimit_policy *hpolicy = &per_cpu(hdata, cpu);
 
+	BUG_ON(!hpolicy);
 	pr_debug("%s: bringing CPU%u online\n", __func__, cpu);
 
 	/* Check if this CPU already has a policy to manage it */
@@ -1634,10 +1630,10 @@ static int cpufreq_online(unsigned int cpu)
 
 	cpumask_copy(policy->cpus, cpumask_of(cpu));
 
-	if (!hpolicy) {
-		hpolicy = hardlimit_policy_alloc(policy->cpu);
-		BUG_ON(!hpolicy);
+	if (!hardlimit_ready[policy->cpu]) {
+		hardlimit_policy_alloc(policy->cpu);
 		BUG_ON(hardlimit_attr_init(policy->cpu));
+		hardlimit_ready[cpu] = 1;
 	}
 
 	/* call driver. From then on the cpufreq must be able
@@ -2807,6 +2803,18 @@ static int cpuhp_cpufreq_offline(unsigned int cpu)
  * (and isn't unregistered in the meantime).
  *
  */
+
+static void hardlimit_memalloc(void)
+{
+	struct hardlimit_policy *hpolicy;
+	unsigned int cpu;
+	for_each_possible_cpu(cpu) {
+		if (cpu_out_of_range(cpu))
+			break;
+		hpolicy = kzalloc(sizeof(struct hardlimit_policy), GFP_KERNEL);
+		BUG_ON(!hpolicy);
+	}
+}
 int cpufreq_register_driver(struct cpufreq_driver *driver_data)
 {
 	unsigned long flags;
@@ -2863,6 +2871,7 @@ int cpufreq_register_driver(struct cpufreq_driver *driver_data)
 	ret = 0;
 
 	pr_info("driver %s up and running\n", driver_data->name);
+	
 	goto out;
 
 err_if_unreg:
@@ -2875,6 +2884,7 @@ err_null_driver:
 	write_unlock_irqrestore(&cpufreq_driver_lock, flags);
 out:
 	cpus_read_unlock();
+	hardlimit_memalloc();
 	return ret;
 }
 EXPORT_SYMBOL_GPL(cpufreq_register_driver);
