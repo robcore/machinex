@@ -1380,20 +1380,24 @@ static int msm_cpufreq_resume(void)
 	 * in policy->cur violating min/max constraint.
 	 * Correct the frequency as soon as possible.
 	 */
-	get_online_cpus();
+
 	for_each_possible_cpu(cpu) {
+		if (cpu_out_of_range(cpu))
+			break;
+		if (!cpu_online(cpu))
+			continue;
 		policy = cpufreq_cpu_get_raw(cpu);
 		if (!policy)
 			continue;
-		if (policy->cur <= check_cpufreq_hardlimit_safe(policy->cpu, policy->max) &&
-			policy->cur >= check_cpufreq_hardlimit_safe(policy->cpu, policy->min))
+
+		if (policy->cur <= check_cpufreq_hardlimit(policy->cpu, policy->max) &&
+			policy->cur >= check_cpufreq_hardlimit(policy->cpu, policy->min))
 			continue;
 
-		reapply_hard_limits_safe(cpu, true);
+		cpufreq_update_policy(cpu);
 	}
-	put_online_cpus();
 
-	return NOTIFY_DONE;
+	return NOTIFY_OK;
 }
 
 static int msm_cpufreq_pm_event(struct notifier_block *this,
@@ -1403,8 +1407,9 @@ static int msm_cpufreq_pm_event(struct notifier_block *this,
 	case PM_PROACTIVE_RESUME:
 		return msm_cpufreq_resume();
 	default:
-		return NOTIFY_DONE;
+		return NOTIFY_OK;
 	}
+	return NOTIFY_OK;
 }
 
 static struct notifier_block msm_cpufreq_pm_notifier = {

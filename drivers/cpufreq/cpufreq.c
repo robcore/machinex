@@ -48,19 +48,8 @@ struct hardlimit_policy {
 	unsigned int input_boost_limit;
 	unsigned int input_boost_frequency;
 };
+
 static DEFINE_PER_CPU(struct hardlimit_policy, hdata);
-struct cpufreq_lockpolicy {
-	/*
-	 * The rules for this semaphore:
-	 * - Any routine that wants to read from the policy structure will
-	 *   do a down_read on this semaphore.
-	 * - Any routine that will write to the policy structure and/or may take away
-	 *   the policy altogether (eg. CPU hotplug), will hold this lock in write
-	 *   mode before doing so.
-	 */
-	struct rw_semaphore	rwsem;
-};
-static DEFINE_PER_CPU(struct cpufreq_lockpolicy, lockpolicy);
 
 unsigned int limited_max_freq_thermal[NR_CPUS] = { DEFAULT_HARD_MAX, DEFAULT_HARD_MAX, DEFAULT_HARD_MAX, DEFAULT_HARD_MAX };
 static struct workqueue_struct *cpu_boost_wq;
@@ -146,13 +135,6 @@ static int __init init_cpufreq_transition_notifier_list(void)
 pure_initcall(init_cpufreq_transition_notifier_list);
 
 static DEFINE_MUTEX(cpufreq_governor_mutex);
-
-struct cpufreq_lockpolicy *get_lockpolicy(unsigned int cpu)
-{
-	struct cpufreq_lockpolicy *lpolicy = &per_cpu(lockpolicy, cpu);
-
-	return lpolicy ? lpolicy : NULL;
-}
 
 struct kobject *get_governor_parent_kobj(struct cpufreq_policy *policy)
 {
@@ -414,97 +396,7 @@ static void reapply_hard_limits(unsigned int cpu, bool update_policy)
 	if (update_policy)
 		cpufreq_update_policy(cpu);
 }
-
-void reapply_hard_limits_safe(unsigned int cpu, bool update_policy)
-{
-	struct cpufreq_lockpolicy *lpolicy;
-	struct cpufreq_policy *policy;
-	struct hardlimit_policy *hpolicy = hardlimit_get_raw(cpu);
-
-	if (!hpolicy) {
-		return;
-	}
-
-	lpolicy = get_lockpolicy(cpu);
-	BUG_ON(!lpolicy);
-
-	/* Recalculate the currently applicable min/max */
-	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON) {
-		down_read(&lpolicy->rwsem);
-		if (limited_max_freq_thermal[cpu] >= DEFAULT_HARD_MIN &&
-			limited_max_freq_thermal[cpu] < hpolicy->hardlimit_max_screen_on) {
-			up_read(&lpolicy->rwsem);
-			down_write(&lpolicy->rwsem);
-			hpolicy->current_limit_max = limited_max_freq_thermal[cpu];
-			up_write(&lpolicy->rwsem);
-		} else {
-			up_read(&lpolicy->rwsem);
-			down_write(&lpolicy->rwsem);
-			hpolicy->current_limit_max = hpolicy->hardlimit_max_screen_on;
-			up_write(&lpolicy->rwsem);
-		}
-		if (thermal_disables_boost) {
-			down_read(&lpolicy->rwsem);
-			if (hpolicy->input_boost_limit > hpolicy->hardlimit_min_screen_on &&
-				hpolicy->input_boost_limit <= hpolicy->current_limit_max &&
-				limited_max_freq_thermal[cpu] == hpolicy->hardlimit_max_screen_on) {
-				up_read(&lpolicy->rwsem);
-				down_write(&lpolicy->rwsem);
-				hpolicy->current_limit_min = hpolicy->input_boost_limit;
-				up_write(&lpolicy->rwsem);
-			} else {
-				up_read(&lpolicy->rwsem);
-				down_write(&lpolicy->rwsem);
-				hpolicy->current_limit_min = hpolicy->hardlimit_min_screen_on;
-				up_write(&lpolicy->rwsem);
-			}
-		} else {
-			down_read(&lpolicy->rwsem);
-			if (hpolicy->input_boost_limit > hpolicy->hardlimit_min_screen_on &&
-				hpolicy->input_boost_limit <= hpolicy->current_limit_max) {
-				up_read(&lpolicy->rwsem);
-				down_write(&lpolicy->rwsem);
-				hpolicy->current_limit_min = hpolicy->input_boost_limit;
-				up_write(&lpolicy->rwsem);
-			} else {
-				up_read(&lpolicy->rwsem);
-				down_write(&lpolicy->rwsem);
-				hpolicy->current_limit_min = hpolicy->hardlimit_min_screen_on;
-				up_write(&lpolicy->rwsem);
-			}
-		}
-	} else if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_OFF) {
-		down_read(&lpolicy->rwsem);
-		if (limited_max_freq_thermal[cpu] >= DEFAULT_HARD_MIN &&
-			limited_max_freq_thermal[cpu] < hpolicy->hardlimit_max_screen_off) {
-			up_read(&lpolicy->rwsem);
-			down_write(&lpolicy->rwsem);
-			hpolicy->current_limit_max = limited_max_freq_thermal[cpu];
-		} else {
-			up_read(&lpolicy->rwsem);
-			down_write(&lpolicy->rwsem);
-			hpolicy->current_limit_max = hpolicy->hardlimit_max_screen_off;
-		}
-		hpolicy->current_limit_min = hpolicy->hardlimit_min_screen_off;
-		up_write(&lpolicy->rwsem);
-	}
-
-	if (!cpu_online(cpu))
-		return;
-
-	policy = cpufreq_cpu_get_raw(cpu);
-	if (!policy)
-		return;
-
-	down_read(&lpolicy->rwsem);
-	policy->user_policy.min = policy->min = hpolicy->current_limit_min;
-	policy->user_policy.max = policy->max = hpolicy->current_limit_max;
-	up_write(&lpolicy->rwsem);
-
-	if (update_policy)
-		cpufreq_update_policy(cpu);
-}
-EXPORT_SYMBOL(reapply_hard_limits_safe);
+EXPORT_SYMBOL(reapply_hard_limits);
 
 /* Sanitize cpufreq to hardlimits */
 unsigned int check_cpufreq_hardlimit(unsigned int cpu, unsigned int freq)
@@ -515,39 +407,19 @@ unsigned int check_cpufreq_hardlimit(unsigned int cpu, unsigned int freq)
 		return freq;
 	}
 
-	clamp_val(freq, hpolicy->current_limit_min, hpolicy->current_limit_max);
+	sanitize_min_max(freq, hpolicy->current_limit_min, hpolicy->current_limit_max);
 	return freq;
 }
 EXPORT_SYMBOL(check_cpufreq_hardlimit);
-
-/* Sanitize cpufreq to hardlimits */
-unsigned int check_cpufreq_hardlimit_safe(unsigned int cpu, unsigned int freq)
-{
-	int ret;
-	struct cpufreq_lockpolicy *lpolicy = get_lockpolicy(cpu);
-	BUG_ON(!lpolicy);
-
-	down_read(&lpolicy->rwsem);
-	ret = check_cpufreq_hardlimit(cpu, freq);
-	up_read(&lpolicy->rwsem);
-
-	return ret;
-}
-EXPORT_SYMBOL(check_cpufreq_hardlimit_safe);
 #endif
 
 void set_thermal_policy(unsigned int cpu, unsigned int freq)
 {
-	struct cpufreq_lockpolicy *lpolicy = get_lockpolicy(cpu);
-	BUG_ON(!lpolicy);
-	down_write(&lpolicy->rwsem);
 	limited_max_freq_thermal[cpu] = freq;
-	up_write(&lpolicy->rwsem);
-	reapply_hard_limits_safe(cpu, true);
+	reapply_hard_limits(cpu, true);
 }
-EXPORT_SYMBOL(set_thermal_policy);
 
-unsigned int _get_hardlimit_max(unsigned int cpu)
+unsigned int get_hardlimit_max(unsigned int cpu)
 {
 	struct hardlimit_policy *hpolicy = hardlimit_get_raw(cpu);
 
@@ -558,23 +430,10 @@ unsigned int _get_hardlimit_max(unsigned int cpu)
 		    hpolicy->hardlimit_max_screen_off;
 }
 
-unsigned int get_hardlimit_max(unsigned int cpu)
-{
-	unsigned int ret;
-	struct cpufreq_lockpolicy *lpolicy = get_lockpolicy(cpu);
-	BUG_ON(!lpolicy);
-
-	down_read(&lpolicy->rwsem);
-	ret = _get_hardlimit_max(cpu);
-	up_read(&lpolicy->rwsem);
-	return ret;
-}
-
 static void do_input_boost_rem(struct work_struct *work)
 {
 	unsigned int cpu;
 	struct hardlimit_policy *hpolicy;
-	struct cpufreq_lockpolicy *lpolicy;
 
 	if (!is_display_on() || !input_boost_enabled || !input_boost_ms)
 		return;
@@ -586,13 +445,9 @@ static void do_input_boost_rem(struct work_struct *work)
 		if (!hpolicy) {
 			continue;
 		}
-		lpolicy = get_lockpolicy(cpu);
-		BUG_ON(!lpolicy);
-		down_write(&lpolicy->rwsem);
 		/* Reset the input_boost_limit for all CPUs in the system */
 		hpolicy->input_boost_limit = hpolicy->hardlimit_min_screen_on;
-		up_write(&lpolicy->rwsem);
-		reapply_hard_limits_safe(cpu, true);
+		reapply_hard_limits(cpu, true);
 	}
 }
 
@@ -600,7 +455,6 @@ static void do_input_boost(struct work_struct *work)
 {
 	unsigned int cpu;
 	struct hardlimit_policy *hpolicy;
-	struct cpufreq_lockpolicy *lpolicy;
 
 	if (!input_boost_enabled || !input_boost_ms || !is_display_on())
 		return;
@@ -613,13 +467,8 @@ static void do_input_boost(struct work_struct *work)
 		if (!hpolicy) {
 			continue;
 		}
-		lpolicy = get_lockpolicy(cpu);
-		BUG_ON(!lpolicy);
-
-		down_write(&lpolicy->rwsem);
 		hpolicy->input_boost_limit = hpolicy->input_boost_frequency;
-		up_write(&lpolicy->rwsem);
-		reapply_hard_limits_safe(cpu, true);
+		reapply_hard_limits(cpu, true);
 	}
 
 	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_rem,
@@ -833,9 +682,7 @@ static void cpufreq_list_transition_notifiers(void)
  */
 void cpufreq_enable_fast_switch(struct cpufreq_policy *policy)
 {
-	struct cpufreq_lockpolicy *lpolicy = get_lockpolicy(policy->cpu);
-	BUG_ON(!lpolicy);
-	lockdep_assert_held(&lpolicy->rwsem);
+	lockdep_assert_held(&policy->rwsem);
 
 	if (!policy->fast_switch_possible)
 		return;
@@ -1036,7 +883,7 @@ void cpufreq_hardlimit_suspend(void)
 	unsigned int cpu;
 	current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_OFF;
 	for_each_possible_cpu(cpu)
-		reapply_hard_limits_safe(cpu, false);
+		reapply_hard_limits(cpu, false);
 }
 
 void cpufreq_hardlimit_resume(void)
@@ -1044,7 +891,7 @@ void cpufreq_hardlimit_resume(void)
 	unsigned int cpu;
 	current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON;
 	for_each_possible_cpu(cpu)
-		reapply_hard_limits_safe(cpu, true);
+		reapply_hard_limits(cpu, true);
 }
 #endif /*CONFIG_CPUFREQ_HARDLIMIT*/
 /**
@@ -1145,7 +992,7 @@ const char *buf, size_t count)			\
 	for (i = 0; (permtable[i].frequency != CPUFREQ_TABLE_END); i++)	\
 		if (permtable[i].frequency == new_hardlimit) {	\
 				hpolicy->name = new_hardlimit;	\
-				reapply_hard_limits_safe(dev->id, false);	\
+				reapply_hard_limits(dev->id, false);	\
 				return count;	\
 		}	\
 	return -EINVAL;	\
@@ -1468,12 +1315,10 @@ static ssize_t show(struct kobject *kobj, struct attribute *attr, char *buf)
 	struct cpufreq_policy *policy = to_policy(kobj);
 	struct freq_attr *fattr = to_attr(attr);
 	ssize_t ret;
-	struct cpufreq_lockpolicy *lpolicy = get_lockpolicy(policy->cpu);
-	BUG_ON(!lpolicy);
 
-	down_read(&lpolicy->rwsem);
+	down_read(&policy->rwsem);
 	ret = fattr->show(policy, buf);
-	up_read(&lpolicy->rwsem);
+	up_read(&policy->rwsem);
 
 	return ret;
 }
@@ -1484,15 +1329,13 @@ static ssize_t store(struct kobject *kobj, struct attribute *attr,
 	struct cpufreq_policy *policy = to_policy(kobj);
 	struct freq_attr *fattr = to_attr(attr);
 	ssize_t ret = -EINVAL;
-	struct cpufreq_lockpolicy *lpolicy = get_lockpolicy(policy->cpu);
-	BUG_ON(!lpolicy);
 
 	cpus_read_lock();
 
 	if (cpu_online(policy->cpu)) {
-		down_write(&lpolicy->rwsem);
+		down_write(&policy->rwsem);
 		ret = fattr->store(policy, buf, count);
-		up_write(&lpolicy->rwsem);
+		up_write(&policy->rwsem);
 	}
 
 	cpus_read_unlock();
@@ -1582,22 +1425,18 @@ int mx_update_policy(unsigned int cpu)
 	struct cpufreq_policy *policy;
 	struct cpufreq_policy new_policy;
 	unsigned int ret = -ENOMEM;
-	struct cpufreq_lockpolicy *lpolicy;
 
 	policy = cpufreq_cpu_get(cpu);
 	if (!policy)
 		return ret;
 
-	lpolicy = get_lockpolicy(policy->cpu);
-	BUG_ON(!lpolicy);
-
 	cpus_read_lock();
 	if (cpu_online(policy->cpu)) {
-		down_write(&lpolicy->rwsem);
+		down_write(&policy->rwsem);
 		memcpy(&new_policy, policy, sizeof(*policy));
 		new_policy.governor = get_mx_governor(policy->cpu);
 		ret = cpufreq_set_policy(policy, &new_policy);
-		up_write(&lpolicy->rwsem);
+		up_write(&policy->rwsem);
 	}
 	cpus_read_unlock();
 	cpufreq_cpu_put(policy);
@@ -1617,15 +1456,12 @@ static int cpufreq_init_policy(struct cpufreq_policy *policy)
 static int cpufreq_add_policy_cpu(struct cpufreq_policy *policy, unsigned int cpu)
 {
 	int ret = 0;
-	struct cpufreq_lockpolicy *lpolicy;
+
 	/* Has this CPU been taken care of already? */
 	if (cpumask_test_cpu(cpu, policy->cpus))
 		return 0;
 
-	lpolicy = get_lockpolicy(cpu);
-	BUG_ON(!lpolicy);
-
-	down_write(&lpolicy->rwsem);
+	down_write(&policy->rwsem);
 	if (has_target())
 		cpufreq_stop_governor(policy);
 
@@ -1636,7 +1472,7 @@ static int cpufreq_add_policy_cpu(struct cpufreq_policy *policy, unsigned int cp
 		if (ret)
 			pr_err("%s: Failed to start governor\n", __func__);
 	}
-	up_write(&lpolicy->rwsem);
+	up_write(&policy->rwsem);
 	return ret;
 }
 
@@ -1653,8 +1489,6 @@ static struct cpufreq_policy *cpufreq_policy_alloc(unsigned int cpu)
 {
 	struct cpufreq_policy *policy;
 	int ret;
-	struct cpufreq_lockpolicy *lpolicy = get_lockpolicy(cpu);
-	BUG_ON(!lpolicy);
 
 	policy = kzalloc(sizeof(*policy), GFP_KERNEL);
 	if (!policy)
@@ -1677,7 +1511,7 @@ static struct cpufreq_policy *cpufreq_policy_alloc(unsigned int cpu)
 	}
 
 	INIT_LIST_HEAD(&policy->policy_list);
-	init_rwsem(&lpolicy->rwsem);
+	init_rwsem(&policy->rwsem);
 	spin_lock_init(&policy->transition_lock);
 	init_waitqueue_head(&policy->transition_wait);
 	init_completion(&policy->kobj_unregister);
@@ -1702,14 +1536,12 @@ static void cpufreq_policy_put_kobj(struct cpufreq_policy *policy)
 {
 	struct kobject *kobj;
 	struct completion *cmp;
-	struct cpufreq_lockpolicy *lpolicy = get_lockpolicy(policy->cpu);
-	BUG_ON(!lpolicy);
 
-	down_write(&lpolicy->rwsem);
+	down_write(&policy->rwsem);
 	cpufreq_stats_free_table(policy);
 	kobj = &policy->kobj;
 	cmp = &policy->kobj_unregister;
-	up_write(&lpolicy->rwsem);
+	up_write(&policy->rwsem);
 	kobject_put(kobj);
 
 	/*
@@ -1772,9 +1604,8 @@ static int cpufreq_online(unsigned int cpu)
 	unsigned int j;
 	int ret;
 	struct hardlimit_policy *hpolicy = &per_cpu(hdata, cpu);
-	struct cpufreq_lockpolicy *lpolicy = get_lockpolicy(cpu);
-	BUG_ON(!hpolicy || !lpolicy);
 
+	BUG_ON(!hpolicy);
 	pr_debug("%s: bringing CPU%u online\n", __func__, cpu);
 
 	/* Check if this CPU already has a policy to manage it */
@@ -1786,10 +1617,10 @@ static int cpufreq_online(unsigned int cpu)
 
 		/* This is the only online CPU for the policy.  Start over. */
 		new_policy = false;
-		down_write(&lpolicy->rwsem);
+		down_write(&policy->rwsem);
 		policy->cpu = cpu;
 		policy->governor = NULL;
-		up_write(&lpolicy->rwsem);
+		up_write(&policy->rwsem);
 	} else {
 		new_policy = true;
 		policy = cpufreq_policy_alloc(cpu);
@@ -1800,9 +1631,7 @@ static int cpufreq_online(unsigned int cpu)
 	cpumask_copy(policy->cpus, cpumask_of(cpu));
 
 	if (!hardlimit_ready[policy->cpu]) {
-		down_write(&lpolicy->rwsem);
 		hardlimit_policy_alloc(policy->cpu);
-		up_write(&lpolicy->rwsem);
 		BUG_ON(hardlimit_attr_init(policy->cpu));
 		hardlimit_ready[cpu] = 1;
 	}
@@ -1816,7 +1645,7 @@ static int cpufreq_online(unsigned int cpu)
 		goto out_free_policy;
 	}
 
-	down_write(&lpolicy->rwsem);
+	down_write(&policy->rwsem);
 
 	/* related_cpus should at least include policy->cpus. */
 	if (new_policy)
@@ -1870,7 +1699,7 @@ static int cpufreq_online(unsigned int cpu)
 		goto out_exit_policy;
 	}
 
-	up_write(&lpolicy->rwsem);
+	up_write(&policy->rwsem);
 
 	kobject_uevent(&policy->kobj, KOBJ_ADD);
 
@@ -1884,7 +1713,7 @@ static int cpufreq_online(unsigned int cpu)
 	return 0;
 
 out_exit_policy:
-	up_write(&lpolicy->rwsem);
+	up_write(&policy->rwsem);
 
 	if (cpufreq_driver->exit)
 		cpufreq_driver->exit(policy);
@@ -1928,8 +1757,6 @@ static int cpufreq_offline(unsigned int cpu)
 {
 	struct cpufreq_policy *policy;
 	int ret;
-	struct cpufreq_lockpolicy *lpolicy = get_lockpolicy(cpu);
-	BUG_ON(!lpolicy);
 
 	pr_debug("%s: unregistering CPU %u\n", __func__, cpu);
 
@@ -1939,7 +1766,7 @@ static int cpufreq_offline(unsigned int cpu)
 		return 0;
 	}
 
-	down_write(&lpolicy->rwsem);
+	down_write(&policy->rwsem);
 	cpufreq_stop_governor(policy);
 
 	cpumask_clear_cpu(cpu, policy->cpus);
@@ -1966,7 +1793,7 @@ static int cpufreq_offline(unsigned int cpu)
 	cpufreq_exit_governor(policy);
 
 unlock:
-	up_write(&lpolicy->rwsem);
+	up_write(&policy->rwsem);
 	return 0;
 }
 
@@ -2120,17 +1947,14 @@ unsigned int cpufreq_get(unsigned int cpu)
 {
 	struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
 	unsigned int ret_freq = 0;
-	struct cpufreq_lockpolicy *lpolicy;
 
 	if (policy) {
-		lpolicy = get_lockpolicy(policy->cpu);
-		BUG_ON(!lpolicy);
-		down_read(&lpolicy->rwsem);
+		down_read(&policy->rwsem);
 
 		if (!policy_is_inactive(policy))
 			ret_freq = __cpufreq_get(policy);
 
-		up_read(&lpolicy->rwsem);
+		up_read(&policy->rwsem);
 
 		cpufreq_cpu_put(policy);
 	}
@@ -2201,7 +2025,6 @@ EXPORT_SYMBOL(cpufreq_generic_suspend);
 void cpufreq_suspend(void)
 {
 	struct cpufreq_policy *policy;
-	struct cpufreq_lockpolicy *lpolicy;
 
 	if (!cpufreq_driver)
 		return;
@@ -2213,11 +2036,9 @@ void cpufreq_suspend(void)
 
 	for_each_active_policy(policy) {
 		if (has_target()) {
-			lpolicy = get_lockpolicy(policy->cpu);
-			BUG_ON(!lpolicy);
-			down_write(&lpolicy->rwsem);
+			down_write(&policy->rwsem);
 			cpufreq_stop_governor(policy);
-			up_write(&lpolicy->rwsem);
+			up_write(&policy->rwsem);
 		}
 
 		if (cpufreq_driver->suspend && cpufreq_driver->suspend(policy))
@@ -2239,7 +2060,6 @@ void cpufreq_resume(void)
 {
 	struct cpufreq_policy *policy;
 	int ret;
-	struct cpufreq_lockpolicy *lpolicy;
 
 	if (!cpufreq_driver)
 		return;
@@ -2256,11 +2076,9 @@ void cpufreq_resume(void)
 			pr_err("%s: Failed to resume driver: %p\n", __func__,
 				policy);
 		} else if (has_target()) {
-			lpolicy = get_lockpolicy(policy->cpu);
-			BUG_ON(!lpolicy);
-			down_write(&lpolicy->rwsem);
+			down_write(&policy->rwsem);
 			ret = cpufreq_start_governor(policy);
-			up_write(&lpolicy->rwsem);
+			up_write(&policy->rwsem);
 
 			if (ret)
 				pr_err("%s: Failed to start governor for policy: %p\n",
@@ -2516,14 +2334,12 @@ int cpufreq_driver_target(struct cpufreq_policy *policy,
 			  unsigned int relation)
 {
 	int ret = -EINVAL;
-	struct cpufreq_lockpolicy *lpolicy = get_lockpolicy(policy->cpu);
-	BUG_ON(!lpolicy);
 
-	down_write(&lpolicy->rwsem);
+	down_write(&policy->rwsem);
 
 	ret = __cpufreq_driver_target(policy, target_freq, relation);
 
-	up_write(&lpolicy->rwsem);
+	up_write(&policy->rwsem);
 
 	return ret;
 }
@@ -2824,15 +2640,11 @@ void cpufreq_update_policy(unsigned int cpu)
 {
 	struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
 	struct cpufreq_policy new_policy;
-	struct cpufreq_lockpolicy *lpolicy;
 
 	if (!policy)
 		return;
 
-	lpolicy = get_lockpolicy(policy->cpu);
-	BUG_ON(!lpolicy);
-
-	down_write(&lpolicy->rwsem);
+	down_write(&policy->rwsem);
 
 	if (policy_is_inactive(policy))
 		goto unlock;
@@ -2856,7 +2668,7 @@ void cpufreq_update_policy(unsigned int cpu)
 	cpufreq_set_policy(policy, &new_policy);
 
 unlock:
-	up_write(&lpolicy->rwsem);
+	up_write(&policy->rwsem);
 
 	cpufreq_cpu_put(policy);
 }
@@ -2869,11 +2681,8 @@ static int cpufreq_boost_set_sw(int state)
 {
 	struct cpufreq_policy *policy;
 	int ret = -EINVAL;
-	struct cpufreq_lockpolicy *lpolicy;
 
 	for_each_active_policy(policy) {
-		lpolicy = get_lockpolicy(policy->cpu);
-		BUG_ON(!lpolicy);
 		if (!policy->freq_table)
 			continue;
 
@@ -2885,10 +2694,10 @@ static int cpufreq_boost_set_sw(int state)
 			break;
 		}
 
-		down_write(&lpolicy->rwsem);
+		down_write(&policy->rwsem);
 		policy->user_policy.max = policy->max;
 		cpufreq_governor_limits(policy);
-		up_write(&lpolicy->rwsem);
+		up_write(&policy->rwsem);
 	}
 
 	return ret;
@@ -3006,19 +2815,6 @@ static void hardlimit_memalloc(void)
 		BUG_ON(!hpolicy);
 	}
 }
-
-static void lockpolicy_memalloc(void)
-{
-	struct cpufreq_lockpolicy *lpolicy;
-	unsigned int cpu;
-	for_each_possible_cpu(cpu) {
-		if (cpu_out_of_range(cpu))
-			break;
-		lpolicy = kzalloc(sizeof(struct cpufreq_lockpolicy), GFP_KERNEL);
-		BUG_ON(!lpolicy);
-	}
-}
-
 int cpufreq_register_driver(struct cpufreq_driver *driver_data)
 {
 	unsigned long flags;
@@ -3088,7 +2884,6 @@ err_null_driver:
 	write_unlock_irqrestore(&cpufreq_driver_lock, flags);
 out:
 	cpus_read_unlock();
-	lockpolicy_memalloc();
 	hardlimit_memalloc();
 	return ret;
 }

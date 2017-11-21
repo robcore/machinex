@@ -101,6 +101,16 @@ struct cpufreq_policy {
 	struct completion	kobj_unregister;
 
 	/*
+	 * The rules for this semaphore:
+	 * - Any routine that wants to read from the policy structure will
+	 *   do a down_read on this semaphore.
+	 * - Any routine that will write to the policy structure and/or may take away
+	 *   the policy altogether (eg. CPU hotplug), will hold this lock in write
+	 *   mode before doing so.
+	 */
+	struct rw_semaphore	rwsem;
+
+	/*
 	 * Fast switch flags:
 	 * - fast_switch_possible should be set by the driver if it can
 	 *   guarantee that frequency can be changed on any CPU sharing the
@@ -159,9 +169,8 @@ void autosmp_input_boost(void);
 #endif
 
 extern int mx_update_policy(unsigned int cpu);
-void reapply_hard_limits_safe(unsigned int cpu, bool update_policy);
+
 unsigned int check_cpufreq_hardlimit(unsigned int cpu, unsigned int freq);
-unsigned int check_cpufreq_hardlimit_safe(unsigned int cpu, unsigned int freq);
 unsigned int get_hardlimit_max(unsigned int cpu);
 #endif /* CONFIG_CPUFREQ_HARDLIMIT*/
 
