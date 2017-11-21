@@ -402,7 +402,7 @@ static void reapply_hard_limits(unsigned int cpu, bool update_policy)
 		down_write(&policy->rwsem);
 		policy->user_policy.min = policy->min = hpolicy->current_limit_min;
 		policy->user_policy.max = policy->max = hpolicy->current_limit_max;
-		up_write(&policey->rwsem);
+		up_write(&policy->rwsem);
 		cpufreq_update_policy(cpu);
 	}
 }
