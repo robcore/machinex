@@ -38,7 +38,7 @@ extern void set_gpu_vdd_levels(int uv_tbl[]);
 
 static unsigned int current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON;
 
-static struct hardlimit_policy {
+struct hardlimit_policy {
 	unsigned int hardlimit_max_screen_on;
 	unsigned int hardlimit_max_screen_off;
 	unsigned int hardlimit_min_screen_on;
@@ -59,14 +59,11 @@ static struct delayed_work input_boost_rem;
 static bool input_boost_enabled = false;
 module_param(input_boost_enabled, bool, 0644);
 
-static unsigned int input_boost_ms = 250;
+static unsigned int input_boost_ms = 350;
 module_param(input_boost_ms, uint, 0644);
 
 static struct delayed_work input_boost_rem;
 static u64 last_input_time;
-
-static unsigned int min_input_interval = 300;
-module_param(min_input_interval, uint, 0644);
 
 static LIST_HEAD(cpufreq_policy_list);
 
@@ -436,13 +433,15 @@ unsigned int get_hardlimit_max(unsigned int cpu)
 static void do_input_boost_rem(struct work_struct *work)
 {
 	unsigned int cpu;
-
+	struct hardlimit_policy *hpolicy;
 
 	if (!is_display_on() || !input_boost_enabled || !input_boost_ms)
 		return;
 
 	for_each_possible_cpu(cpu) {
-		struct hardlimit_policy *hpolicy = hardlimit_get_raw(cpu);
+		if (cpu_out_of_range(cpu))
+			break;
+		hpolicy = hardlimit_get_raw(cpu);
 		if (!hpolicy) {
 			continue;
 		}
@@ -455,13 +454,16 @@ static void do_input_boost_rem(struct work_struct *work)
 static void do_input_boost(struct work_struct *work)
 {
 	unsigned int cpu;
+	struct hardlimit_policy *hpolicy;
 
 	if (!input_boost_enabled || !input_boost_ms || !is_display_on())
 		return;
 
 	/* Set the input_boost_limit for all CPUs in the system */
 	for_each_possible_cpu(cpu) {
-		struct hardlimit_policy *hpolicy = hardlimit_get_raw(cpu);
+		if (cpu_out_of_range(cpu))
+			break;
+		hpolicy = hardlimit_get_raw(cpu);
 		if (!hpolicy) {
 			continue;
 		}
@@ -475,20 +477,17 @@ static void do_input_boost(struct work_struct *work)
 
 void cpu_boost_event(void)
 {
-	u64 min_interval;
-	u64 now;
+	u64 delta;
 
 	if (!input_boost_enabled ||
 		!input_boost_ms || !is_display_on())
 		return;
 
-	min_interval = max(min_input_interval, input_boost_ms);
-	now = ktime_to_us(ktime_get());
-
 	if (!last_input_time)
 		goto first_time;
 
-	if (now - last_input_time < min_interval * USEC_PER_MSEC)
+	delta = ktime_to_us(ktime_get()) - last_input_time;
+	if (delta < input_boost_ms * USEC_PER_MSEC)
 		return;
 
 first_time:
