@@ -390,8 +390,12 @@ static void reapply_hard_limits(unsigned int cpu, bool update_policy)
 	if (!policy)
 		return;
 
+	if (!update_policy)
+		down_write(&policy->rwsem);
 	policy->user_policy.min = policy->min = hpolicy->current_limit_min;
 	policy->user_policy.max = policy->max = hpolicy->current_limit_max;
+	if (!update_policy)
+		up_write(&policey->rwsem);
 
 	if (update_policy)
 		cpufreq_update_policy(cpu);
@@ -883,7 +887,7 @@ void cpufreq_hardlimit_suspend(void)
 	unsigned int cpu;
 	current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_OFF;
 	for_each_possible_cpu(cpu)
-		reapply_hard_limits(cpu, false);
+		reapply_hard_limits(cpu, true);
 }
 
 void cpufreq_hardlimit_resume(void)
@@ -992,7 +996,7 @@ const char *buf, size_t count)			\
 	for (i = 0; (permtable[i].frequency != CPUFREQ_TABLE_END); i++)	\
 		if (permtable[i].frequency == new_hardlimit) {	\
 				hpolicy->name = new_hardlimit;	\
-				reapply_hard_limits(dev->id, false);	\
+				reapply_hard_limits(dev->id, true);	\
 				return count;	\
 		}	\
 	return -EINVAL;	\
