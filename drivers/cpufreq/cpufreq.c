@@ -353,28 +353,30 @@ static void reapply_hard_limits(unsigned int cpu, bool update_policy)
 		return;
 	}
 	/* Recalculate the currently applicable min/max */
-	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON) {
-		if (limited_max_freq_thermal[cpu] >= DEFAULT_HARD_MIN &&
-			limited_max_freq_thermal[cpu] < hpolicy->hardlimit_max_screen_on)
-			hpolicy->current_limit_max = limited_max_freq_thermal[cpu];
-		else
-			hpolicy->current_limit_max = hpolicy->hardlimit_max_screen_on;
+	switch(current_screen_state) {
+		case CPUFREQ_HARDLIMIT_SCREEN_ON:
+			if (limited_max_freq_thermal[cpu] >= DEFAULT_HARD_MIN &&
+				limited_max_freq_thermal[cpu] < hpolicy->hardlimit_max_screen_on)
+				hpolicy->current_limit_max = limited_max_freq_thermal[cpu];
+			else
+				hpolicy->current_limit_max = hpolicy->hardlimit_max_screen_on;
 
-		if (thermal_disables_boost) {
-			if (hpolicy->input_boost_limit > hpolicy->hardlimit_min_screen_on &&
-				hpolicy->input_boost_limit <= hpolicy->current_limit_max &&
-				limited_max_freq_thermal[cpu] == hpolicy->hardlimit_max_screen_on)
-				hpolicy->current_limit_min = hpolicy->input_boost_limit;
-			else
-				hpolicy->current_limit_min = hpolicy->hardlimit_min_screen_on;
-		} else {
-			if (hpolicy->input_boost_limit > hpolicy->hardlimit_min_screen_on &&
-				hpolicy->input_boost_limit <= hpolicy->current_limit_max)
-				hpolicy->current_limit_min = hpolicy->input_boost_limit;
-			else
-				hpolicy->current_limit_min = hpolicy->hardlimit_min_screen_on;
-		}
-	} else if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_OFF) {
+			if (thermal_disables_boost) {
+				if (hpolicy->input_boost_limit > hpolicy->hardlimit_min_screen_on &&
+					hpolicy->input_boost_limit <= hpolicy->current_limit_max &&
+					limited_max_freq_thermal[cpu] == hpolicy->hardlimit_max_screen_on)
+					hpolicy->current_limit_min = hpolicy->input_boost_limit;
+				else
+					hpolicy->current_limit_min = hpolicy->hardlimit_min_screen_on;
+			} else {
+				if (hpolicy->input_boost_limit > hpolicy->hardlimit_min_screen_on &&
+					hpolicy->input_boost_limit <= hpolicy->current_limit_max)
+					hpolicy->current_limit_min = hpolicy->input_boost_limit;
+				else
+					hpolicy->current_limit_min = hpolicy->hardlimit_min_screen_on;
+			}
+		break;
+		case CPUFREQ_HARDLIMIT_SCREEN_OFF:
 		if (limited_max_freq_thermal[cpu] >= DEFAULT_HARD_MIN &&
 			limited_max_freq_thermal[cpu] < hpolicy->hardlimit_max_screen_off)
 			hpolicy->current_limit_max = limited_max_freq_thermal[cpu];
@@ -382,6 +384,9 @@ static void reapply_hard_limits(unsigned int cpu, bool update_policy)
 			hpolicy->current_limit_max = hpolicy->hardlimit_max_screen_off;
 
 		hpolicy->current_limit_min = hpolicy->hardlimit_min_screen_off;
+		break;
+		default:
+		break;
 	}
 	if (!cpu_online(cpu))
 		return;
@@ -390,17 +395,17 @@ static void reapply_hard_limits(unsigned int cpu, bool update_policy)
 	if (!policy)
 		return;
 
-	if (!update_policy)
+	if (!update_policy) {
+		policy->user_policy.min = policy->min = hpolicy->current_limit_min;
+		policy->user_policy.max = policy->max = hpolicy->current_limit_max;
+	} else {
 		down_write(&policy->rwsem);
-	policy->user_policy.min = policy->min = hpolicy->current_limit_min;
-	policy->user_policy.max = policy->max = hpolicy->current_limit_max;
-	if (!update_policy)
-		up_write(&policy->rwsem);
-
-	if (update_policy)
+		policy->user_policy.min = policy->min = hpolicy->current_limit_min;
+		policy->user_policy.max = policy->max = hpolicy->current_limit_max;
+		up_write(&policey->rwsem);
 		cpufreq_update_policy(cpu);
+	}
 }
-EXPORT_SYMBOL(reapply_hard_limits);
 
 /* Sanitize cpufreq to hardlimits */
 unsigned int check_cpufreq_hardlimit(unsigned int cpu, unsigned int freq)
@@ -887,7 +892,7 @@ void cpufreq_hardlimit_suspend(void)
 	unsigned int cpu;
 	current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_OFF;
 	for_each_possible_cpu(cpu)
-		reapply_hard_limits(cpu, true);
+		reapply_hard_limits(cpu, false);
 }
 
 void cpufreq_hardlimit_resume(void)
@@ -996,7 +1001,7 @@ const char *buf, size_t count)			\
 	for (i = 0; (permtable[i].frequency != CPUFREQ_TABLE_END); i++)	\
 		if (permtable[i].frequency == new_hardlimit) {	\
 				hpolicy->name = new_hardlimit;	\
-				reapply_hard_limits(dev->id, true);	\
+				reapply_hard_limits(dev->id, false);	\
 				return count;	\
 		}	\
 	return -EINVAL;	\
