@@ -1580,7 +1580,6 @@ static void cpufreq_policy_free(struct cpufreq_policy *policy)
 	kfree(policy);
 }
 
-static unsigned int hlim_initialized[NR_CPUS] = {0, 0, 0, 0};
 static unsigned int hdev_added[NR_CPUS] = { 0, 0, 0, 0 };
 
 static void hardlimit_add_dev(unsigned int cpu)
@@ -1591,16 +1590,26 @@ static void hardlimit_add_dev(unsigned int cpu)
 		pr_warn("WARNING! HARDLIMIT called before allocation!\n");
 		return;
 	}
+}
 
-	hpolicy->hardlimit_max_screen_on = DEFAULT_HARD_MAX,
-	hpolicy->hardlimit_max_screen_off = DEFAULT_HARD_MAX,
-	hpolicy->hardlimit_min_screen_on = DEFAULT_HARD_MIN,
-	hpolicy->hardlimit_min_screen_off = DEFAULT_HARD_MIN,
-	hpolicy->current_limit_max = DEFAULT_HARD_MAX,
-	hpolicy->current_limit_min = DEFAULT_HARD_MIN,
-	hpolicy->input_boost_limit = DEFAULT_HARD_MIN,
-	hpolicy->input_boost_frequency = DEFAULT_INPUT_FREQ,
-	hlim_initialized[cpu] = 1;
+static struct hardlimit_policy *hardlimit_policy_alloc(unsigned int cpu)
+{
+	struct hardlimit_policy *hpolicy;
+	int ret;
+
+	hpolicy = kzalloc(sizeof(*hpolicy), GFP_KERNEL);
+	if (!hpolicy)
+		return NULL;
+
+	hpolicy->hardlimit_max_screen_on = DEFAULT_HARD_MAX;
+	hpolicy->hardlimit_max_screen_off = DEFAULT_HARD_MAX;
+	hpolicy->hardlimit_min_screen_on = DEFAULT_HARD_MIN;
+	hpolicy->hardlimit_min_screen_off = DEFAULT_HARD_MIN;
+	hpolicy->current_limit_max = DEFAULT_HARD_MAX;
+	hpolicy->current_limit_min = DEFAULT_HARD_MIN;
+	hpolicy->input_boost_limit = DEFAULT_HARD_MIN;
+	hpolicy->input_boost_frequency = DEFAULT_INPUT_FREQ;
+	return hpolicy;
 }
 
 static int hardlimit_attr_init(unsigned int cpu)
@@ -1614,6 +1623,7 @@ static int hardlimit_attr_init(unsigned int cpu)
 static int cpufreq_online(unsigned int cpu)
 {
 	struct cpufreq_policy *policy;
+	struct hardlimit_policy *hpolicy;
 	bool new_policy;
 	unsigned long flags;
 	unsigned int j;
@@ -1664,10 +1674,15 @@ static int cpufreq_online(unsigned int cpu)
 	 */
 	cpumask_and(policy->cpus, policy->cpus, cpu_online_mask);
 
-	if (!hlim_initialized[cpu])
-		hardlimit_add_dev(policy->cpu);
-
-	reapply_hard_limits(policy->cpu, false);
+	hpolicy = per_cpu(hdata, cpu);
+	if (hpolicy == NULL) {
+		hpolicy = hardlimit_policy_alloc(policy->cpu);
+		if (!hpolicy)
+			return -ENOMEM;
+		hardlimit_attr_init(policy->cpu);
+	} else {
+		reapply_hard_limits(policy->cpu, false);
+	}
 
 	if (new_policy) {
 		policy->user_policy.min = check_cpufreq_hardlimit(policy->cpu, policy->min);
@@ -1708,9 +1723,6 @@ static int cpufreq_online(unsigned int cpu)
 		new_policy = false;
 		goto out_exit_policy;
 	}
-
-	if (!hdev_added[policy->cpu])
-		hardlimit_attr_init(policy->cpu);
 
 	up_write(&policy->rwsem);
 
