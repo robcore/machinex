@@ -160,17 +160,6 @@ struct cpufreq_policy {
 
 #define CPUFREQ_HARDLIMIT_SCREEN_ON	0		/* default, consider we boot with screen on */
 #define CPUFREQ_HARDLIMIT_SCREEN_OFF	1
-
-struct hardlimit_policy {
-	unsigned int hardlimit_max_screen_on;
-	unsigned int hardlimit_max_screen_off;
-	unsigned int hardlimit_min_screen_on;
-	unsigned int hardlimit_min_screen_off;
-	unsigned int current_limit_max;
-	unsigned int current_limit_min;
-	unsigned int input_boost_limit;
-	unsigned int input_boost_frequency;
-};
 extern unsigned int limited_max_freq_thermal[NR_CPUS];
 
 void cpu_boost_event(void);

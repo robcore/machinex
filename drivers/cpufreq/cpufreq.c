@@ -37,7 +37,20 @@ extern ssize_t get_gpu_vdd_levels_str(char *buf);
 extern void set_gpu_vdd_levels(int uv_tbl[]);
 
 static unsigned int current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON;
-static struct hardlimit_policy hl[NR_CPUS];
+
+struct hardlimit_policy {
+	unsigned int hardlimit_max_screen_on;
+	unsigned int hardlimit_max_screen_off;
+	unsigned int hardlimit_min_screen_on;
+	unsigned int hardlimit_min_screen_off;
+	unsigned int current_limit_max;
+	unsigned int current_limit_min;
+	unsigned int input_boost_limit;
+	unsigned int input_boost_frequency;
+};
+
+static DEFINE_PER_CPU(struct hardlimit_policy *, hdata);
+
 unsigned int limited_max_freq_thermal[NR_CPUS] = { DEFAULT_HARD_MAX, DEFAULT_HARD_MAX, DEFAULT_HARD_MAX, DEFAULT_HARD_MAX };
 static struct workqueue_struct *cpu_boost_wq;
 static struct delayed_work input_boost_work;
@@ -241,6 +254,13 @@ struct cpufreq_policy *cpufreq_cpu_get_raw(unsigned int cpu)
 }
 EXPORT_SYMBOL_GPL(cpufreq_cpu_get_raw);
 
+struct hardlimit_policy *hardlimit_get_raw(unsigned int cpu)
+{
+	struct hardlimit_policy *hpolicy = per_cpu(hdata, cpu);
+
+	return hpolicy ? hpolicy : NULL;
+}
+
 unsigned int cpufreq_generic_get(unsigned int cpu)
 {
 	if (!cpu_online(cpu))
@@ -330,36 +350,42 @@ module_param(thermal_disables_boost, bool, 0644);
 static void reapply_hard_limits(unsigned int cpu, bool update_policy)
 {
 	struct cpufreq_policy *policy;
+	struct hardlimit_policy *hpolicy = hardlimit_get_raw(cpu);
+
+	if (hpolicy == NULL) {
+		pr_warn("WARNING! HARDLIMIT called before allocation!\n");
+		return;
+	}
 	/* Recalculate the currently applicable min/max */
 	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON) {
 		if (limited_max_freq_thermal[cpu] >= DEFAULT_HARD_MIN &&
-			limited_max_freq_thermal[cpu] < hl[cpu].hardlimit_max_screen_on)
-			hl[cpu].current_limit_max = limited_max_freq_thermal[cpu];
+			limited_max_freq_thermal[cpu] < hpolicy->hardlimit_max_screen_on)
+			hpolicy->current_limit_max = limited_max_freq_thermal[cpu];
 		else
-			hl[cpu].current_limit_max = hl[cpu].hardlimit_max_screen_on;
+			hpolicy->current_limit_max = hpolicy->hardlimit_max_screen_on;
 
 		if (thermal_disables_boost) {
-			if (hl[cpu].input_boost_limit > hl[cpu].hardlimit_min_screen_on &&
-				hl[cpu].input_boost_limit <= hl[cpu].current_limit_max &&
-				limited_max_freq_thermal[cpu] == hl[cpu].hardlimit_max_screen_on)
-				hl[cpu].current_limit_min = hl[cpu].input_boost_limit;
+			if (hpolicy->input_boost_limit > hpolicy->hardlimit_min_screen_on &&
+				hpolicy->input_boost_limit <= hpolicy->current_limit_max &&
+				limited_max_freq_thermal[cpu] == hpolicy->hardlimit_max_screen_on)
+				hpolicy->current_limit_min = hpolicy->input_boost_limit;
 			else
-				hl[cpu].current_limit_min = hl[cpu].hardlimit_min_screen_on;
+				hpolicy->current_limit_min = hpolicy->hardlimit_min_screen_on;
 		} else {
-			if (hl[cpu].input_boost_limit > hl[cpu].hardlimit_min_screen_on &&
-				hl[cpu].input_boost_limit <= hl[cpu].current_limit_max)
-				hl[cpu].current_limit_min = hl[cpu].input_boost_limit;
+			if (hpolicy->input_boost_limit > hpolicy->hardlimit_min_screen_on &&
+				hpolicy->input_boost_limit <= hpolicy->current_limit_max)
+				hpolicy->current_limit_min = hpolicy->input_boost_limit;
 			else
-				hl[cpu].current_limit_min = hl[cpu].hardlimit_min_screen_on;
+				hpolicy->current_limit_min = hpolicy->hardlimit_min_screen_on;
 		}
 	} else if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_OFF) {
 		if (limited_max_freq_thermal[cpu] >= DEFAULT_HARD_MIN &&
-			limited_max_freq_thermal[cpu] < hl[cpu].hardlimit_max_screen_off)
-			hl[cpu].current_limit_max = limited_max_freq_thermal[cpu];
+			limited_max_freq_thermal[cpu] < hpolicy->hardlimit_max_screen_off)
+			hpolicy->current_limit_max = limited_max_freq_thermal[cpu];
 		else
-			hl[cpu].current_limit_max = hl[cpu].hardlimit_max_screen_off;
+			hpolicy->current_limit_max = hpolicy->hardlimit_max_screen_off;
 
-		hl[cpu].current_limit_min = hl[cpu].hardlimit_min_screen_off;
+		hpolicy->current_limit_min = hpolicy->hardlimit_min_screen_off;
 	}
 	if (!cpu_online(cpu))
 		return;
@@ -368,8 +394,8 @@ static void reapply_hard_limits(unsigned int cpu, bool update_policy)
 	if (!policy)
 		return;
 
-	policy->user_policy.min = policy->min = hl[cpu].current_limit_min;
-	policy->user_policy.max = policy->max = hl[cpu].current_limit_max;
+	policy->user_policy.min = policy->min = hpolicy->current_limit_min;
+	policy->user_policy.max = policy->max = hpolicy->current_limit_max;
 
 	if (update_policy)
 		cpufreq_update_policy(cpu);
@@ -379,7 +405,14 @@ EXPORT_SYMBOL(reapply_hard_limits);
 /* Sanitize cpufreq to hardlimits */
 unsigned int check_cpufreq_hardlimit(unsigned int cpu, unsigned int freq)
 {
-	sanitize_min_max(freq, hl[cpu].current_limit_min, hl[cpu].current_limit_max);
+	struct hardlimit_policy *hpolicy = hardlimit_get_raw(cpu);
+
+	if (hpolicy == NULL) {
+		pr_warn("WARNING! HARDLIMIT called before allocation!\n");
+		return freq;
+	}
+
+	sanitize_min_max(freq, hpolicy->current_limit_min, hpolicy->current_limit_max);
 	return freq;
 }
 EXPORT_SYMBOL(check_cpufreq_hardlimit);
@@ -393,20 +426,32 @@ void set_thermal_policy(unsigned int cpu, unsigned int freq)
 
 unsigned int get_hardlimit_max(unsigned int cpu)
 {
-	return is_display_on() ? hl[cpu].hardlimit_max_screen_on :
-		    hl[cpu].hardlimit_max_screen_off;
+	struct hardlimit_policy *hpolicy = hardlimit_get_raw(cpu);
+
+	if (hpolicy == NULL) {
+		pr_warn("WARNING! HARDLIMIT called before allocation!\n");
+		return DEFAULT_HARD_MAX;
+	}
+	return is_display_on() ? hpolicy->hardlimit_max_screen_on :
+		    hpolicy->hardlimit_max_screen_off;
 }
 
 static void do_input_boost_rem(struct work_struct *work)
 {
 	unsigned int cpu;
 
+
 	if (!is_display_on() || !input_boost_enabled || !input_boost_ms)
 		return;
 
 	for_each_possible_cpu(cpu) {
+		struct hardlimit_policy *hpolicy = hardlimit_get_raw(cpu);
+		if (hpolicy == NULL) {
+			pr_warn("WARNING! HARDLIMIT called before allocation!\n");
+			continue;
+		}
 		/* Reset the input_boost_limit for all CPUs in the system */
-		hl[cpu].input_boost_limit = hl[cpu].hardlimit_min_screen_on;
+		hpolicy->input_boost_limit = hpolicy->hardlimit_min_screen_on;
 		reapply_hard_limits(cpu, true);
 	}
 }
@@ -420,7 +465,12 @@ static void do_input_boost(struct work_struct *work)
 
 	/* Set the input_boost_limit for all CPUs in the system */
 	for_each_possible_cpu(cpu) {
-		hl[cpu].input_boost_limit = hl[cpu].input_boost_frequency;
+		struct hardlimit_policy *hpolicy = hardlimit_get_raw(cpu);
+		if (hpolicy == NULL) {
+			pr_warn("WARNING! HARDLIMIT called before allocation!\n");
+			continue;
+		}
+		hpolicy->input_boost_limit = hpolicy->input_boost_frequency;
 		reapply_hard_limits(cpu, true);
 	}
 
@@ -876,7 +926,10 @@ show_one(scaling_max_freq, max);
 static ssize_t object##_show(struct device *dev,			\
 		struct device_attribute *attr, char *buf)	\
 {								\
-	return sprintf(buf, "%u\n", hl[(dev->id)].object);	\
+	struct hardlimit_policy *hpolicy = hardlimit_get_raw(dev->id);	\
+	if (hpolicy == NULL)	\
+		return sprintf(buf, "ERROR\n");	\
+	return sprintf(buf, "%u\n", hpolicy->object);	\
 }
 
 show_one_hardlimit(hardlimit_max_screen_on);
@@ -934,6 +987,9 @@ const char *buf, size_t count)			\
 {	\
 	unsigned int new_hardlimit, i;	\
 	struct cpufreq_frequency_table *permtable;	\
+	struct hardlimit_policy *hpolicy = hardlimit_get_raw(dev->id);	\
+	if (hpolicy == NULL)	\
+		return -EINVAL;	\
 	if (!sscanf(buf, "%u", &new_hardlimit))	\
 		return -EINVAL;	\
 	permtable = cpufreq_frequency_get_table(0);	\
@@ -941,7 +997,7 @@ const char *buf, size_t count)			\
 		return -EINVAL;	\
 	for (i = 0; (permtable[i].frequency != CPUFREQ_TABLE_END); i++)	\
 		if (permtable[i].frequency == new_hardlimit) {	\
-				hl[(dev->id)].name = new_hardlimit;	\
+				hpolicy->name = new_hardlimit;	\
 				reapply_hard_limits(dev->id, false);	\
 				return count;	\
 		}	\
@@ -956,6 +1012,9 @@ const char *buf, size_t count)			\
 {	\
 	unsigned int new_hardlimit, i;	\
 	struct cpufreq_frequency_table *permtable;	\
+	struct hardlimit_policy *hpolicy = hardlimit_get_raw(dev->id);	\
+	if (hpolicy == NULL)	\
+		return -EINVAL;	\
 	if (!sscanf(buf, "%u", &new_hardlimit))	\
 		return -EINVAL;	\
 	permtable = cpufreq_frequency_get_table(0);	\
@@ -963,7 +1022,7 @@ const char *buf, size_t count)			\
 		return -EINVAL;	\
 	for (i = 0; (permtable[i].frequency != CPUFREQ_TABLE_END); i++)	\
 		if (permtable[i].frequency == new_hardlimit) {	\
-				hl[(dev->id)].name = new_hardlimit;	\
+				hpolicy->name = new_hardlimit;	\
 				return count;	\
 		}	\
 	return -EINVAL;	\
@@ -1526,14 +1585,21 @@ static unsigned int hdev_added[NR_CPUS] = { 0, 0, 0, 0 };
 
 static void hardlimit_add_dev(unsigned int cpu)
 {
-	hl[cpu].hardlimit_max_screen_on = DEFAULT_HARD_MAX,
-	hl[cpu].hardlimit_max_screen_off = DEFAULT_HARD_MAX,
-	hl[cpu].hardlimit_min_screen_on = DEFAULT_HARD_MIN,
-	hl[cpu].hardlimit_min_screen_off = DEFAULT_HARD_MIN,
-	hl[cpu].current_limit_max = DEFAULT_HARD_MAX,
-	hl[cpu].current_limit_min = DEFAULT_HARD_MIN,
-	hl[cpu].input_boost_limit = DEFAULT_HARD_MIN,
-	hl[cpu].input_boost_frequency = DEFAULT_INPUT_FREQ,
+	struct hardlimit_policy *hpolicy = hardlimit_get_raw(cpu);
+
+	if (hpolicy == NULL) {
+		pr_warn("WARNING! HARDLIMIT called before allocation!\n");
+		return;
+	}
+
+	hpolicy->hardlimit_max_screen_on = DEFAULT_HARD_MAX,
+	hpolicy->hardlimit_max_screen_off = DEFAULT_HARD_MAX,
+	hpolicy->hardlimit_min_screen_on = DEFAULT_HARD_MIN,
+	hpolicy->hardlimit_min_screen_off = DEFAULT_HARD_MIN,
+	hpolicy->current_limit_max = DEFAULT_HARD_MAX,
+	hpolicy->current_limit_min = DEFAULT_HARD_MIN,
+	hpolicy->input_boost_limit = DEFAULT_HARD_MIN,
+	hpolicy->input_boost_frequency = DEFAULT_INPUT_FREQ,
 	hlim_initialized[cpu] = 1;
 }
 
@@ -2485,6 +2551,7 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
 {
 	struct cpufreq_governor *old_gov;
 	int ret;
+	struct hardlimit_policy *hpolicy;
 
 	pr_debug("setting new policy for CPU %u: %u - %u kHz\n",
 		 new_policy->cpu, new_policy->min, new_policy->max);
@@ -2522,9 +2589,12 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
 	policy->min = new_policy->min;
 	policy->max = new_policy->max;
 
-	if (unlikely(policy->min != hl[policy->cpu].current_limit_min ||
-		policy->max != hl[policy->cpu].current_limit_max))
-		reapply_hard_limits(policy->cpu, false);
+	hpolicy = hardlimit_get_raw(policy->cpu);
+	if (hpolicy) {
+		if (unlikely(policy->min != hpolicy->current_limit_min ||
+			policy->max != hpolicy->current_limit_max))
+			reapply_hard_limits(policy->cpu, false);
+	}
 
 	policy->cached_target_freq = UINT_MAX;
 
