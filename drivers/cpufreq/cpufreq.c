@@ -417,12 +417,63 @@ static void reapply_hard_limits(unsigned int cpu, bool update_policy)
 
 void reapply_hard_limits_safe(unsigned int cpu, bool update_policy)
 {
-	struct cpufreq_lockpolicy *lpolicy = get_lockpolicy(cpu);
+	struct cpufreq_lockpolicy *lpolicy;
+	struct cpufreq_policy *policy;
+	struct hardlimit_policy *hpolicy = hardlimit_get_raw(cpu);
+
+	if (!hpolicy) {
+		return;
+	}
+
+	lpolicy = get_lockpolicy(cpu);
 	BUG_ON(!lpolicy);
 
 	down_write(&lpolicy->rwsem);
-	reapply_hard_limits(cpu, update_policy);
+	/* Recalculate the currently applicable min/max */
+	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON) {
+		if (limited_max_freq_thermal[cpu] >= DEFAULT_HARD_MIN &&
+			limited_max_freq_thermal[cpu] < hpolicy->hardlimit_max_screen_on)
+			hpolicy->current_limit_max = limited_max_freq_thermal[cpu];
+		else
+			hpolicy->current_limit_max = hpolicy->hardlimit_max_screen_on;
+
+		if (thermal_disables_boost) {
+			if (hpolicy->input_boost_limit > hpolicy->hardlimit_min_screen_on &&
+				hpolicy->input_boost_limit <= hpolicy->current_limit_max &&
+				limited_max_freq_thermal[cpu] == hpolicy->hardlimit_max_screen_on)
+				hpolicy->current_limit_min = hpolicy->input_boost_limit;
+			else
+				hpolicy->current_limit_min = hpolicy->hardlimit_min_screen_on;
+		} else {
+			if (hpolicy->input_boost_limit > hpolicy->hardlimit_min_screen_on &&
+				hpolicy->input_boost_limit <= hpolicy->current_limit_max)
+				hpolicy->current_limit_min = hpolicy->input_boost_limit;
+			else
+				hpolicy->current_limit_min = hpolicy->hardlimit_min_screen_on;
+		}
+	} else if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_OFF) {
+		if (limited_max_freq_thermal[cpu] >= DEFAULT_HARD_MIN &&
+			limited_max_freq_thermal[cpu] < hpolicy->hardlimit_max_screen_off)
+			hpolicy->current_limit_max = limited_max_freq_thermal[cpu];
+		else
+			hpolicy->current_limit_max = hpolicy->hardlimit_max_screen_off;
+
+		hpolicy->current_limit_min = hpolicy->hardlimit_min_screen_off;
+	}
+
+	if (!cpu_online(cpu))
+		return;
+
+	policy = cpufreq_cpu_get_raw(cpu);
+	if (!policy)
+		return;
+
+	policy->user_policy.min = policy->min = hpolicy->current_limit_min;
+	policy->user_policy.max = policy->max = hpolicy->current_limit_max;
 	up_write(&lpolicy->rwsem);
+
+	if (update_policy)
+		cpufreq_update_policy(cpu);
 }
 EXPORT_SYMBOL(reapply_hard_limits_safe);
 
@@ -516,8 +567,8 @@ static void do_input_boost_rem(struct work_struct *work)
 		down_write(&lpolicy->rwsem);
 		/* Reset the input_boost_limit for all CPUs in the system */
 		hpolicy->input_boost_limit = hpolicy->hardlimit_min_screen_on;
-		reapply_hard_limits(cpu, true);
 		up_write(&lpolicy->rwsem);
+		reapply_hard_limits_safe(cpu, true);
 	}
 }
 
@@ -543,8 +594,8 @@ static void do_input_boost(struct work_struct *work)
 
 		down_write(&lpolicy->rwsem);
 		hpolicy->input_boost_limit = hpolicy->input_boost_frequency;
-		reapply_hard_limits(cpu, true);
 		up_write(&lpolicy->rwsem);
+		reapply_hard_limits_safe(cpu, true);
 	}
 
 	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_rem,
@@ -961,7 +1012,7 @@ void cpufreq_hardlimit_suspend(void)
 	unsigned int cpu;
 	current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_OFF;
 	for_each_possible_cpu(cpu)
-		reapply_hard_limits(cpu, false);
+		reapply_hard_limits_safe(cpu, false);
 }
 
 void cpufreq_hardlimit_resume(void)
@@ -969,7 +1020,7 @@ void cpufreq_hardlimit_resume(void)
 	unsigned int cpu;
 	current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON;
 	for_each_possible_cpu(cpu)
-		reapply_hard_limits(cpu, true);
+		reapply_hard_limits_safe(cpu, true);
 }
 #endif /*CONFIG_CPUFREQ_HARDLIMIT*/
 /**
@@ -1070,7 +1121,7 @@ const char *buf, size_t count)			\
 	for (i = 0; (permtable[i].frequency != CPUFREQ_TABLE_END); i++)	\
 		if (permtable[i].frequency == new_hardlimit) {	\
 				hpolicy->name = new_hardlimit;	\
-				reapply_hard_limits(dev->id, false);	\
+				reapply_hard_limits_safe(dev->id, false);	\
 				return count;	\
 		}	\
 	return -EINVAL;	\
@@ -3011,8 +3062,8 @@ err_null_driver:
 	write_unlock_irqrestore(&cpufreq_driver_lock, flags);
 out:
 	cpus_read_unlock();
-	hardlimit_memalloc();
 	lockpolicy_memalloc();
+	hardlimit_memalloc();
 	return ret;
 }
 EXPORT_SYMBOL_GPL(cpufreq_register_driver);

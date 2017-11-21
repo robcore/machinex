@@ -545,8 +545,8 @@ struct cpufreq_governor *mx_gov_userspace(void);
 
 static inline void cpufreq_policy_apply_limits(struct cpufreq_policy *policy)
 {
-	unsigned int realmax = check_cpufreq_hardlimit_safe(policy->cpu, policy->max);
-	unsigned int realmin = check_cpufreq_hardlimit_safe(policy->cpu, policy->min);
+	unsigned int realmax = check_cpufreq_hardlimit(policy->cpu, policy->max);
+	unsigned int realmin = check_cpufreq_hardlimit(policy->cpu, policy->min);
 	if (realmax < policy->cur)
 		__cpufreq_driver_target(policy, realmax, CPUFREQ_RELATION_H);
 	else if (realmin > policy->cur)
