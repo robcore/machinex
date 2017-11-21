@@ -395,7 +395,7 @@ static void reapply_hard_limits(unsigned int cpu, bool update_policy)
 	policy->user_policy.min = policy->min = hpolicy->current_limit_min;
 	policy->user_policy.max = policy->max = hpolicy->current_limit_max;
 	if (!update_policy)
-		up_write(&policey->rwsem);
+		up_write(&policy->rwsem);
 
 	if (update_policy)
 		cpufreq_update_policy(cpu);
