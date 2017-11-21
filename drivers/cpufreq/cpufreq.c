@@ -538,6 +538,8 @@ EXPORT_SYMBOL(check_cpufreq_hardlimit_safe);
 
 void set_thermal_policy(unsigned int cpu, unsigned int freq)
 {
+	struct cpufreq_lockpolicy *lpolicy = get_lockpolicy(cpu);
+	BUG_ON(!lpolicy);
 	down_write(&lpolicy->rwsem);
 	limited_max_freq_thermal[cpu] = freq;
 	up_write(&lpolicy->rwsem);
