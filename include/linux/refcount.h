@@ -5,6 +5,7 @@
 #include <linux/atomic.h>
 #include <linux/mutex.h>
 #include <linux/spinlock.h>
+#include <linux/kernel.h>
 
 typedef struct refcount_struct {
 	atomic_t refs;
