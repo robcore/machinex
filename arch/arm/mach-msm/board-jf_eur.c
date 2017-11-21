@@ -179,7 +179,7 @@ static void sensor_power_on_vdd(int, int);
 #define MSM_ION_MFC_META_SIZE  0x40000 /* 256 Kbytes */
 #define MSM_CONTIG_MEM_SIZE  0x65000
 #ifdef CONFIG_MSM_IOMMU
-#define MSM_ION_MM_SIZE		0x7200000    /* 56MB(0x3800000) -> 98MB -> 102MB */
+#define MSM_ION_MM_SIZE		0x6800000    /* 104MB */
 #define MSM_ION_SF_SIZE		0
 #define MSM_ION_QSECOM_SIZE	0x1700000    /* 7.5MB(0x780000) -> 23MB */
 #define MSM_ION_HEAP_NUM	7
@@ -547,18 +547,6 @@ static void __init reserve_rtb_memory(void)
 #endif
 }
 
-
-static void __init size_pmem_devices(void)
-{
-#ifdef CONFIG_ANDROID_PMEM
-#ifndef CONFIG_MSM_MULTIMEDIA_USE_ION
-	android_pmem_adsp_pdata.size = pmem_adsp_size;
-	android_pmem_pdata.size = pmem_size;
-	android_pmem_audio_pdata.size = MSM_PMEM_AUDIO_SIZE;
-#endif /*CONFIG_MSM_MULTIMEDIA_USE_ION*/
-#endif /*CONFIG_ANDROID_PMEM*/
-}
-
 #ifdef CONFIG_ANDROID_PMEM
 #ifndef CONFIG_MSM_MULTIMEDIA_USE_ION
 static void __init reserve_memory_for(struct android_pmem_platform_data *p)
@@ -567,18 +555,6 @@ static void __init reserve_memory_for(struct android_pmem_platform_data *p)
 }
 #endif /*CONFIG_MSM_MULTIMEDIA_USE_ION*/
 #endif /*CONFIG_ANDROID_PMEM*/
-
-static void __init reserve_pmem_memory(void)
-{
-#ifdef CONFIG_ANDROID_PMEM
-#ifndef CONFIG_MSM_MULTIMEDIA_USE_ION
-	reserve_memory_for(&android_pmem_adsp_pdata);
-	reserve_memory_for(&android_pmem_pdata);
-	reserve_memory_for(&android_pmem_audio_pdata);
-	apq8064_reserve_table[MEMTYPE_EBI1].size += msm_contig_mem_size;
-#endif /*CONFIG_MSM_MULTIMEDIA_USE_ION*/
-#endif /*CONFIG_ANDROID_PMEM*/
-}
 
 static int apq8064_paddr_to_memtype(phys_addr_t paddr)
 {
@@ -740,18 +716,19 @@ static void __init apq8064_reserve_fixed_area(unsigned long fixed_area_size)
 #if defined(CONFIG_ION_MSM) && defined(CONFIG_MSM_MULTIMEDIA_USE_ION)
 	int ret;
 
-	if (fixed_area_size > MAX_FIXED_AREA_SIZE)
-		panic("fixed area size is larger than %dM\n",
-			MAX_FIXED_AREA_SIZE >> 20);
+	pr_info("Reserved Area Size: %lu\n", fixed_area_size);
+	 BUG_ON(fixed_area_size > MAX_FIXED_AREA_SIZE);
+		/*panic("fixed area size is larger than %dM\n",
+			MAX_FIXED_AREA_SIZE >> 20); */
 
 	reserve_info->fixed_area_size = fixed_area_size;
 	reserve_info->fixed_area_start = APQ8064_FW_START;
 	ret = memblock_reserve(reserve_info->fixed_area_start,
 		reserve_info->fixed_area_size);
 	BUG_ON(ret);
-	ret = memblock_free(reserve_info->fixed_area_start,
+	memblock_free_early(reserve_info->fixed_area_start,
 		reserve_info->fixed_area_size);
-			BUG_ON(ret);
+			//BUG_ON(ret);
 	ret = memblock_remove(reserve_info->fixed_area_start,
 		reserve_info->fixed_area_size);
 	BUG_ON(ret);
@@ -1037,8 +1014,6 @@ static void __init reserve_mpdcvs_memory(void)
 
 static void __init apq8064_calculate_reserve_sizes(void)
 {
-	size_pmem_devices();
-	reserve_pmem_memory();
 	reserve_ion_memory();
 	reserve_mdp_memory();
 	reserve_cache_dump_memory();
