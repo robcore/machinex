@@ -275,10 +275,7 @@ static void hotplug_work_fn(struct work_struct *work)
 	for_each_nonboot_cpu(cpu) {
 		if (cpu_out_of_range_hp(cpu))
 			break;
-		if (!is_cpu_allowed(cpu) ||
-			thermal_core_controlled(cpu))
-			continue;
-		if (hotplug_onoff[cpu] == ON)
+		if (is_cpu_allowed(cpu) && hotplug_onoff[cpu] == ON)
 			cpu_up(cpu);
 		else if (hotplug_onoff[cpu] == OFF)
 			cpu_down(cpu);

@@ -380,8 +380,7 @@ static void do_override(void)
 		if (cpu_out_of_range_hp(cpu))
 			break;
 		if (cpu_online(cpu) ||
-			!is_cpu_allowed(cpu) ||
-			thermal_core_controlled(cpu))
+			!is_cpu_allowed(cpu))
 			continue;
 		ret = cpu_up(cpu);
 		if (ret)
@@ -432,8 +431,6 @@ static void cpu_up_down_work(struct work_struct *work)
 				num_online_cpus() == target)
 				break;
 			if (cpu_is_offline(cpu) ||
-				!is_cpu_allowed(cpu) ||
-				thermal_core_controlled(cpu) ||
 				check_down_lock(cpu))
 				continue;
 			l_nr_threshold =
@@ -449,8 +446,7 @@ static void cpu_up_down_work(struct work_struct *work)
 				num_online_cpus() == target)
 				break;
 			if (cpu_online(cpu) ||
-				!is_cpu_allowed(cpu) ||
-				thermal_core_controlled(cpu))
+				!is_cpu_allowed(cpu))
 				continue;
 			if (!cpu_up(cpu))
 				apply_down_lock(cpu);
@@ -544,16 +540,12 @@ static void cycle_cpus(void)
 			continue;
 		if (check_down_lock(cpu))
 			rm_down_lock(cpu, 0);
-		if (!is_cpu_allowed(cpu) ||
-			thermal_core_controlled(cpu))
-			continue;
 		cpu_down(cpu);
 	}
 	for_each_nonboot_offline_cpu(cpu) {
 		if (cpu_out_of_range_hp(cpu))
 			break;
-		if (!is_cpu_allowed(cpu) ||
-			thermal_core_controlled(cpu))
+		if (!is_cpu_allowed(cpu))
 			continue;
 		if (!cpu_up(cpu))
 			force_down_lock(cpu);
@@ -580,17 +572,13 @@ static void recycle_cpus(void)
 			continue;
 		if (check_down_lock(cpu))
 			rm_down_lock(cpu, 0);
-		if (!is_cpu_allowed(cpu) ||
-			thermal_core_controlled(cpu))
-			continue;
 		cpu_down(cpu);
 	}
 
 	for_each_nonboot_offline_cpu(cpu) {
 		if (cpu_out_of_range_hp(cpu))
 			break;
-		if (!is_cpu_allowed(cpu) ||
-			thermal_core_controlled(cpu))
+		if (!is_cpu_allowed(cpu))
 			continue;
 		if (!cpu_up(cpu)) {
 			if (!check_down_lock(cpu))

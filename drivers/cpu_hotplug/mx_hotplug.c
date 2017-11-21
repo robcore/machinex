@@ -134,8 +134,7 @@ void inject_nos(bool from_input, bool last_uptick)
 				num_online_cpus() == max_cpus_online)
 				break;
 			if (cpu_online(cpu) ||
-				!is_cpu_allowed(cpu) ||
-				thermal_core_controlled(cpu))
+				!is_cpu_allowed(cpu))
 				continue;
 		cpu_up(cpu);
 		}
@@ -147,8 +146,7 @@ void inject_nos(bool from_input, bool last_uptick)
 				num_online_cpus() == cylinders)
 				break;
 			if (cpu_online(cpu) ||
-				!is_cpu_allowed(cpu) ||
-				thermal_core_controlled(cpu))
+				!is_cpu_allowed(cpu))
 				continue;
 		cpu_up(cpu);
 		}
@@ -167,8 +165,7 @@ static void upshift(void)
 		num_online_cpus() == max_cpus_online)
 		return;
 	if (cpu_online(cpu) ||
-		!is_cpu_allowed(cpu) ||
-		thermal_core_controlled(cpu))
+		!is_cpu_allowed(cpu))
 		return;
 	cpu_up(cpu);
 }
