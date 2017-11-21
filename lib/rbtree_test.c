@@ -1,11 +1,18 @@
 #include <linux/module.h>
+#include <linux/moduleparam.h>
 #include <linux/rbtree_augmented.h>
 #include <linux/random.h>
+#include <linux/slab.h>
 #include <asm/timex.h>
 
-#define NODES       100
-#define PERF_LOOPS  100000
-#define CHECK_LOOPS 100
+#define __param(type, name, init, msg)		\
+	static type name = init;		\
+	module_param(name, type, 0444);		\
+	MODULE_PARM_DESC(name, msg);
+
+__param(int, nnodes, 100, "Number of nodes in the rb-tree");
+__param(int, perf_loops, 100000, "Number of iterations modifying the rb-tree");
+__param(int, check_loops, 100, "Number of iterations modifying and verifying the rb-tree");
 
 struct test_node {
 	u32 key;
@@ -17,7 +24,7 @@ struct test_node {
 };
 
 static struct rb_root root = RB_ROOT;
-static struct test_node nodes[NODES];
+static struct test_node *nodes = NULL;
 
 static struct rnd_state rnd;
 
@@ -95,7 +102,7 @@ static void erase_augmented(struct test_node *node, struct rb_root *root)
 static void init(void)
 {
 	int i;
-	for (i = 0; i < NODES; i++) {
+	for (i = 0; i < nnodes; i++) {
 		nodes[i].key = prandom_u32_state(&rnd);
 		nodes[i].val = prandom_u32_state(&rnd);
 	}
@@ -176,6 +183,11 @@ static int rbtree_test_init(void)
 {
 	int i, j;
 	cycles_t time1, time2, time;
+	struct rb_node *node;
+
+	nodes = kmalloc(nnodes * sizeof(*nodes), GFP_KERNEL);
+	if (!nodes)
+		return -ENOMEM;
 
 	printk(KERN_ALERT "rbtree testing");
 
@@ -184,27 +196,47 @@ static int rbtree_test_init(void)
 
 	time1 = get_cycles();
 
-	for (i = 0; i < PERF_LOOPS; i++) {
-		for (j = 0; j < NODES; j++)
+	for (i = 0; i < perf_loops; i++) {
+		for (j = 0; j < nnodes; j++)
 			insert(nodes + j, &root);
-		for (j = 0; j < NODES; j++)
+		for (j = 0; j < nnodes; j++)
 			erase(nodes + j, &root);
 	}
 
 	time2 = get_cycles();
 	time = time2 - time1;
 
-	time = div_u64(time, PERF_LOOPS);
-	printk(" -> %llu cycles\n", (unsigned long long)time);
+	time = div_u64(time, perf_loops);
+	printk(" -> test 1 (latency of nnodes insert+delete): %llu cycles\n", (unsigned long long)time);
 
-	for (i = 0; i < CHECK_LOOPS; i++) {
+	for (i = 0; i < nnodes; i++)
+		insert(nodes + i, &root);
+
+	time1 = get_cycles();
+
+	for (i = 0; i < perf_loops; i++) {
+		for (node = rb_first(&root); node; node = rb_next(node))
+			;
+	}
+
+	time2 = get_cycles();
+	time = time2 - time1;
+
+	time = div_u64(time, perf_loops);
+	printk(" -> test 2 (latency of inorder traversal): %llu cycles\n", (unsigned long long)time);
+
+	for (i = 0; i < nnodes; i++)
+		erase(nodes + i, &root);
+
+	/* run checks */
+	for (i = 0; i < check_loops; i++) {
 		init();
-		for (j = 0; j < NODES; j++) {
+		for (j = 0; j < nnodes; j++) {
 			check(j);
 			insert(nodes + j, &root);
 		}
-		for (j = 0; j < NODES; j++) {
-			check(NODES - j);
+		for (j = 0; j < nnodes; j++) {
+			check(nnodes - j);
 			erase(nodes + j, &root);
 		}
 		check(0);
@@ -216,31 +248,33 @@ static int rbtree_test_init(void)
 
 	time1 = get_cycles();
 
-	for (i = 0; i < PERF_LOOPS; i++) {
-		for (j = 0; j < NODES; j++)
+	for (i = 0; i < perf_loops; i++) {
+		for (j = 0; j < nnodes; j++)
 			insert_augmented(nodes + j, &root);
-		for (j = 0; j < NODES; j++)
+		for (j = 0; j < nnodes; j++)
 			erase_augmented(nodes + j, &root);
 	}
 
 	time2 = get_cycles();
 	time = time2 - time1;
 
-	time = div_u64(time, PERF_LOOPS);
-	printk(" -> %llu cycles\n", (unsigned long long)time);
+	time = div_u64(time, perf_loops);
+	printk(" -> test 1 (latency of nnodes insert+delete): %llu cycles\n", (unsigned long long)time);
 
-	for (i = 0; i < CHECK_LOOPS; i++) {
+	for (i = 0; i < check_loops; i++) {
 		init();
-		for (j = 0; j < NODES; j++) {
+		for (j = 0; j < nnodes; j++) {
 			check_augmented(j);
 			insert_augmented(nodes + j, &root);
 		}
-		for (j = 0; j < NODES; j++) {
-			check_augmented(NODES - j);
+		for (j = 0; j < nnodes; j++) {
+			check_augmented(nnodes - j);
 			erase_augmented(nodes + j, &root);
 		}
 		check_augmented(0);
 	}
+
+	kfree(nodes);
 
 	return -EAGAIN; /* Fail will directly unload the module */
 }
