@@ -341,7 +341,7 @@ SYSCALL_DEFINE3(mprotect, unsigned long, start, size_t, len,
 	if (grows == (PROT_GROWSDOWN|PROT_GROWSUP)) /* can't be both */
 		return -EINVAL;
 
-	if (start & ~PAGE_MASK)
+	if (offset_in_page(start))
 		return -EINVAL;
 	if (!len)
 		return 0;

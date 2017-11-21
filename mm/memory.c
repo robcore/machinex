@@ -1762,7 +1762,7 @@ int vm_iomap_memory(struct vm_area_struct *vma, phys_addr_t start, unsigned long
 	 * but we've historically allowed it because IO memory might
 	 * just have smaller alignment.
 	 */
-	len += start & ~PAGE_MASK;
+	len += offset_in_page(start);
 	pfn = start >> PAGE_SHIFT;
 	pages = (len + ~PAGE_MASK) >> PAGE_SHIFT;
 	if (pfn + pages < pfn)

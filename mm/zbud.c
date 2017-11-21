@@ -432,7 +432,7 @@ void zbud_free(struct zbud_pool *pool, unsigned long handle)
 	zhdr = handle_to_zbud_header(handle);
 
 	/* If first buddy, handle will be page aligned */
-	if ((handle - ZHDR_SIZE_ALIGNED) & ~PAGE_MASK)
+	if (offset_in_page(handle - ZHDR_SIZE_ALIGNED))
 		zhdr->last_chunks = 0;
 	else
 		zhdr->first_chunks = 0;

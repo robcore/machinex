@@ -155,8 +155,8 @@ static __always_inline ssize_t __mcopy_atomic(struct mm_struct *dst_mm,
 	/*
 	 * Sanitize the command parameters:
 	 */
-	BUG_ON(dst_start & ~PAGE_MASK);
-	BUG_ON(len & ~PAGE_MASK);
+	BUG_ON(offset_in_page(dst_start));
+	BUG_ON(offset_in_page(len));
 
 	/* Does the address range wrap, or is the span zero-sized? */
 	BUG_ON(src_start + len <= src_start);

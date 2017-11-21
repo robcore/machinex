@@ -473,7 +473,7 @@ SYSCALL_DEFINE3(madvise, unsigned long, start, size_t, len_in, int, behavior)
 	if (!madvise_behavior_valid(behavior))
 		return error;
 
-	if (start & ~PAGE_MASK)
+	if (offset_in_page(start))
 		return error;
 	len = (len_in + ~PAGE_MASK) & PAGE_MASK;
 

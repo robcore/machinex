@@ -1145,7 +1145,7 @@ static long do_mbind(unsigned long start, unsigned long len,
 	if ((flags & MPOL_MF_MOVE_ALL) && !capable(CAP_SYS_NICE))
 		return -EPERM;
 
-	if (start & ~PAGE_MASK)
+	if (offset_in_page(start))
 		return -EINVAL;
 
 	if (mode == MPOL_DEFAULT)
