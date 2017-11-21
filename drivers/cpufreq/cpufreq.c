@@ -428,37 +428,65 @@ void reapply_hard_limits_safe(unsigned int cpu, bool update_policy)
 	lpolicy = get_lockpolicy(cpu);
 	BUG_ON(!lpolicy);
 
-	down_write(&lpolicy->rwsem);
 	/* Recalculate the currently applicable min/max */
 	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON) {
+		down_read(&lpolicy->rwsem);
 		if (limited_max_freq_thermal[cpu] >= DEFAULT_HARD_MIN &&
-			limited_max_freq_thermal[cpu] < hpolicy->hardlimit_max_screen_on)
+			limited_max_freq_thermal[cpu] < hpolicy->hardlimit_max_screen_on) {
+			up_read(&lpolicy->rwsem);
+			down_write(&lpolicy->rwsem);
 			hpolicy->current_limit_max = limited_max_freq_thermal[cpu];
-		else
+			up_write(&lpolicy->rwsem);
+		} else {
+			up_read(&lpolicy->rwsem);
+			down_write(&lpolicy->rwsem);
 			hpolicy->current_limit_max = hpolicy->hardlimit_max_screen_on;
-
+			up_write(&lpolicy->rwsem);
+		}
 		if (thermal_disables_boost) {
+			down_read(&lpolicy->rwsem);
 			if (hpolicy->input_boost_limit > hpolicy->hardlimit_min_screen_on &&
 				hpolicy->input_boost_limit <= hpolicy->current_limit_max &&
-				limited_max_freq_thermal[cpu] == hpolicy->hardlimit_max_screen_on)
+				limited_max_freq_thermal[cpu] == hpolicy->hardlimit_max_screen_on) {
+				up_read(&lpolicy->rwsem);
+				down_write(&lpolicy->rwsem);
 				hpolicy->current_limit_min = hpolicy->input_boost_limit;
-			else
+				up_write(&lpolicy->rwsem);
+			} else {
+				up_read(&lpolicy->rwsem);
+				down_write(&lpolicy->rwsem);
 				hpolicy->current_limit_min = hpolicy->hardlimit_min_screen_on;
+				up_write(&lpolicy->rwsem);
+			}
 		} else {
+			down_read(&lpolicy->rwsem);
 			if (hpolicy->input_boost_limit > hpolicy->hardlimit_min_screen_on &&
-				hpolicy->input_boost_limit <= hpolicy->current_limit_max)
+				hpolicy->input_boost_limit <= hpolicy->current_limit_max) {
+				up_read(&lpolicy->rwsem);
+				down_write(&lpolicy->rwsem);
 				hpolicy->current_limit_min = hpolicy->input_boost_limit;
-			else
+				up_write(&lpolicy->rwsem);
+			} else {
+				up_read(&lpolicy->rwsem);
+				down_write(&lpolicy->rwsem);
 				hpolicy->current_limit_min = hpolicy->hardlimit_min_screen_on;
+				up_write(&lpolicy->rwsem);
+			}
 		}
 	} else if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_OFF) {
+		down_read(&lpolicy->rwsem);
 		if (limited_max_freq_thermal[cpu] >= DEFAULT_HARD_MIN &&
-			limited_max_freq_thermal[cpu] < hpolicy->hardlimit_max_screen_off)
+			limited_max_freq_thermal[cpu] < hpolicy->hardlimit_max_screen_off) {
+			up_read(&lpolicy->rwsem);
+			down_write(&lpolicy->rwsem);
 			hpolicy->current_limit_max = limited_max_freq_thermal[cpu];
-		else
+		} else {
+			up_read(&lpolicy->rwsem);
+			down_write(&lpolicy->rwsem);
 			hpolicy->current_limit_max = hpolicy->hardlimit_max_screen_off;
-
+		}
 		hpolicy->current_limit_min = hpolicy->hardlimit_min_screen_off;
+		up_write(&lpolicy->rwsem);
 	}
 
 	if (!cpu_online(cpu))
@@ -468,6 +496,7 @@ void reapply_hard_limits_safe(unsigned int cpu, bool update_policy)
 	if (!policy)
 		return;
 
+	down_read(&lpolicy->rwsem);
 	policy->user_policy.min = policy->min = hpolicy->current_limit_min;
 	policy->user_policy.max = policy->max = hpolicy->current_limit_max;
 	up_write(&lpolicy->rwsem);
@@ -507,21 +536,14 @@ unsigned int check_cpufreq_hardlimit_safe(unsigned int cpu, unsigned int freq)
 EXPORT_SYMBOL(check_cpufreq_hardlimit_safe);
 #endif
 
-static void _set_thermal_policy(unsigned int cpu, unsigned int freq)
-{
-	limited_max_freq_thermal[cpu] = freq;
-	reapply_hard_limits(cpu, true);
-}
-
 void set_thermal_policy(unsigned int cpu, unsigned int freq)
 {
-	struct cpufreq_lockpolicy *lpolicy = get_lockpolicy(cpu);
-	BUG_ON(!lpolicy);
-
 	down_write(&lpolicy->rwsem);
-	_set_thermal_policy(cpu, freq);
+	limited_max_freq_thermal[cpu] = freq;
 	up_write(&lpolicy->rwsem);
+	reapply_hard_limits_safe(cpu, true);
 }
+EXPORT_SYMBOL(set_thermal_policy);
 
 unsigned int _get_hardlimit_max(unsigned int cpu)
 {
@@ -1776,7 +1798,9 @@ static int cpufreq_online(unsigned int cpu)
 	cpumask_copy(policy->cpus, cpumask_of(cpu));
 
 	if (!hardlimit_ready[policy->cpu]) {
+		down_write(&lpolicy->rwsem);
 		hardlimit_policy_alloc(policy->cpu);
+		up_write(&lpolicy->rwsem);
 		BUG_ON(hardlimit_attr_init(policy->cpu));
 		hardlimit_ready[cpu] = 1;
 	}
