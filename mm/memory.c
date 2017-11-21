@@ -78,9 +78,9 @@
 #ifndef CONFIG_NEED_MULTIPLE_NODES
 /* use the per-pgdat data instead for discontigmem - mbligh */
 unsigned long max_mapnr;
-EXPORT_SYMBOL(max_mapnr);
-
 struct page *mem_map;
+
+EXPORT_SYMBOL(max_mapnr);
 EXPORT_SYMBOL(mem_map);
 #endif
 
@@ -91,7 +91,8 @@ EXPORT_SYMBOL(mem_map);
  * highstart_pfn must be the same; there must be no gap between ZONE_NORMAL
  * and ZONE_HIGHMEM.
  */
-void *high_memory;
+void * high_memory;
+
 EXPORT_SYMBOL(high_memory);
 
 /*
@@ -115,6 +116,8 @@ static int __init disable_randmaps(char *s)
 __setup("norandmaps", disable_randmaps);
 
 unsigned long zero_pfn __read_mostly;
+unsigned long highest_memmap_pfn __read_mostly;
+
 EXPORT_SYMBOL(zero_pfn);
 
 /*
