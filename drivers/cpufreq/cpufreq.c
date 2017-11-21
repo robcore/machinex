@@ -352,7 +352,7 @@ static void reapply_hard_limits(unsigned int cpu, bool update_policy)
 	struct cpufreq_policy *policy;
 	struct hardlimit_policy *hpolicy = hardlimit_get_raw(cpu);
 
-	if (hpolicy == NULL) {
+	if (!hpolicy) {
 		return;
 	}
 	/* Recalculate the currently applicable min/max */
@@ -406,7 +406,7 @@ unsigned int check_cpufreq_hardlimit(unsigned int cpu, unsigned int freq)
 {
 	struct hardlimit_policy *hpolicy = hardlimit_get_raw(cpu);
 
-	if (hpolicy == NULL) {
+	if (!hpolicy) {
 		return freq;
 	}
 
@@ -426,7 +426,7 @@ unsigned int get_hardlimit_max(unsigned int cpu)
 {
 	struct hardlimit_policy *hpolicy = hardlimit_get_raw(cpu);
 
-	if (hpolicy == NULL) {
+	if (!hpolicy) {
 		return DEFAULT_HARD_MAX;
 	}
 	return is_display_on() ? hpolicy->hardlimit_max_screen_on :
@@ -443,7 +443,7 @@ static void do_input_boost_rem(struct work_struct *work)
 
 	for_each_possible_cpu(cpu) {
 		struct hardlimit_policy *hpolicy = hardlimit_get_raw(cpu);
-		if (hpolicy == NULL) {
+		if (!hpolicy) {
 			continue;
 		}
 		/* Reset the input_boost_limit for all CPUs in the system */
@@ -462,7 +462,7 @@ static void do_input_boost(struct work_struct *work)
 	/* Set the input_boost_limit for all CPUs in the system */
 	for_each_possible_cpu(cpu) {
 		struct hardlimit_policy *hpolicy = hardlimit_get_raw(cpu);
-		if (hpolicy == NULL) {
+		if (!hpolicy) {
 			continue;
 		}
 		hpolicy->input_boost_limit = hpolicy->input_boost_frequency;
@@ -922,7 +922,7 @@ static ssize_t object##_show(struct device *dev,			\
 		struct device_attribute *attr, char *buf)	\
 {								\
 	struct hardlimit_policy *hpolicy = hardlimit_get_raw(dev->id);	\
-	if (hpolicy == NULL)	\
+	if (!hpolicy)	\
 		return sprintf(buf, "ERROR\n");	\
 	return sprintf(buf, "%u\n", hpolicy->object);	\
 }
@@ -983,7 +983,7 @@ const char *buf, size_t count)			\
 	unsigned int new_hardlimit, i;	\
 	struct cpufreq_frequency_table *permtable;	\
 	struct hardlimit_policy *hpolicy = hardlimit_get_raw(dev->id);	\
-	if (hpolicy == NULL)	\
+	if (!hpolicy)	\
 		return -EINVAL;	\
 	if (!sscanf(buf, "%u", &new_hardlimit))	\
 		return -EINVAL;	\
@@ -1008,7 +1008,7 @@ const char *buf, size_t count)			\
 	unsigned int new_hardlimit, i;	\
 	struct cpufreq_frequency_table *permtable;	\
 	struct hardlimit_policy *hpolicy = hardlimit_get_raw(dev->id);	\
-	if (hpolicy == NULL)	\
+	if (!hpolicy)	\
 		return -EINVAL;	\
 	if (!sscanf(buf, "%u", &new_hardlimit))	\
 		return -EINVAL;	\
@@ -1635,6 +1635,13 @@ static int cpufreq_online(unsigned int cpu)
 
 	cpumask_copy(policy->cpus, cpumask_of(cpu));
 
+	hpolicy = per_cpu(hdata, cpu);
+	if (!hpolicy) {
+		hpolicy = hardlimit_policy_alloc(policy->cpu);
+		BUG_ON(!hpolicy);
+		BUG_ON(hardlimit_attr_init(policy->cpu));
+	}
+
 	/* call driver. From then on the cpufreq must be able
 	 * to accept all calls to ->verify and ->setpolicy for this CPU
 	 */
@@ -1656,16 +1663,7 @@ static int cpufreq_online(unsigned int cpu)
 	 */
 	cpumask_and(policy->cpus, policy->cpus, cpu_online_mask);
 
-	hpolicy = per_cpu(hdata, cpu);
-	if (hpolicy == NULL) {
-		hpolicy = hardlimit_policy_alloc(policy->cpu);
-		if (!hpolicy)
-			return -ENOMEM;
-		if (hardlimit_attr_init(policy->cpu))
-			return -ENOMEM;
-	} else {
-		reapply_hard_limits(policy->cpu, false);
-	}
+	reapply_hard_limits(policy->cpu, false);
 
 	if (new_policy) {
 		policy->user_policy.min = check_cpufreq_hardlimit(policy->cpu, policy->min);
