@@ -40,7 +40,6 @@
 #define MAX_IDX 14
 #define SHUTOFF_TEMP 85
 
-static int enabled;
 static struct msm_thermal_data msm_thermal_info = {
 	.poll_ms = 240,
 	.limit_temp_degC = 65,
@@ -661,7 +660,6 @@ static void __ref check_temp(struct work_struct *work)
 		do_core_control();
 	}
 reschedule:
-	if (likely(enabled))
 		mod_delayed_work(intellithermal_wq, &check_temp_work,
 				msecs_to_jiffies(msm_thermal_info.poll_ms));
 }
@@ -679,66 +677,6 @@ static void __ref get_table(struct work_struct *work)
 reschedule:
 		schedule_work(&get_table_work);
 }
-
-/**
- * We will reset the cpu frequencies limits here. The core online/offline
- * status will be carried over to the process stopping the msm_thermal, as
- * we dont want to online a core and bring in the thermal issues.
- */
-static void __ref disable_msm_thermal(void)
-{
-	unsigned int cpu = smp_processor_id();
-	unsigned int tempfreq;
-
-	cancel_delayed_work_sync(&check_temp_work);
-	destroy_workqueue(intellithermal_wq);
-
-	get_online_cpus();
-	for_each_possible_cpu(cpu) {
-		if (cpu_out_of_range(cpu))
-			break;
-		if (limited_max_freq_thermal[cpu] == get_hardlimit_max(cpu))
-			continue;
-
-		tempfreq = get_hardlimit_max(cpu);
-
-		set_thermal_policy(cpu, tempfreq);
-	}
-	put_online_cpus();
-}
-
-static int __ref set_enabled(const char *val, const struct kernel_param *kp)
-{
-	int ret = 0;
-
-	if (*val == '0' || *val == 'n' || *val == 'N') {
-		enabled = 0;
-		disable_msm_thermal();
-		pr_debug("msm_thermal: disabling...\n");
-	} else {
-		if (!enabled) {
-			enabled = 1;
-			intellithermal_wq = create_hipri_workqueue("intellithermal");
-			INIT_WORK(&get_table_work, get_table);
-			INIT_DELAYED_WORK(&check_temp_work, check_temp);
-			schedule_work(&get_table_work);
-			pr_debug("msm_thermal: rescheduling...\n");
-		} else
-			pr_debug("msm_thermal: already running...\n");
-	}
-	pr_debug("%s: enabled = %d\n", KBUILD_MODNAME, enabled);
-	ret = param_set_bool(val, kp);
-
-	return ret;
-}
-
-static struct kernel_param_ops module_ops = {
-	.set = set_enabled,
-	.get = param_get_bool,
-};
-
-module_param_cb(enabled, &module_ops, &enabled, 0644);
-MODULE_PARM_DESC(enabled, "enforce thermal limit on cpu");
 
 /* Call with core_control_mutex locked */
 static void __ref update_offline_cores(void)
@@ -891,7 +829,6 @@ int __init msm_thermal_init(void)
 	}
 	cpumask_clear(&cores_offlined_mask);
 
-	enabled = 1;
 	mutex_init(&core_control_mutex);
 	intellithermal_wq = create_hipri_workqueue("intellithermal");
 	INIT_WORK(&get_table_work, get_table);
@@ -907,22 +844,12 @@ int __init msm_thermal_late_init(void)
 
 	return 0;
 }
-static void msm_thermal_exit(void)
-{
-	if (core_control_enabled)
-		core_control_enabled = false;
-	enabled = 0;
-	disable_msm_thermal();
-	unregister_pm_notifier(&msm_thermal_pm_notifier);
-	mutex_destroy(&core_control_mutex);
-}
 
 late_initcall(msm_thermal_late_init);
-module_exit(msm_thermal_exit);
-
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Praveen Chidambaram <pchidamb@codeaurora.org>");
 MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>");
 MODULE_AUTHOR("Rob Patershuk <robpatershuk@gmail.com>");
 MODULE_DESCRIPTION("intelligent thermal driver for Qualcomm based SOCs");
-MODULE_DESCRIPTION("originally from Qualcomm's open source repo");
+MODULE_DESCRIPTION("originally from Qualcomm's open source repo, further");
+MODULE_DESCRIPTION("modified by Rob Patershuk");
