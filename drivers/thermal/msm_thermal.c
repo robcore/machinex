@@ -605,7 +605,7 @@ static void __ref do_core_control(void)
 			 msm_thermal_info.core_temp_hysteresis_degC);
 
 	mutex_lock(&core_control_mutex);
-	for_each_possible_cpu(cpu) {
+	for_each_nonboot_cpu(cpu) {
 		if (cpu_out_of_range_hp(cpu))
 			break;
 		core_temp = evaluate_temp(cpu);
@@ -616,25 +616,26 @@ static void __ref do_core_control(void)
 				if (cpumask_test_cpu(cpu, &cores_offlined_mask) &&
 					!cpu_online(cpu))
 					continue;
+				cpumask_set_cpu(cpu, &cores_offlined_mask);
 				ret = cpu_down(cpu);
 				if (ret)
 					pr_debug("cpu_down failed. you got problems\n");
-				cpumask_set_cpu(cpu, &cores_offlined_mask);
 		} else if (core_temp < delta &&
 				   cpumask_test_cpu(cpu, &core_control_mask) &&
 				   cpumask_test_cpu(cpu, &cores_offlined_mask)) {
+
+					cpumask_clear_cpu(cpu, &cores_offlined_mask);
 				/* If this core is already online, then bring up the
 				 * next offlined core.
 				 */
 				if (cpu_online(cpu))
 					continue;
-				if (!is_cpu_allowed(cpu))
+				if (!is_cpu_allowed_for_therm(cpu))
 					continue;
 				ret = cpu_up(cpu);
 				if (ret)
 					pr_err("%s: Error %d online core %u\n",
 							KBUILD_MODNAME, ret, cpu);
-				cpumask_clear_cpu(cpu, &cores_offlined_mask);
 		}
 	}
 	mutex_unlock(&core_control_mutex);
