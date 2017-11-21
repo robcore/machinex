@@ -95,9 +95,6 @@ int snd_reg_access(unsigned int reg)
 		case TABLA_A_CDC_RX1_VOL_CTL_B2_CTL:
 		case TABLA_A_CDC_RX2_VOL_CTL_B2_CTL:
 		case TABLA_A_CDC_RX5_VOL_CTL_B2_CTL:
-			if (snd_ctrl_enabled && snd_ctrl_locked)
-				ret = 0;
-			break;
 		/* Incall MIC Gain */
 		case TABLA_A_CDC_TX6_VOL_CTL_GAIN:
 		/* Camera MIC Gain */
@@ -106,6 +103,7 @@ int snd_reg_access(unsigned int reg)
 				ret = 0;
 			break;
 		default:
+			return ret;
 			break;
 	}
 
