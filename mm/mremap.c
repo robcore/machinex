@@ -579,7 +579,7 @@ SYSCALL_DEFINE5(mremap, unsigned long, addr, unsigned long, old_len,
 		ret = move_vma(vma, addr, old_len, new_len, new_addr, &locked);
 	}
 out:
-	if (offset_in_page(ret)) {
+	if (offset_in_page(ret))
 		vm_unacct_memory(charged);
 	up_write(&current->mm->mmap_sem);
 	if (locked && new_len > old_len)
