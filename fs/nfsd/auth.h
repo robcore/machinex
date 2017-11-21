@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
  * nfsd-specific authentication stuff.
  * uid/gid mapping not yet implemented.

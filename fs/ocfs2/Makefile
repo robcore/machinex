@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0
 ccflags-y := -Ifs/ocfs2
 
 ccflags-y += -DCATCH_BH_JBD_RACES

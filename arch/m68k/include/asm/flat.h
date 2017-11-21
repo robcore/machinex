@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
  * include/asm-m68knommu/flat.h -- uClinux flat-format executables
  */

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0
 #include "au8820.h"
 #include "au88x0.h"
 static DEFINE_PCI_DEVICE_TABLE(snd_vortex_ids) = {

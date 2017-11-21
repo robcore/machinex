@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
     comedi/drivers/amcc_s5933.h
 

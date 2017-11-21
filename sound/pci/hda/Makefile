@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0
 snd-hda-intel-objs := hda_intel.o
 
 snd-hda-codec-y := hda_codec.o hda_jack.o

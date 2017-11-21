@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
  *  linux/arch/x86_64/kernel/head.S -- start in 32bit and switch to 64bit
  *

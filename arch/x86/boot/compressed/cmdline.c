@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0
 #include "misc.h"
 
 static unsigned long fs;

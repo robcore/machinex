@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0
 # Taken from perf makefile
 uname_M := $(shell uname -m 2>/dev/null || echo not)
 ARCH ?= $(shell echo $(uname_M) | sed -e s/i.86/i386/)

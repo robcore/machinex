@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0
 #include <linux/string.h>
 
 char *strstr(const char *cs, const char *ct)

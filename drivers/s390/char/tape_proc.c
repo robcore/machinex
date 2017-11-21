@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  *  drivers/s390/char/tape.c
  *    tape device driver for S/390 and zSeries tapes.

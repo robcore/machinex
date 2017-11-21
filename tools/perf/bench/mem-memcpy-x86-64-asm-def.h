@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 
 MEMCPY_FN(__memcpy,
 	"x86-64-unrolled",

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0
 
 ccflags-y += -Ivirt/kvm -Iarch/x86/kvm
 

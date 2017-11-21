@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  *  drivers/s390/char/sclp_cpi_sys.c
  *    SCLP control program identification sysfs interface

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0
 ifdef CONFIG_FUNCTION_TRACER
 CFLAGS_REMOVE_core.o = -pg
 endif

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0
 
 CFLAGS += -I. -g -Wall -D_LGPL_SOURCE
 LDFLAGS += -lpthread -lurcu

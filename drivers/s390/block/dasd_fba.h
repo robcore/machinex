@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
  * File...........: linux/drivers/s390/block/dasd_fba.h
  * Author(s)......: Holger Smolinski <Holger.Smolinski@de.ibm.com>

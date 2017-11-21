@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * hvc_iucv.c - z/VM IUCV hypervisor console (HVC) device driver
  *

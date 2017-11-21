@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
  *  drivers/s390/char/tape_3590.h
  *    tape device discipline for 3590 tapes.

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  *  drivers/s390/char/tape_std.c
  *    standard tape device functions for ibm tapes.

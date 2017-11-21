@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0
 # generic pinmux support
 
 ccflags-$(CONFIG_DEBUG_PINCTRL)	+= -DDEBUG

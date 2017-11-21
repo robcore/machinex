@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0
 PROG=	aicasm
 
 .SUFFIXES= .l .y .c .h

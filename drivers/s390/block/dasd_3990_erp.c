@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * File...........: linux/drivers/s390/block/dasd_3990_erp.c
  * Author(s)......: Horst  Hummel    <Horst.Hummel@de.ibm.com>
