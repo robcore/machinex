@@ -353,7 +353,6 @@ static void reapply_hard_limits(unsigned int cpu, bool update_policy)
 	struct hardlimit_policy *hpolicy = hardlimit_get_raw(cpu);
 
 	if (hpolicy == NULL) {
-		pr_warn("WARNING! HARDLIMIT called before allocation!\n");
 		return;
 	}
 	/* Recalculate the currently applicable min/max */
@@ -408,7 +407,6 @@ unsigned int check_cpufreq_hardlimit(unsigned int cpu, unsigned int freq)
 	struct hardlimit_policy *hpolicy = hardlimit_get_raw(cpu);
 
 	if (hpolicy == NULL) {
-		pr_warn("WARNING! HARDLIMIT called before allocation!\n");
 		return freq;
 	}
 
@@ -429,7 +427,6 @@ unsigned int get_hardlimit_max(unsigned int cpu)
 	struct hardlimit_policy *hpolicy = hardlimit_get_raw(cpu);
 
 	if (hpolicy == NULL) {
-		pr_warn("WARNING! HARDLIMIT called before allocation!\n");
 		return DEFAULT_HARD_MAX;
 	}
 	return is_display_on() ? hpolicy->hardlimit_max_screen_on :
@@ -447,7 +444,6 @@ static void do_input_boost_rem(struct work_struct *work)
 	for_each_possible_cpu(cpu) {
 		struct hardlimit_policy *hpolicy = hardlimit_get_raw(cpu);
 		if (hpolicy == NULL) {
-			pr_warn("WARNING! HARDLIMIT called before allocation!\n");
 			continue;
 		}
 		/* Reset the input_boost_limit for all CPUs in the system */
@@ -467,7 +463,6 @@ static void do_input_boost(struct work_struct *work)
 	for_each_possible_cpu(cpu) {
 		struct hardlimit_policy *hpolicy = hardlimit_get_raw(cpu);
 		if (hpolicy == NULL) {
-			pr_warn("WARNING! HARDLIMIT called before allocation!\n");
 			continue;
 		}
 		hpolicy->input_boost_limit = hpolicy->input_boost_frequency;
