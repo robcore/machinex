@@ -726,9 +726,8 @@ static void __init apq8064_reserve_fixed_area(unsigned long fixed_area_size)
 	ret = memblock_reserve(reserve_info->fixed_area_start,
 		reserve_info->fixed_area_size);
 	BUG_ON(ret);
-	memblock_free_early(reserve_info->fixed_area_start,
+	ret = memblock_free(reserve_info->fixed_area_start,
 		reserve_info->fixed_area_size);
-			//BUG_ON(ret);
 	ret = memblock_remove(reserve_info->fixed_area_start,
 		reserve_info->fixed_area_size);
 	BUG_ON(ret);
