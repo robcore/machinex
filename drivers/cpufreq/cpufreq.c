@@ -49,7 +49,7 @@ struct hardlimit_policy {
 	unsigned int input_boost_frequency;
 };
 
-static DEFINE_PER_CPU(struct hardlimit_policy *, hdata);
+static DEFINE_PER_CPU(struct hardlimit_policy, hdata);
 
 unsigned int limited_max_freq_thermal[NR_CPUS] = { DEFAULT_HARD_MAX, DEFAULT_HARD_MAX, DEFAULT_HARD_MAX, DEFAULT_HARD_MAX };
 static struct workqueue_struct *cpu_boost_wq;
@@ -253,7 +253,7 @@ EXPORT_SYMBOL_GPL(cpufreq_cpu_get_raw);
 
 struct hardlimit_policy *hardlimit_get_raw(unsigned int cpu)
 {
-	struct hardlimit_policy *hpolicy = per_cpu(hdata, cpu);
+	struct hardlimit_policy *hpolicy = &per_cpu(hdata, cpu);
 
 	return hpolicy ? hpolicy : NULL;
 }
@@ -1579,7 +1579,7 @@ static struct hardlimit_policy *hardlimit_policy_alloc(unsigned int cpu)
 	struct hardlimit_policy *hpolicy;
 	int ret;
 
-	hpolicy = kzalloc(sizeof(*hpolicy), GFP_KERNEL);
+	hpolicy = kzalloc(sizeof(struct hardlimit_policy), GFP_KERNEL);
 	if (!hpolicy)
 		return NULL;
 
@@ -1608,7 +1608,7 @@ static int cpufreq_online(unsigned int cpu)
 	unsigned long flags;
 	unsigned int j;
 	int ret;
-	struct hardlimit_policy *hpolicy = per_cpu(hdata, cpu);
+	struct hardlimit_policy *hpolicy = &per_cpu(hdata, cpu);
 
 	pr_debug("%s: bringing CPU%u online\n", __func__, cpu);
 
