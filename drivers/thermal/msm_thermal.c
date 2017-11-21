@@ -49,14 +49,11 @@ static struct msm_thermal_data msm_thermal_info = {
 	.core_temp_hysteresis_degC = 10,
 };
 
-struct msm_thermal_pcpu {
-	int limit_idx;
-	int thermal_limit_low;
-	uint32_t msm_sens_id;
-	unsigned int resolve_max_freq;
-};
-static DEFINE_PER_CPU(struct msm_thermal_pcpu, pcputherm);
+static int limit_idx[NR_CPUS];
+static int thermal_limit_low[NR_CPUS];
+
 static const uint32_t soc_sens_id = 0;
+static const uint32_t msm_sens_id[NR_CPUS] = { 7, 8, 9, 10 };
 
 static struct delayed_work check_temp_work;
 static struct work_struct get_table_work;
@@ -212,7 +209,6 @@ static int set_thermal_limit_low(const char *buf, const struct kernel_param *kp)
 {
 	unsigned int val, cpu = 0;
 	int i, temp_low = -1;
-	struct msm_thermal_pcpu *mpcpu;
 
 	if (!sscanf(buf, "%u", &val))
 		return -EINVAL;
@@ -232,9 +228,7 @@ static int set_thermal_limit_low(const char *buf, const struct kernel_param *kp)
 	for_each_possible_cpu(cpu) {
 		if (cpu_out_of_range(cpu))
 			break;
-		mpcpu = &per_cpu(pcputherm, cpu);
-		BUG_ON(!mpcpu);
-		mpcpu->thermal_limit_low = temp_low;
+		thermal_limit_low[cpu] = temp_low;
 	}
 
 	return 0;
@@ -243,9 +237,9 @@ static int set_thermal_limit_low(const char *buf, const struct kernel_param *kp)
 static int get_thermal_limit_low(char *buf, const struct kernel_param *kp)
 {
 	ssize_t ret;
-	struct msm_thermal_pcpu *mpcpu = &per_cpu(pcputherm, 0);
+	unsigned int cpu = 0;
 
-	ret = sprintf(buf, "%u", therm_table[mpcpu->thermal_limit_low].frequency);
+	ret = sprintf(buf, "%u", therm_table[thermal_limit_low[cpu]].frequency);
 
 	return ret;
 }
@@ -432,7 +426,6 @@ module_param_cb(poll_ms, &param_ops_poll_ms, NULL, 0644);
 static int msm_thermal_get_freq_table(void)
 {
 	struct cpufreq_policy *policy;
-	struct msm_thermal_pcpu *mpcpu;
 	unsigned int templow, cpu, smartcheck, smartlow;
 	int i;
 
@@ -461,23 +454,21 @@ static int msm_thermal_get_freq_table(void)
 	for_each_possible_cpu(cpu) {
 		if (cpu_out_of_range(cpu))
 			break;
-		mpcpu = &per_cpu(pcputherm, cpu);
-		BUG_ON(!mpcpu);
 		if (smartlow) {
-			mpcpu->thermal_limit_low = smartlow;
-			sanitize_min_max(mpcpu->thermal_limit_low, smartlow, smartlow);
+			thermal_limit_low[cpu] = smartlow;
+			sanitize_min_max(thermal_limit_low[cpu], smartlow, smartlow);
 		} else {
-			mpcpu->thermal_limit_low = 4;
-			sanitize_min_max(mpcpu->thermal_limit_low, 4, 4);
+			thermal_limit_low[cpu] = 4;
+			sanitize_min_max(thermal_limit_low[cpu], 4, 4);
 			pr_info("MSM Thermal: WARNING! Initial freq count FAILED! Value was %u\n and is fixed", templow);
 		}
 		if (unlikely(smartcheck != MAX_IDX)) {
-			mpcpu->limit_idx = MAX_IDX;
-			sanitize_min_max(mpcpu->limit_idx, MAX_IDX, MAX_IDX);
+			limit_idx[cpu] = MAX_IDX;
+			sanitize_min_max(limit_idx[cpu], MAX_IDX, MAX_IDX);
 			continue;
 		} else {
-			mpcpu->limit_idx = smartcheck;
-			sanitize_min_max(mpcpu->limit_idx, smartcheck, smartcheck);
+			limit_idx[cpu] = smartcheck;
+			sanitize_min_max(limit_idx[cpu], smartcheck, smartcheck);
 		}
 	}
 	return 0;
@@ -486,14 +477,13 @@ static int msm_thermal_get_freq_table(void)
 static long evaluate_temp(unsigned int cpu)
 {
 	struct tsens_device tsens_dev;
-	struct msm_thermal_pcpu *mpcpu = &per_cpu(pcputherm, cpu);
 	long temp;
 	int ret = 0;
 
 	if (thermal_suspended)
 		return -EINVAL;
 
-	tsens_dev.sensor_num = mpcpu->msm_sens_id;
+	tsens_dev.sensor_num = msm_sens_id[cpu];
 	ret = tsens_get_temp(&tsens_dev, &temp);
 	if (!temp || ret) {
 		pr_err("%s: Unable to read TSENS sensor %u\n",
@@ -536,7 +526,7 @@ static int __ref do_freq_control(void)
 	unsigned int cpu = smp_processor_id();
 	long freq_temp, delta;
 	unsigned int hotplug_check_needed = 0;
-	struct msm_thermal_pcpu *mpcpu;
+	unsigned int resolve_max_freq[NR_CPUS];
 
 	if (thermal_suspended) {
 		pr_err("frequency control not ready!\n");		
@@ -549,53 +539,50 @@ static int __ref do_freq_control(void)
 	for_each_possible_cpu(cpu) {
 		if (cpu_out_of_range(cpu))
 			break;
-		mpcpu = &per_cpu(pcputherm, cpu);
 		freq_temp = evaluate_temp(cpu);
 		if (freq_temp <= 0) {
 			hotplug_check_needed++;
 			continue;
 		}
-		mpcpu->resolve_max_freq = limited_max_freq_thermal[cpu];
+		resolve_max_freq[cpu] = limited_max_freq_thermal[cpu];
 		if (freq_temp >= msm_thermal_info.limit_temp_degC) {
-				if (mpcpu->limit_idx <= mpcpu->thermal_limit_low) {
-					mpcpu->limit_idx = mpcpu->thermal_limit_low;
-					if (unlikely(limited_max_freq_thermal[cpu] > mpcpu->resolve_max_freq))
-						set_thermal_policy(cpu, mpcpu->resolve_max_freq);
+				if (limit_idx[cpu] <= thermal_limit_low[cpu]) {
+					limit_idx[cpu] = thermal_limit_low[cpu];
+					if (unlikely(limited_max_freq_thermal[cpu] > resolve_max_freq[cpu]))
+						set_thermal_policy(cpu, resolve_max_freq[cpu]);
 					hotplug_check_needed++;
 					continue;
 				}
-				if (mpcpu->limit_idx >= mpcpu->thermal_limit_low + msm_thermal_info.freq_step)
-					mpcpu->limit_idx -= msm_thermal_info.freq_step;
-				if (mpcpu->limit_idx <= mpcpu->thermal_limit_low)
-					mpcpu->limit_idx = mpcpu->thermal_limit_low;
-				mpcpu->resolve_max_freq = therm_table[mpcpu->limit_idx].frequency;
+				if (limit_idx[cpu] >= thermal_limit_low[cpu] + msm_thermal_info.freq_step)
+					limit_idx[cpu] -= msm_thermal_info.freq_step;
+				if (limit_idx[cpu] <= thermal_limit_low[cpu])
+					limit_idx[cpu] = thermal_limit_low[cpu];
+				resolve_max_freq[cpu] = therm_table[limit_idx[cpu]].frequency;
 				hotplug_check_needed++;
 		} else if (freq_temp < delta) {
-				if (mpcpu->limit_idx >= MAX_IDX) {
-					mpcpu->limit_idx = MAX_IDX;
-					mpcpu->resolve_max_freq = get_hardlimit_max(cpu);
+				if (limit_idx[cpu] >= MAX_IDX) {
+					limit_idx[cpu] = MAX_IDX;
+					resolve_max_freq[cpu] = get_hardlimit_max(cpu);
 					/* Satisfy suspend/resume type cases where we haven't updated the
 					 * thermal limit in time. ie. suspend/resume
 					 */
-					if (unlikely(limited_max_freq_thermal[cpu] < mpcpu->resolve_max_freq))
-						set_thermal_policy(cpu, mpcpu->resolve_max_freq);
+					if (unlikely(limited_max_freq_thermal[cpu] < resolve_max_freq[cpu]))
+						set_thermal_policy(cpu, resolve_max_freq[cpu]);
 					continue;
 				}
-				if (mpcpu->limit_idx <= MAX_IDX - msm_thermal_info.freq_step)
-					mpcpu->limit_idx += msm_thermal_info.freq_step;
-				if (mpcpu->limit_idx >= MAX_IDX) {
-					mpcpu->limit_idx = MAX_IDX;
-					mpcpu->resolve_max_freq = get_hardlimit_max(cpu);
+				if (limit_idx[cpu] <= MAX_IDX - msm_thermal_info.freq_step)
+					limit_idx[cpu] += msm_thermal_info.freq_step;
+				if (limit_idx[cpu] >= MAX_IDX) {
+					limit_idx[cpu] = MAX_IDX;
+					resolve_max_freq[cpu] = get_hardlimit_max(cpu);
 				} else {
-					mpcpu->resolve_max_freq = therm_table[mpcpu->limit_idx].frequency;
+					resolve_max_freq[cpu] = therm_table[limit_idx[cpu]].frequency;
 					hotplug_check_needed++;
 				}
 		}
 
-		if (mpcpu->resolve_max_freq != limited_max_freq_thermal[cpu])
-			set_thermal_policy(cpu, mpcpu->resolve_max_freq);
-
-		mpcpu->resolve_max_freq = 0;
+		if (resolve_max_freq[cpu] != limited_max_freq_thermal[cpu])
+			set_thermal_policy(cpu, resolve_max_freq[cpu]);
 	}
 
 	sanitize_min_max(hotplug_check_needed, 0, 1)
@@ -829,27 +816,11 @@ static struct notifier_block msm_thermal_pm_notifier = {
 int __init msm_thermal_init(void)
 {
 	struct msm_thermal_data *msm_thermal_info;
-	struct msm_thermal_pcpu *mpcpu;
 	unsigned int cpu;
 
 	msm_thermal_info = kzalloc(sizeof(struct msm_thermal_data), GFP_KERNEL);
 	if (!msm_thermal_info)
 		return -ENOMEM;
-
-	for_each_possible_cpu(cpu) {
-		if (cpu_out_of_range(cpu))
-			break;
-		mpcpu = kzalloc(sizeof(struct msm_thermal_pcpu), GFP_KERNEL);
-		BUG_ON(!mpcpu);
-		if (cpu == 0)
-			mpcpu->msm_sens_id = 7;
-		else if (cpu == 1)
-			mpcpu->msm_sens_id = 8;
-		else if (cpu == 2)
-			mpcpu->msm_sens_id = 9;
-		else if (cpu == 3)
-			mpcpu->msm_sens_id = 10;
-	}
 
 	for_each_nonboot_cpu(cpu) {
 		if (cpu_out_of_range_hp(cpu))
