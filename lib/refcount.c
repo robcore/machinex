@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Variant of atomic_t specialized for reference counts.
  *
@@ -36,6 +37,7 @@
 
 #include <linux/refcount.h>
 #include <linux/bug.h>
+#include <linux/export.h>
 
 #ifdef CONFIG_REFCOUNT_FULL
 
@@ -348,4 +350,3 @@ bool refcount_dec_and_lock(refcount_t *r, spinlock_t *lock)
 	return true;
 }
 EXPORT_SYMBOL(refcount_dec_and_lock);
-
