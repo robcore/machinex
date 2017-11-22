@@ -1173,7 +1173,7 @@ struct audit_buffer *audit_log_start(struct audit_context *ctx, gfp_t gfp_mask,
 	if (unlikely(audit_filter_type(type)))
 		return NULL;
 
-	if (gfp_mask & __GFP_WAIT)
+	if (gfp_mask & __GFP_DIRECT_RECLAIM)
 		reserve = 0;
 	else
 		reserve = 5; /* Allow atomic callers to go up to five
@@ -1181,7 +1181,7 @@ struct audit_buffer *audit_log_start(struct audit_context *ctx, gfp_t gfp_mask,
 
 	while (audit_backlog_limit
 	       && skb_queue_len(&audit_skb_queue) > audit_backlog_limit + reserve) {
-		if (gfp_mask & __GFP_WAIT && audit_backlog_wait_time
+		if (gfp_mask & __GFP_DIRECT_RECLAIM && audit_backlog_wait_time
 		    && time_before(jiffies, timeout_start + audit_backlog_wait_time)) {
 
 			/* Wait for auditd to drain the queue a little */
