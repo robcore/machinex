@@ -225,7 +225,7 @@ again:
 	delta = ktime_sub(ktime_get(), last_fuelcheck);
 
 	if ((!should_boost && ktime_compare(delta, ms_to_ktime(sampling_rate))  < 0) ||
-		!clutch || hotplug_suspended || thermal_override()) {
+		!clutch || hotplug_suspended) {
 		mutex_unlock(&mx_mutex);
 		schedule();
 		mutex_unlock(&mx_mutex);
