@@ -10,6 +10,11 @@
 
 struct vm_area_struct;
 
+/*
+ * In case of changes, please don't forget to update
+ * include/trace/events/gfpflags.h
+ */
+
 /* Plain integer GFP bitmasks. Do not use this directly. */
 #define ___GFP_DMA		0x01u
 #define ___GFP_HIGHMEM		0x02u
