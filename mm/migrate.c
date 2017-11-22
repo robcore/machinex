@@ -1581,7 +1581,7 @@ static struct page *alloc_misplaced_dst_page(struct page *page,
 					 (GFP_HIGHUSER_MOVABLE |
 					  __GFP_THISNODE | __GFP_NOMEMALLOC |
 					  __GFP_NORETRY | __GFP_NOWARN) &
-					 ~(__GFP_IO | __GFP_FS), 0);
+					 ~GFP_IOFS, 0);
 
 	return newpage;
 }
