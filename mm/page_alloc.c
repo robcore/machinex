@@ -2307,7 +2307,7 @@ should_alloc_retry(gfp_t gfp_mask, unsigned int order,
 {
 
 	/*
-	 * Suspend converts GFP_KERNEL to __GFP_WAIT which can prevent reclaim
+	 * Suspend converts GFP_KERNEL to __GFP_RECLAIM which can prevent reclaim
 	 * making forward progress without invoking OOM. Suspend also disables
 	 * storage devices so kswapd will not help. Bail if we are suspending.
 	 */
@@ -2698,9 +2698,9 @@ __alloc_pages_slowpath(gfp_t gfp_mask, unsigned int order,
 	 * fail early.  There's no need to wakeup kswapd or retry for a
 	 * speculative node-specific allocation.
 	 */
-	if (IS_ENABLED(CONFIG_NUMA) && (gfp_mask & __GFP_THISNODE) && !wait)
+	if (IS_ENABLED(CONFIG_NUMA) && (gfp_mask & __GFP_THISNODE) && !can_direct_reclaim)
 		goto nopage;
-
+	/*
 	 * We also sanity check to catch abuse of atomic reserves being used by
 	 * callers that are not in atomic context.
 	 */
@@ -2753,7 +2753,7 @@ retry:
 	}
 
 	/* Atomic allocations - we can't balance anything */
-	if (!wait) {
+	if (!can_direct_reclaim) {
 		/*
 		 * All existing users of the deprecated __GFP_NOFAIL are
 		 * blockable, so warn of any new users that actually allow this
