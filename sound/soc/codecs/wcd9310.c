@@ -45,6 +45,7 @@
 
 static int cfilt_adjust_ms = 10;
 module_param(cfilt_adjust_ms, int, 0644);
+unsigned int mx_wcd_debug = 0;
 MODULE_PARM_DESC(cfilt_adjust_ms, "delay after adjusting cfilt voltage in ms");
 module_param(mx_wcd_debug, uint, 0644);
 #define mxcodec_dbg(msg...)		\
