@@ -978,7 +978,7 @@ static struct bio *crypt_alloc_buffer(struct dm_crypt_io *io, unsigned size,
 		 * return a partially-allocated bio.  The caller will then try
 		 * to allocate more bios while submitting this partial bio.
 		 */
-		gfp_mask = (gfp_mask | __GFP_NOWARN) & ~__GFP_WAIT;
+		gfp_mask = (gfp_mask | __GFP_NOWARN) & ~__GFP_DIRECT_RECLAIM;
 
 		len = (size > PAGE_SIZE) ? PAGE_SIZE : size;
 
