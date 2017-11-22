@@ -791,11 +791,8 @@ int __init msm_thermal_init(void)
 	if (!msm_thermal_info)
 		return -ENOMEM;
 
-	for_each_nonboot_cpu(cpu) {
-		if (cpu_out_of_range_hp(cpu))
-			break;
-		cpumask_set_cpu(cpu, &core_control_mask);
-	}
+	cpumask_copy(&core_control_mask,
+			&__cpu_nonboot_mask);
 	cpumask_clear(&cores_offlined_mask);
 
 	mutex_init(&core_control_mutex);
