@@ -2263,7 +2263,7 @@ void warn_alloc_failed(gfp_t gfp_mask, int order, const char *fmt, ...)
 	 * Walking all memory to count page types is very expensive and should
 	 * be inhibited in non-blockable contexts.
 	 */
-	if (!(gfp_mask & __GFP_WAIT))
+	if (!(gfp_mask & __GFP_DIRECT_RECLAIM))
 		filter |= SHOW_MEM_FILTER_PAGE_COUNT;
 
 	/*
@@ -2275,7 +2275,7 @@ void warn_alloc_failed(gfp_t gfp_mask, int order, const char *fmt, ...)
 		if (test_thread_flag(TIF_MEMDIE) ||
 		    (current->flags & (PF_MEMALLOC | PF_EXITING)))
 			filter &= ~SHOW_MEM_FILTER_NODES;
-	if (in_interrupt() || !(gfp_mask & __GFP_WAIT))
+	if (in_interrupt() || !(gfp_mask & __GFP_DIRECT_RECLAIM))
 		filter &= ~SHOW_MEM_FILTER_NODES;
 
 	if (fmt) {
@@ -2305,13 +2305,6 @@ should_alloc_retry(gfp_t gfp_mask, unsigned int order,
 				unsigned long did_some_progress,
 				unsigned long pages_reclaimed)
 {
-	/* Do not loop if specifically requested */
-	if (gfp_mask & __GFP_NORETRY)
-		return 0;
-
-	/* Always retry if specifically requested */
-	if (gfp_mask & __GFP_NOFAIL)
-		return 1;
 
 	/*
 	 * Suspend converts GFP_KERNEL to __GFP_WAIT which can prevent reclaim
@@ -2320,6 +2313,14 @@ should_alloc_retry(gfp_t gfp_mask, unsigned int order,
 	 */
 	if (!did_some_progress && pm_suspended_storage())
 		return 0;
+
+	/* Do not loop if specifically requested */
+	if (gfp_mask & __GFP_NORETRY)
+		return 0;
+
+	/* Always retry if specifically requested */
+	if (gfp_mask & __GFP_NOFAIL)
+		return 1;
 
 	/*
 	 * In this implementation, order <= PAGE_ALLOC_COSTLY_ORDER
@@ -2615,8 +2616,7 @@ static void wake_all_kswapds(unsigned int order, const struct alloc_context *ac)
 static inline int
 gfp_to_alloc_flags(gfp_t gfp_mask)
 {
-	int alloc_flags = ALLOC_WMARK_MIN | ALLOC_CPUSET;
-	const bool atomic = !(gfp_mask & (__GFP_WAIT | ___GFP_DIRECT_RECLAIM));
+	unsigned int alloc_flags = ALLOC_WMARK_MIN | ALLOC_CPUSET;
 
 	/* __GFP_HIGH is assumed to be the same as ALLOC_HIGH to save a branch. */
 	BUILD_BUG_ON(__GFP_HIGH != (__force gfp_t) ALLOC_HIGH);
@@ -2625,11 +2625,11 @@ gfp_to_alloc_flags(gfp_t gfp_mask)
 	 * The caller may dip into page reserves a bit more if the caller
 	 * cannot run direct reclaim, or if the caller has realtime scheduling
 	 * policy or is asking for __GFP_HIGH memory.  GFP_ATOMIC requests will
-	 * set both ALLOC_HARDER (atomic == true) and ALLOC_HIGH (__GFP_HIGH).
+	 * set both ALLOC_HARDER (__GFP_ATOMIC) and ALLOC_HIGH (__GFP_HIGH).
 	 */
 	alloc_flags |= (__force int) (gfp_mask & __GFP_HIGH);
 
-	if (atomic) {
+	if (gfp_mask & __GFP_ATOMIC) {
 		/*
 		 * Not worth trying to allocate harder for __GFP_NOMEMALLOC even
 		 * if it can't schedule.
@@ -2638,7 +2638,7 @@ gfp_to_alloc_flags(gfp_t gfp_mask)
 			alloc_flags |= ALLOC_HARDER;
 		/*
 		 * Ignore cpuset mems for GFP_ATOMIC rather than fail, see the
-		 * comment for __cpuset_node_allowed_softwall().
+		 * comment for __cpuset_node_allowed().
 		 */
 		alloc_flags &= ~ALLOC_CPUSET;
 	} else if (unlikely(rt_task(current)) && !in_interrupt())
@@ -2670,9 +2670,9 @@ static inline struct page *
 __alloc_pages_slowpath(gfp_t gfp_mask, unsigned int order,
 						struct alloc_context *ac)
 {
-	const gfp_t wait = gfp_mask & __GFP_WAIT;
+	bool can_direct_reclaim = gfp_mask & __GFP_DIRECT_RECLAIM;
 	struct page *page = NULL;
-	int alloc_flags;
+	unsigned int alloc_flags;
 	unsigned long pages_reclaimed = 0;
 	unsigned long did_some_progress;
 	enum migrate_mode migration_mode = MIGRATE_ASYNC;
@@ -2701,10 +2701,14 @@ __alloc_pages_slowpath(gfp_t gfp_mask, unsigned int order,
 	if (IS_ENABLED(CONFIG_NUMA) && (gfp_mask & __GFP_THISNODE) && !wait)
 		goto nopage;
 
-retry:
-	if (!(gfp_mask & ___GFP_DIRECT_RECLAIM))
-		wake_all_kswapds(order, ac);
+	 * We also sanity check to catch abuse of atomic reserves being used by
+	 * callers that are not in atomic context.
+	 */
+	if (WARN_ON_ONCE((gfp_mask & (__GFP_ATOMIC|__GFP_DIRECT_RECLAIM)) ==
+				(__GFP_ATOMIC|__GFP_DIRECT_RECLAIM)))
+		gfp_mask &= ~__GFP_ATOMIC;
 
+retry:
 	/*
 	 * OK, we're below the kswapd watermark and have kicked background
 	 * reclaim. Now things get more complex, so set up alloc_flags according
@@ -2722,6 +2726,9 @@ retry:
 				ac->high_zoneidx, NULL, &ac->preferred_zone);
 		ac->classzone_idx = zonelist_zone_idx(preferred_zoneref);
 	}
+
+	if (gfp_mask & __GFP_KSWAPD_RECLAIM)
+		wake_all_kswapds(order, ac);
 
 	/* This is the last chance, in general, before the goto nopage. */
 	page = get_page_from_freelist(gfp_mask, order,
@@ -2934,7 +2941,7 @@ __alloc_pages_nodemask(gfp_t gfp_mask, unsigned int order,
 	fs_reclaim_acquire(gfp_mask);
 	fs_reclaim_release(gfp_mask);
 
-	might_sleep_if(gfp_mask & __GFP_WAIT);
+	might_sleep_if(gfp_mask & __GFP_DIRECT_RECLAIM);
 
 	if (should_fail_alloc_page(gfp_mask, order))
 		return NULL;
