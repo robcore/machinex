@@ -65,7 +65,6 @@ static DEFINE_MUTEX(core_control_mutex);
 
 static struct cpufreq_frequency_table *therm_table;
 static bool thermal_suspended = false;
-static int thermal_should_override = 0;
 
 bool thermal_core_controlled(unsigned int cpu)
 {
@@ -74,11 +73,6 @@ bool thermal_core_controlled(unsigned int cpu)
 		cpumask_test_cpu(cpu, &cores_offlined_mask))
 		return true;
 	return false;
-}
-
-unsigned int thermal_override(void)
-{
-	return cpumask_empty(&cores_offlined_mask) ? 0 : 1 || thermal_should_override ? 1 : 0;
 }
 
 /*************************************************************************
@@ -622,7 +616,6 @@ static void __ref do_core_control(void)
 				if (cpumask_test_cpu(cpu, &cores_offlined_mask) &&
 					!cpu_online(cpu))
 					continue;
-				thermal_should_override++;
 				cpumask_set_cpu(cpu, &cores_offlined_mask);
 				ret = cpu_down(cpu);
 				if (ret)
@@ -630,7 +623,6 @@ static void __ref do_core_control(void)
 		} else if (core_temp < delta &&
 				   cpumask_test_cpu(cpu, &core_control_mask) &&
 				   cpumask_test_cpu(cpu, &cores_offlined_mask)) {
-					thermal_should_override--;
 					cpumask_clear_cpu(cpu, &cores_offlined_mask);
 				/* If this core is already online, then bring up the
 				 * next offlined core.
