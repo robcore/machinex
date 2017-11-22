@@ -1194,12 +1194,6 @@ config BACKLIGHT_IC_KTD3102
 	---help---
 	  support for KTD3102 backlight IC
 
-config BACKLIGHT_WORKQUEUE
-	bool "CONFIG_BACKLIGHT_WORKQUEUE"
-	default n
-	---help---
-	  support for BACKLIGHT_WORKQUEUE
-
 config FB_MSM_EBI2_EPSON_S1D_QVGA_PANEL
 	bool "EBI2 Epson QVGA Panel"
 	select FB_MSM_EBI2
