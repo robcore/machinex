@@ -1201,6 +1201,9 @@ void __init sanity_check_meminfo(void)
 	meminfo.nr_banks = j;
 	high_memory = __va(arm_lowmem_limit - 1) + 1;
 
+	if (!memblock_limit)
+		memblock_limit = arm_lowmem_limit;
+
 	/*
 	 * Round the memblock limit down to a section size.  This
 	 * helps to ensure that we will allocate memory from the
@@ -1208,8 +1211,6 @@ void __init sanity_check_meminfo(void)
 	 */
 	if (memblock_limit)
 		memblock_limit = round_down(memblock_limit, SECTION_SIZE);
-	if (!memblock_limit)
-		memblock_limit = arm_lowmem_limit;
 
 	memblock_set_current_limit(memblock_limit);
 }
@@ -1278,10 +1279,10 @@ void __init arm_mm_memblock_reserve(void)
 
 /*
  * Set up the device mappings.  Since we clear out the page tables for all
- * mappings above VMALLOC_START, we will remove any debug device mappings.
- * This means you have to be careful how you debug this function, or any
- * called function.  This means you can't use any function or debugging
- * method which may touch any device, otherwise the kernel _will_ crash.
+ * mappings above VMALLOC_START, except early fixmap, we might remove debug
+ * device mappings.  This means earlycon can be used to debug this function
+ * Any other function or debugging method which may touch any device _will_
+ * crash the kernel.
  */
 static void __init devicemaps_init(const struct machine_desc *mdesc)
 {
@@ -1296,7 +1297,10 @@ static void __init devicemaps_init(const struct machine_desc *mdesc)
 
 	early_trap_init(vectors);
 
-	for (addr = VMALLOC_START; addr; addr += PMD_SIZE)
+	/*
+	 * Clear page table except top pmd used by early fixmaps
+	 */
+	for (addr = VMALLOC_START; addr < (FIXADDR_TOP & PMD_MASK); addr += PMD_SIZE)
 		pmd_clear(pmd_off_k(addr));
 
 	/*
@@ -1328,9 +1332,6 @@ static void __init devicemaps_init(const struct machine_desc *mdesc)
 	map.type = MT_MINICLEAN;
 	create_mapping(&map);
 #endif
-
-	/* Reserve fixed i/o space in VMALLOC region */
-	pci_reserve_io();
 
 	/*
 	 * Create a mapping for the machine vectors at the high-vectors
@@ -1369,6 +1370,9 @@ static void __init devicemaps_init(const struct machine_desc *mdesc)
 	else
 		debug_ll_io_init();
 	fill_pmd_gaps();
+
+	/* Reserve fixed i/o space in VMALLOC region */
+	pci_reserve_io();
 
 	if (use_user_accessible_timers()) {
 		/*
