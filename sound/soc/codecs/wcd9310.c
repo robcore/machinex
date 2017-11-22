@@ -9242,12 +9242,6 @@ static struct snd_soc_codec_driver soc_codec_dev_tabla = {
 };
 
 #ifdef CONFIG_PM
-static int tabla_suspend(struct device *dev)
-{
-	dev_dbg(dev, "%s: system suspend\n", __func__);
-	return 0;
-}
-
 static int tabla_resume(struct device *dev)
 {
 	int irq;
@@ -9284,7 +9278,6 @@ static int tabla_resume(struct device *dev)
 }
 
 static const struct dev_pm_ops tabla_pm_ops = {
-	.suspend	= tabla_suspend,
 	.resume		= tabla_resume,
 };
 #endif
@@ -9353,4 +9346,3 @@ module_exit(tabla_codec_exit);
 MODULE_DESCRIPTION("Tabla codec driver");
 MODULE_VERSION("1.0");
 MODULE_LICENSE("GPL v2");
-
