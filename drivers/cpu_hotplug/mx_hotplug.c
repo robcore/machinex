@@ -225,14 +225,15 @@ again:
 	delta = ktime_sub(ktime_get(), last_fuelcheck);
 
 	if ((!should_boost && ktime_compare(delta, ms_to_ktime(sampling_rate))  < 0) ||
-		!clutch || hotplug_suspended) {
+		!clutch || hotplug_suspended || thermal_override()) {
 		mutex_unlock(&mx_mutex);
 		schedule();
-		mutex_lock(&mx_mutex);
-	}
+	} else
+		mutex_unlock(&mx_mutex);
 
 	set_current_state(TASK_RUNNING);
 
+	mutex_lock(&mx_mutex);
 	if (should_boost) {
 		inject_nos(true, false);
 		last_boost = ktime_get();
