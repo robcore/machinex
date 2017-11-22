@@ -72,7 +72,8 @@ static inline void plug_cpu(void)
 	for_each_nonboot_offline_cpu(cpu) {
 		if (cpu_out_of_range_hp(cpu))
 			break;
-		if (is_cpu_allowed(cpu))
+		if (is_cpu_allowed(cpu) &&
+			!thermal_core_controlled(cpu))
 			cpu_up(cpu);
 	}
 reset:
@@ -99,6 +100,8 @@ static inline void unplug_cpu(void)
 		}
 	}
 	put_online_cpus();
+	if (is_cpu_allowed(low_cpu) &&
+		!thermal_core_controlled(low_cpu))
 	cpu_down(low_cpu);
 
 reset:

@@ -233,8 +233,6 @@ extern cpumask_t screen_off_allowd_msk;
 extern int lock_screen_off_cpus(int primary);
 extern void unlock_screen_off_cpus(void);
 extern unsigned int is_cpu_allowed(unsigned int cpu);
-unsigned int is_cpu_allowed_for_therm(unsigned int cpu);
-unsigned int thermal_override(void);
 #else /* !CONFIG_PM_SLEEP_SMP */
 static inline int disable_nonboot_cpus(void) { return 0; }
 static inline void enable_nonboot_cpus(void) {}

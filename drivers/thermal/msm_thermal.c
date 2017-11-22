@@ -605,36 +605,36 @@ static void __ref do_core_control(void)
 			 msm_thermal_info.core_temp_hysteresis_degC);
 
 	mutex_lock(&core_control_mutex);
-	for_each_nonboot_cpu(cpu) {
+	for_each_possible_cpu(cpu) {
 		if (cpu_out_of_range_hp(cpu))
 			break;
 		core_temp = evaluate_temp(cpu);
-		if (core_temp <= 0)
+		if (core_temp < 0)
 			continue;
 		if (core_temp >= msm_thermal_info.core_limit_temp_degC &&
 			cpumask_test_cpu(cpu, &core_control_mask)) {
 				if (cpumask_test_cpu(cpu, &cores_offlined_mask) &&
 					!cpu_online(cpu))
 					continue;
-				cpumask_set_cpu(cpu, &cores_offlined_mask);
 				ret = cpu_down(cpu);
 				if (ret)
 					pr_debug("cpu_down failed. you got problems\n");
+				cpumask_set_cpu(cpu, &cores_offlined_mask);
 		} else if (core_temp < delta &&
 				   cpumask_test_cpu(cpu, &core_control_mask) &&
 				   cpumask_test_cpu(cpu, &cores_offlined_mask)) {
-					cpumask_clear_cpu(cpu, &cores_offlined_mask);
 				/* If this core is already online, then bring up the
 				 * next offlined core.
 				 */
 				if (cpu_online(cpu))
 					continue;
-				if (!is_cpu_allowed_for_therm(cpu))
+				if (!is_cpu_allowed(cpu))
 					continue;
 				ret = cpu_up(cpu);
 				if (ret)
 					pr_err("%s: Error %d online core %u\n",
 							KBUILD_MODNAME, ret, cpu);
+				cpumask_clear_cpu(cpu, &cores_offlined_mask);
 		}
 	}
 	mutex_unlock(&core_control_mutex);
@@ -648,12 +648,17 @@ static void __ref check_temp(struct work_struct *work)
 		return;
 
 	ret = do_freq_control();
-	if (ret == -EINVAL)
+	if (ret == -EINVAL) {
 		return;
-	else if (ret == 0)
-		goto reschedule;
-	else
+	} else if (msm_thermal_info.limit_temp_degC <
+		msm_thermal_info.core_limit_temp_degC) {
+		if (ret == 0)
+			goto reschedule;
+		else
+			do_core_control();
+	} else {
 		do_core_control();
+	}
 reschedule:
 		mod_delayed_work(intellithermal_wq, &check_temp_work,
 				msecs_to_jiffies(msm_thermal_info.poll_ms));
@@ -671,6 +676,30 @@ static void __ref get_table(struct work_struct *work)
 	return;
 reschedule:
 		schedule_work(&get_table_work);
+}
+
+/* Call with core_control_mutex locked */
+static void __ref update_offline_cores(void)
+{
+	unsigned int cpu = 0;
+	int ret = 0;
+
+	if (!core_control_enabled || intelli_init() ||
+		thermal_suspended)
+		return;
+
+	for_each_nonboot_online_cpu(cpu) {
+		if (cpu_out_of_range_hp(cpu))
+			break;
+		if (!cpu_online(cpu))
+			continue;
+		if (cpumask_test_cpu(cpu, &core_control_mask) &&
+			cpumask_test_cpu(cpu, &cores_offlined_mask))
+		ret = cpu_down(cpu);
+		if (ret)
+			pr_err("%s: Unable to offline cpu%u\n",
+				KBUILD_MODNAME, cpu);
+	}
 }
 
 static ssize_t show_cc_enabled(struct kobject *kobj,
@@ -696,8 +725,14 @@ static ssize_t __ref store_cc_enabled(struct kobject *kobj,
 		goto done_store_cc;
 
 	core_control_enabled = !!val;
-	if (!core_control_enabled)
+	if (core_control_enabled) {
+		pr_debug("%s: Core control enabled\n", KBUILD_MODNAME);
+		update_offline_cores();
+	} else {
+		pr_debug("%s: Core control disabled\n", KBUILD_MODNAME);
 		cpumask_clear(&cores_offlined_mask);
+	}
+
 done_store_cc:
 	mutex_unlock(&core_control_mutex);
 	return count;
@@ -762,14 +797,10 @@ static int msm_thermal_pm_event(struct notifier_block *this,
 		break;
 	case PM_PROACTIVE_RESUME:
 		thermal_suspended = false;
-		mutex_lock(&core_control_mutex);
-		for_each_cpu(cpu, &cores_offlined_mask) {
-			if (cpu_out_of_range_hp(cpu))
-				break;
-			if (cpu_online(cpu))
-				cpu_down(cpu);
+		if (mutex_trylock(&core_control_mutex)) {
+			update_offline_cores();
+			mutex_unlock(&core_control_mutex);
 		}
-		mutex_unlock(&core_control_mutex);
 		mod_delayed_work(intellithermal_wq, &check_temp_work, 0);
 		break;
 	default:
@@ -791,8 +822,11 @@ int __init msm_thermal_init(void)
 	if (!msm_thermal_info)
 		return -ENOMEM;
 
-	cpumask_copy(&core_control_mask,
-			&__cpu_nonboot_mask);
+	for_each_nonboot_cpu(cpu) {
+		if (cpu_out_of_range_hp(cpu))
+			break;
+		cpumask_set_cpu(cpu, &core_control_mask);
+	}
 	cpumask_clear(&cores_offlined_mask);
 
 	mutex_init(&core_control_mutex);

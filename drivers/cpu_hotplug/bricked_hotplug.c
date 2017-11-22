@@ -212,7 +212,8 @@ static void bricked_hotplug_work(struct work_struct *work) {
 	case MSM_MPDEC_DOWN:
 		cpu = get_slowest_cpu();
 		if (cpu > 0) {
-			if (cpu_online(cpu) && !check_down_lock(cpu))
+			if (cpu_online(cpu) && !check_down_lock(cpu) &&
+			is_cpu_allowed(cpu) && !thermal_core_controlled(cpu))
 				cpu_down(cpu);
 		}
 		break;
@@ -220,7 +221,7 @@ static void bricked_hotplug_work(struct work_struct *work) {
 		cpu = cpumask_next_zero(0, cpu_online_mask);
 		if (cpu < DEFAULT_MAX_CPUS_ONLINE) {
 			if (!cpu_online(cpu) &&
-			is_cpu_allowed(cpu)) {
+			is_cpu_allowed(cpu) && !thermal_core_controlled(cpu)) {
 				cpu_up(cpu);
 				apply_down_lock(cpu);
 			}

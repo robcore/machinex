@@ -134,7 +134,8 @@ void inject_nos(bool from_input, bool last_uptick)
 				num_online_cpus() == max_cpus_online)
 				break;
 			if (cpu_online(cpu) ||
-				!is_cpu_allowed(cpu))
+				!is_cpu_allowed(cpu) ||
+				thermal_core_controlled(cpu))
 				continue;
 		cpu_up(cpu);
 		}
@@ -146,7 +147,8 @@ void inject_nos(bool from_input, bool last_uptick)
 				num_online_cpus() == cylinders)
 				break;
 			if (cpu_online(cpu) ||
-				!is_cpu_allowed(cpu))
+				!is_cpu_allowed(cpu) ||
+				thermal_core_controlled(cpu))
 				continue;
 		cpu_up(cpu);
 		}
@@ -165,7 +167,8 @@ static void upshift(void)
 		num_online_cpus() == max_cpus_online)
 		return;
 	if (cpu_online(cpu) ||
-		!is_cpu_allowed(cpu))
+		!is_cpu_allowed(cpu) ||
+		thermal_core_controlled(cpu))
 		return;
 	cpu_up(cpu);
 }
@@ -181,7 +184,9 @@ static void downshift(void)
 	if (cpu_out_of_range_hp(cpu) ||
 		num_online_cpus() == min_cpus_online)
 		return;
-	if (!cpu_online(cpu))
+	if (!cpu_online(cpu) ||
+		!is_cpu_allowed(cpu) ||
+		thermal_core_controlled(cpu))
 		return;
 	cpu_down(cpu);
 }
@@ -197,7 +202,9 @@ static void hit_the_brakes(void)
 		if (cpu_out_of_range_hp(cpu) ||
 			num_online_cpus() == min_cpus_online)
 			break;
-		if (!cpu_online(cpu))
+		if (!cpu_online(cpu) ||
+			!is_cpu_allowed(cpu) ||
+			thermal_core_controlled(cpu))
 			continue;
 		cpu_down(cpu);
 	}
@@ -228,7 +235,7 @@ again:
 		!clutch || hotplug_suspended) {
 		mutex_unlock(&mx_mutex);
 		schedule();
-		mutex_unlock(&mx_mutex);
+		mutex_lock(&mx_mutex);
 	}
 
 	set_current_state(TASK_RUNNING);

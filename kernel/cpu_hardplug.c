@@ -67,22 +67,6 @@ static DEFINE_MUTEX(hardplug_mtx);
 
 unsigned int is_cpu_allowed(unsigned int cpu)
 {
-	if (!thermal_core_controlled(cpu))
-		return NOT_ALLOWED;
-
-	if (!limit_screen_on_cpus ||
-		!is_display_on() ||
-		cpu == 0)
-		return ALLOWED;
-
-	if (!cpumask_test_cpu(cpu, &screen_on_allowd_msk))
-		return NOT_ALLOWED;
-
-	return ALLOWED;
-}
-
-unsigned int is_cpu_allowed_for_therm(unsigned int cpu)
-{
 	if (!limit_screen_on_cpus ||
 		!is_display_on() ||
 		cpu == 0)
