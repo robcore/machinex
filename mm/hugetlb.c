@@ -984,7 +984,7 @@ static struct page *alloc_fresh_huge_page_node(struct hstate *h, int nid)
 {
 	struct page *page;
 
-	page = alloc_pages_exact_node(nid,
+	page = __alloc_pages_node(nid,
 		htlb_alloc_mask(h)|__GFP_COMP|__GFP_THISNODE|
 						__GFP_REPEAT|__GFP_NOWARN,
 		huge_page_order(h));
@@ -1146,7 +1146,7 @@ static struct page *alloc_buddy_huge_page(struct hstate *h, int nid)
 				   __GFP_REPEAT|__GFP_NOWARN,
 				   huge_page_order(h));
 	else
-		page = alloc_pages_exact_node(nid,
+		page = __alloc_pages_node(nid,
 			htlb_alloc_mask(h)|__GFP_COMP|__GFP_THISNODE|
 			__GFP_REPEAT|__GFP_NOWARN, huge_page_order(h));
 
