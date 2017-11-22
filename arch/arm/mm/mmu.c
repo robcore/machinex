@@ -874,7 +874,7 @@ static void __init create_mapping(struct map_desc *md)
 	phys = __pfn_to_phys(md->pfn);
 	length = PAGE_ALIGN(md->length + (md->virtual & ~PAGE_MASK));
 
-	if (WARN_ON_ONCE(type->prot_l1 == 0 && ((addr | phys | length) & ~SECTION_MASK))) {
+	if (type->prot_l1 == 0 && ((addr | phys | length) & ~SECTION_MASK)) {
 		pr_warn("BUG: map for 0x%08llx at 0x%08lx cannot be mapped using pages, ignoring.\n",
 			(long long)__pfn_to_phys(md->pfn), addr);
 		return;
