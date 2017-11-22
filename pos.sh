@@ -1,10 +1,4 @@
 #!/bin/bash
-patch -p1 -R < "/root/machinex/patches/0042-just-copy-the-nonboot-cpus-mask-into-our-core-contro.patch"
-patch -p1 -R < "/root/machinex/patches/0041-this-should-fix-the-thermal-garbage.patch"
-patch -p1 -R < "/root/machinex/patches/0040-forget-sending-the-override-to-mx-plug-for-nwo.patch"
-patch -p1 -R < "/root/machinex/patches/0039-back-to-the-previous-mutex-setup.patch"
-patch -p1 -R < "/root/machinex/patches/0038-thermal-hardplug-mx-plug-make-thermal-core-control-o.patch"
-patch -p1 -R < "/root/machinex/patches/0037-hotplugs-no-more-using-thermal_core_controlled-as-it.patch"
-patch -p1 -R < "/root/machinex/patches/0036-mx-hotplug-offlining-cores-is-just-fine-if-cpu-isnt-.patch"
-patch -p1 -R < "/root/machinex/patches/0035-thermal-and-hardplug-make-thermal-control-is_cpu_all.patch"
-patch -p1 -R < "/root/machinex/patches/0034-aaaand-any-non-policy-callers-of-reapply-hardlimits-.patch"
+patch -p1 -R < "/root/machinex/patches/0054-this-is-a-mess.patch"
+patch -p1 -R < "/root/machinex/patches/0053-fixing-ish.patch"
+patch -p1 -R < "/root/machinex/patches/0052-trying-something-wacky.patch"
