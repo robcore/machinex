@@ -3075,7 +3075,7 @@ retry:
 		if (new_bfqq != NULL) {
 			bfqq = new_bfqq;
 			new_bfqq = NULL;
-		} else if (gfp_mask & __GFP_WAIT) {
+		} else if (gfp_mask & __GFP_RECLAIM) {
 			spin_unlock_irq(bfqd->queue->queue_lock);
 			new_bfqq = kmem_cache_alloc_node(bfq_pool,
 					gfp_mask | __GFP_ZERO,
@@ -3573,8 +3573,6 @@ static int bfq_set_request(struct request_queue *q, struct request *rq,
 	struct bfq_group *bfqg;
 	unsigned long flags;
 	bool split = false;
-
-	might_sleep_if(gfp_mask & __GFP_WAIT);
 
 	bfq_check_ioprio_change(bic);
 
