@@ -1604,7 +1604,7 @@ struct sk_buff *sock_alloc_send_pskb(struct sock *sk, unsigned long header_len,
 		goto failure;
 
 	gfp_mask = sk->sk_allocation;
-	if (gfp_mask & __GFP_RECLAIM)
+	if (gfpflags_allow_blocking(gfp_mask))
 		gfp_mask |= __GFP_REPEAT;
 
 	timeo = sock_sndtimeo(sk, noblock);
