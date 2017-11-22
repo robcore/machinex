@@ -648,17 +648,12 @@ static void __ref check_temp(struct work_struct *work)
 		return;
 
 	ret = do_freq_control();
-	if (ret == -EINVAL) {
+	if (ret == -EINVAL)
 		return;
-	} else if (msm_thermal_info.limit_temp_degC <
-		msm_thermal_info.core_limit_temp_degC) {
-		if (ret == 0)
+	else if (ret == 0)
 			goto reschedule;
-		else
-			do_core_control();
-	} else {
+	else
 		do_core_control();
-	}
 reschedule:
 		mod_delayed_work(intellithermal_wq, &check_temp_work,
 				msecs_to_jiffies(msm_thermal_info.poll_ms));
