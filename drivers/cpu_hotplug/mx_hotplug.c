@@ -184,9 +184,7 @@ static void downshift(void)
 	if (cpu_out_of_range_hp(cpu) ||
 		num_online_cpus() == min_cpus_online)
 		return;
-	if (!cpu_online(cpu) ||
-		!is_cpu_allowed(cpu) ||
-		thermal_core_controlled(cpu))
+	if (!cpu_online(cpu))
 		return;
 	cpu_down(cpu);
 }
@@ -202,9 +200,7 @@ static void hit_the_brakes(void)
 		if (cpu_out_of_range_hp(cpu) ||
 			num_online_cpus() == min_cpus_online)
 			break;
-		if (!cpu_online(cpu) ||
-			!is_cpu_allowed(cpu) ||
-			thermal_core_controlled(cpu))
+		if (!cpu_online(cpu))
 			continue;
 		cpu_down(cpu);
 	}

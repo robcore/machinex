@@ -227,9 +227,7 @@ static void cpu_all_ctrl(bool online) {
 		for_each_nonboot_online_cpu(cpu) {
 			if (cpu_out_of_range_hp(cpu))
 				break;
-			if (!cpu_online(cpu) ||
-				!is_cpu_allowed(cpu) ||
-				thermal_core_controlled(cpu))
+			if (!cpu_online(cpu))
 				continue;
 			cpu_down(cpu);
 		}
@@ -318,9 +316,7 @@ static void unplug_cpu(int min_active_cpu)
 	for_each_nonboot_online_cpu(cpu) {
 		if (cpu_out_of_range_hp(cpu))
 			break;
-		if (!cpu_online(cpu) ||
-			!is_cpu_allowed(cpu) ||
-			thermal_core_controlled(cpu))
+		if (!cpu_online(cpu))
 			continue;
 		l_nr_threshold =
 			cpu_nr_run_threshold << 1 / (num_online_cpus());

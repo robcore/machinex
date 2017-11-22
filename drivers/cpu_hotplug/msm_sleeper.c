@@ -100,8 +100,6 @@ static inline void unplug_cpu(void)
 		}
 	}
 	put_online_cpus();
-	if (is_cpu_allowed(low_cpu) &&
-		!thermal_core_controlled(low_cpu))
 	cpu_down(low_cpu);
 
 reset:

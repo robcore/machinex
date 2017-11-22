@@ -432,8 +432,6 @@ static void cpu_up_down_work(struct work_struct *work)
 				num_online_cpus() == target)
 				break;
 			if (cpu_is_offline(cpu) ||
-				!is_cpu_allowed(cpu) ||
-				thermal_core_controlled(cpu) ||
 				check_down_lock(cpu))
 				continue;
 			l_nr_threshold =
@@ -544,9 +542,6 @@ static void cycle_cpus(void)
 			continue;
 		if (check_down_lock(cpu))
 			rm_down_lock(cpu, 0);
-		if (!is_cpu_allowed(cpu) ||
-			thermal_core_controlled(cpu))
-			continue;
 		cpu_down(cpu);
 	}
 	for_each_nonboot_offline_cpu(cpu) {
@@ -580,9 +575,6 @@ static void recycle_cpus(void)
 			continue;
 		if (check_down_lock(cpu))
 			rm_down_lock(cpu, 0);
-		if (!is_cpu_allowed(cpu) ||
-			thermal_core_controlled(cpu))
-			continue;
 		cpu_down(cpu);
 	}
 

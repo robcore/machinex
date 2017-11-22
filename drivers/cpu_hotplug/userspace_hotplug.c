@@ -27,9 +27,7 @@ void uplug_start_stop(unsigned int enabled)
 				is_cpu_allowed(cpu))
 				cpu_up(cpu);
 			else if (!cpumask_test_cpu(cpu, &uplug_mask) &&
-				cpu_online(cpu) &&
-				!thermal_core_controlled(cpu) &&
-				is_cpu_allowed(cpu))
+				cpu_online(cpu))
 				cpu_down(cpu);
 		}
 	} else {
@@ -85,9 +83,7 @@ static ssize_t store_cpu1(struct kobject *kobj,
 		if (cpu_online(cpu))
 			cpumask_set_cpu(cpu, &uplug_mask);
 	} else if (!val) {
-		if (cpu_online(cpu) && uplug_enabled &&
-				!thermal_core_controlled(cpu) &&
-				is_cpu_allowed(cpu))
+		if (cpu_online(cpu) && uplug_enabled)
 			cpu_down(cpu);
 		if (!cpu_online(cpu))
 			cpumask_clear_cpu(cpu, &uplug_mask);
@@ -125,9 +121,7 @@ static ssize_t store_cpu2(struct kobject *kobj,
 		if (cpu_online(cpu))
 			cpumask_set_cpu(cpu, &uplug_mask);
 	} else if (!val) {
-		if (cpu_online(cpu) && uplug_enabled &&
-				!thermal_core_controlled(cpu) &&
-				is_cpu_allowed(cpu))
+		if (cpu_online(cpu) && uplug_enabled)
 			cpu_down(cpu);
 		if (!cpu_online(cpu))
 			cpumask_clear_cpu(cpu, &uplug_mask);
@@ -165,9 +159,7 @@ static ssize_t store_cpu3(struct kobject *kobj,
 		if (cpu_online(cpu))
 			cpumask_set_cpu(cpu, &uplug_mask);
 	} else if (!val) {
-		if (cpu_online(cpu) && uplug_enabled &&
-				!thermal_core_controlled(cpu) &&
-				is_cpu_allowed(cpu))
+		if (cpu_online(cpu) && uplug_enabled)
 			cpu_down(cpu);
 		if (!cpu_online(cpu))
 			cpumask_clear_cpu(cpu, &uplug_mask);
