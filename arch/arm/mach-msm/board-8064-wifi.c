@@ -561,7 +561,7 @@ int __init brcm_wlan_init(void)
 #endif
 	return platform_device_register(&brcm_device_wlan);
 }
-early_initcall(brcm_wlan_init);
+
 #if 0
 static struct partial_resume smd_pr = {
 	.irq = 353,

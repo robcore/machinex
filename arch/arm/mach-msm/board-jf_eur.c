@@ -5514,10 +5514,8 @@ static void __init samsung_jf_init(void)
 #ifdef CONFIG_SND_SOC_ES325
 	es325_start_api();
 #endif
-#if 0
 #if defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE)
 	brcm_wlan_init();
-#endif
 #endif
 }
 
