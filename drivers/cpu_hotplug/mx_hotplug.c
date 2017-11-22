@@ -228,12 +228,11 @@ again:
 		!clutch || hotplug_suspended || thermal_override()) {
 		mutex_unlock(&mx_mutex);
 		schedule();
-	} else
 		mutex_unlock(&mx_mutex);
+	}
 
 	set_current_state(TASK_RUNNING);
 
-	mutex_lock(&mx_mutex);
 	if (should_boost) {
 		inject_nos(true, false);
 		last_boost = ktime_get();
