@@ -220,15 +220,14 @@ static int __ref mx_gearbox(void *data)
 again:
 	set_current_state(TASK_INTERRUPTIBLE);
 	if (kthread_should_stop()) {
+		mutex_lock(&mx_mutex);
 		inject_nos(false, true);
+		mutex_unlock(&mx_mutex);
 		return 0;
 	}
 
 	mutex_lock(&mx_mutex);
-	delta = ktime_sub(ktime_get(), last_fuelcheck);
-
-	if ((!should_boost && ktime_compare(delta, ms_to_ktime(sampling_rate))  < 0) ||
-		!clutch || hotplug_suspended) {
+	if (!clutch || hotplug_suspended) {
 		mutex_unlock(&mx_mutex);
 		schedule();
 		mutex_lock(&mx_mutex);
@@ -236,7 +235,8 @@ again:
 
 	set_current_state(TASK_RUNNING);
 
-	if (should_boost) {
+	delta = ktime_sub(ktime_get(), last_fuelcheck);
+	if (should_boost && ktime_compare(delta, ms_to_ktime(sampling_rate))  > 0) {
 		inject_nos(true, false);
 		last_boost = ktime_get();
 		should_boost = false;
@@ -312,13 +312,12 @@ void fuel_injector(void)
 		return;
 	}
 
-	if (!should_boost)
+	if (!should_boost) {
 		should_boost = true;
-
-	mutex_unlock(&mx_mutex);
-
-	if (should_boost)
+		mutex_unlock(&mx_mutex);
 		mod_delayed_work_on(0, mx_hp_engine, &motor, 0);
+	} else
+		mutex_unlock(&mx_mutex);
 }
 	
 
