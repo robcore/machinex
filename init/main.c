@@ -613,6 +613,7 @@ asmlinkage __visible void __init start_kernel(void)
 	vfs_caches_init_early();
 	sort_main_extable();
 	trap_init();
+	pr_info("MM Init!!\n");
 	mm_init();
 
 	/*
@@ -944,6 +945,7 @@ static void __init do_basic_setup(void)
 	cpuset_init_smp();
 	usermodehelper_init();
 	shmem_init();
+	pr_info("Driver Init!!\n");
 	driver_init();
 	init_irq_proc();
 	do_ctors();
