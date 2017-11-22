@@ -1581,7 +1581,7 @@ static struct page *alloc_misplaced_dst_page(struct page *page,
 					 (GFP_HIGHUSER_MOVABLE |
 					  __GFP_THISNODE | __GFP_NOMEMALLOC |
 					  __GFP_NORETRY | __GFP_NOWARN) &
-					 ~(__GFP_IO | __GFP_FS), 0);
+					 ~GFP_IOFS, 0);
 
 	return newpage;
 }
@@ -1775,7 +1775,7 @@ int migrate_misplaced_transhuge_page(struct mm_struct *mm,
 		goto out_dropref;
 
 	new_page = alloc_pages_node(node,
-		(GFP_TRANSHUGE | __GFP_THISNODE) & ~__GFP_RECLAIM,
+		(GFP_TRANSHUGE | __GFP_THISNODE) & ~__GFP_WAIT,
 		HPAGE_PMD_ORDER);
 	if (!new_page)
 		goto out_fail;

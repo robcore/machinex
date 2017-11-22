@@ -473,8 +473,6 @@ memcg_kmem_newpage_charge(gfp_t gfp, struct mem_cgroup **memcg, int order)
 	 */
 	if (gfp & __GFP_NOFAIL)
 		return true;
-	if (!(gfp & __GFP_ACCOUNT))
-		return true;
 	if (in_interrupt() || (!current->mm) || (current->flags & PF_KTHREAD))
 		return true;
 
