@@ -147,7 +147,7 @@ static int ion_iommu_heap_allocate(struct ion_heap *heap,
 			 */
 			data->pages = kmalloc(page_tbl_size,
 					      __GFP_COMP | __GFP_NORETRY |
-					      ___GFP_DIRECT_RECLAIM | __GFP_NOWARN);
+					      __GFP_NOWARN);
 			if (!data->pages) {
 				data->pages = vmalloc(page_tbl_size);
 				data->pages_uses_vmalloc = 1;
