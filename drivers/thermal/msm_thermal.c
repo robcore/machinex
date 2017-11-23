@@ -532,6 +532,8 @@ static int __ref mitigation_control(void *data)
 	unsigned int resolve_max_freq[NR_CPUS];
 
 top:
+	set_current_state(TASK_INTERRUPTIBLE);
+
 	if (kthread_should_stop())
 		return 0;
 
@@ -540,6 +542,7 @@ top:
 		goto goodnight;
 	}
 
+	set_current_state(TASK_RUNNING);
 	delta = (msm_thermal_info.limit_temp_degC -
 			 msm_thermal_info.temp_hysteresis_degC);
 
@@ -688,6 +691,9 @@ static void __ref get_table(struct work_struct *work)
 {
 	int ret;
 	unsigned int i;
+	if (system_state != SYSTEM_RUNNING)
+		goto reschedule;
+
 	ret = msm_thermal_get_freq_table();
 	if (ret)
 		goto reschedule;
