@@ -594,7 +594,7 @@ top:
 			set_thermal_policy(cpu, resolve_max_freq[cpu]);
 	}
 
-	clamp_val(hotplug_check_needed, 0, 1)
+	clamp_val(hotplug_check_needed, 0, 1);
 
 	if (!core_control_enabled || intelli_init() ||
 		 thermal_suspended || !hotplug_check_needed ||
