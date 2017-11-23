@@ -758,7 +758,7 @@ static ssize_t autosleep_store(struct kobject *kobj,
 		return -EINVAL;
 
 	if (state == PM_SUSPEND_MEM)
-		state = mem_sleep_current;
+		state = mem_sleep_default;
 
 	error = pm_autosleep_set_state(state);
 	pr_info("Autosleep called:%s\n", pm_states[state] ?
