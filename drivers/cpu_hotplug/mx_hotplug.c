@@ -253,7 +253,7 @@ again:
 	else if ((air_to_fuel >= thirdgear &&
 				air_to_fuel < sixthgear) ||
 			   (current_rpm >= thirdgear_rpm &&
-				current_rpm < sixthgear_rpm)) {
+				current_rpm < sixthgear_rpm))
 		upshift();
 	else if ((air_to_fuel > firstgear &&
 				air_to_fuel <= secondgear) &&
