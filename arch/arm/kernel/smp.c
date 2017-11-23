@@ -606,8 +606,7 @@ DEFINE_PER_CPU(struct pt_regs, regs_before_stop);
  */
 static void ipi_cpu_stop(unsigned int cpu, struct pt_regs *regs)
 {
-	if (system_state == SYSTEM_BOOTING ||
-	    system_state == SYSTEM_RUNNING) {
+	if (system_state <= SYSTEM_RUNNING) {
 		per_cpu(regs_before_stop, cpu) = *regs;
 		raw_spin_lock(&stop_lock);
 		pr_crit("CPU%u: stopping\n", cpu);

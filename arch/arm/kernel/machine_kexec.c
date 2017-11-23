@@ -118,10 +118,13 @@ void machine_kexec(struct kimage *image)
 	unsigned long reboot_code_buffer_phys;
 	void *reboot_code_buffer;
 
-	if (num_online_cpus() > 1) {
-	    pr_err("kexec: error: multiple CPUs still online\n");
-	    return;
-	}
+	/*
+	 * This can only happen if machine_shutdown() failed to disable some
+	 * CPU, and that can only happen if the checks in
+	 * machine_kexec_prepare() were not correct. If this fails, we can't
+	 * reliably kexec anyway, so BUG_ON is appropriate.
+	 */
+	BUG_ON(num_online_cpus() > 1);
 
 	page_list = image->head & PAGE_MASK;
 
