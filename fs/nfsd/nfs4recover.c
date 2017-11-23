@@ -469,7 +469,7 @@ nfs4_reset_recoverydir(char *recdir)
 	if (status)
 		return status;
 	status = -ENOTDIR;
-	if (S_ISDIR(path.dentry->d_inode->i_mode)) {
+	if (d_is_dir(path.dentry)) {
 		strcpy(user_recovery_dirname, recdir);
 		status = 0;
 	}
