@@ -1402,7 +1402,7 @@ int mdp_debugfs_init(void)
 		return -1;
 	}
 #endif
-
+#if defined(CONFIG_FB_MSM_OVERLAY) && defined(CONFIG_FB_MSM_MDDI)
 	dent = debugfs_create_dir("mddi", NULL);
 
 	if (IS_ERR(dent)) {
@@ -1418,7 +1418,7 @@ int mdp_debugfs_init(void)
 		return -1;
 	}
 
-#if defined(CONFIG_FB_MSM_OVERLAY) && defined(CONFIG_FB_MSM_MDDI)
+
 	if (debugfs_create_file("vsync", 0600, dent, 0, &vsync_fops)
 			== NULL) {
 		printk(KERN_ERR "%s(%d): debugfs_create_file: debug fail\n",
