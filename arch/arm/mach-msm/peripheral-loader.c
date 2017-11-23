@@ -719,10 +719,10 @@ EXPORT_SYMBOL(msm_pil_unregister);
 static int pil_pm_notify(struct notifier_block *b, unsigned long event, void *p)
 {
 	switch (event) {
-	case PM_SUSPEND_PREPARE:
+	case PM_PROACTIVE_SUSPEND:
 		down_write(&pil_pm_rwsem);
 		break;
-	case PM_POST_SUSPEND:
+	case PM_PROACTIVE_RESUME:
 		up_write(&pil_pm_rwsem);
 		break;
 	}

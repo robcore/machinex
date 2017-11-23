@@ -346,14 +346,14 @@ static int mpu_early_notifier_callback(struct mpu_private_data *mpu,
 	printk(KERN_INFO"[%s] event = %lu\n", __func__, event);
 	mutex_lock(&mpu->mutex);
 	if (!(mpu->pid) ||
-	    (event != PM_SUSPEND_PREPARE && event != PM_POST_SUSPEND)) {
+	    (event != PM_PROACTIVE_SUSPEND && event != PM_PROACTIVE_RESUME)) {
 		mutex_unlock(&mpu->mutex);
 		return NOTIFY_OK;
 	}
 
-	if (event == PM_SUSPEND_PREPARE)
+	if (event == PM_PROACTIVE_SUSPEND)
 		mpu->event |= MPU_PM_EVENT_SUSPEND_PREPARE;
-	if (event == PM_POST_SUSPEND)
+	if (event == PM_PROACTIVE_RESUME)
 		mpu->event |= MPU_PM_EVENT_POST_SUSPEND;
 
 	do_gettimeofday(&event_time);
