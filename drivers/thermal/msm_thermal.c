@@ -25,6 +25,7 @@
 #include <linux/mutex.h>
 #include <linux/msm_tsens.h>
 #include <linux/workqueue.h>
+#include <linux/kthread.h>
 #include <linux/cpu.h>
 #include <linux/cpufreq.h>
 #include <linux/msm_tsens.h>
@@ -402,7 +403,7 @@ static int set_poll_ms(const char *buf, const struct kernel_param *kp)
 
 	sanitize_min_max(val, 40, 1000); /*works best if in same multiple as thermal poll, 40ms. 1 sec max for safety*/
 
-	msm_thermal_info.poll_ms = val;
+	msm_thermal_info.poll_ms = (long long unsigned int)val;
 
 	return 0;
 }
@@ -411,7 +412,7 @@ static int get_poll_ms(char *buf, const struct kernel_param *kp)
 {
 	ssize_t ret;
 
-	ret = sprintf(buf, "%u\n", msm_thermal_info.poll_ms);
+	ret = sprintf(buf, "%llu\n", msm_thermal_info.poll_ms);
 
 	return ret;
 }
@@ -529,7 +530,6 @@ static int __ref mitigation_control(void *data)
 	long freq_temp, core_temp, delta;
 	unsigned int hotplug_check_needed = 0;
 	unsigned int resolve_max_freq[NR_CPUS];
-	unsigned int cpu = smp_processor_id();
 
 top:
 	if (kthread_should_stop())
@@ -657,7 +657,7 @@ static void __ref check_temp(struct work_struct *work)
 	}
 
 	delta = ktime_sub(ktime_get(), last_tempcheck);
-	if (ktime_compare(delta, ms_to_ktime(poll_ms)) < 0)
+	if (ktime_compare(delta, ms_to_ktime(msm_thermal_info.poll_ms)) < 0)
 		goto reschedule;
 
 	wake_up_process(mitigator);
@@ -697,7 +697,7 @@ static void __ref get_table(struct work_struct *work)
 		return;
 	}
 
-	panic();
+	panic("NO THERMAL DRIVER\n");
 reschedule:
 		schedule_work(&get_table_work);
 }
