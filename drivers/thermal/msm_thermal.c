@@ -25,6 +25,7 @@
 #include <linux/mutex.h>
 #include <linux/msm_tsens.h>
 #include <linux/workqueue.h>
+#include <linux/kthread.h>
 #include <linux/cpu.h>
 #include <linux/cpufreq.h>
 #include <linux/msm_tsens.h>
@@ -39,6 +40,7 @@
 
 #define MAX_IDX 14
 #define SHUTOFF_TEMP 85
+static ktime_t last_tempcheck;
 
 static struct msm_thermal_data msm_thermal_info = {
 	.poll_ms = 240,
@@ -48,6 +50,7 @@ static struct msm_thermal_data msm_thermal_info = {
 	.core_limit_temp_degC = 75,
 	.core_temp_hysteresis_degC = 10,
 };
+
 
 static int limit_idx[NR_CPUS];
 static int thermal_limit_low[NR_CPUS];
@@ -62,6 +65,7 @@ static bool core_control_enabled;
 static cpumask_t core_control_mask;
 static cpumask_t cores_offlined_mask;
 static DEFINE_MUTEX(core_control_mutex);
+static struct task_struct *mitigator;
 
 static struct cpufreq_frequency_table *therm_table;
 static bool thermal_suspended = false;
@@ -399,7 +403,7 @@ static int set_poll_ms(const char *buf, const struct kernel_param *kp)
 
 	sanitize_min_max(val, 40, 1000); /*works best if in same multiple as thermal poll, 40ms. 1 sec max for safety*/
 
-	msm_thermal_info.poll_ms = val;
+	msm_thermal_info.poll_ms = (long long unsigned int)val;
 
 	return 0;
 }
@@ -408,7 +412,7 @@ static int get_poll_ms(char *buf, const struct kernel_param *kp)
 {
 	ssize_t ret;
 
-	ret = sprintf(buf, "%u\n", msm_thermal_info.poll_ms);
+	ret = sprintf(buf, "%llu\n", msm_thermal_info.poll_ms);
 
 	return ret;
 }
@@ -519,18 +523,21 @@ static long evaluate_any_temp(uint32_t sens_id)
 
 	return temp;
 }
-
-static int __ref do_freq_control(void)
+static int __ref mitigation_control(void *data)
 {
 	int ret = 0;
 	unsigned int cpu = smp_processor_id();
-	long freq_temp, delta;
+	long freq_temp, core_temp, delta;
 	unsigned int hotplug_check_needed = 0;
 	unsigned int resolve_max_freq[NR_CPUS];
 
+top:
+	if (kthread_should_stop())
+		return 0;
+
 	if (thermal_suspended) {
 		pr_err("frequency control not ready!\n");		
-		return -EINVAL;
+		goto goodnight;
 	}
 
 	delta = (msm_thermal_info.limit_temp_degC -
@@ -585,20 +592,12 @@ static int __ref do_freq_control(void)
 			set_thermal_policy(cpu, resolve_max_freq[cpu]);
 	}
 
-	sanitize_min_max(hotplug_check_needed, 0, 1)
-	return hotplug_check_needed;
-}
-
-static void __ref do_core_control(void)
-{
-	unsigned int cpu = smp_processor_id();
-	int ret = 0;
-	long core_temp, delta;
+	clamp_val(hotplug_check_needed, 0, 1);
 
 	if (!core_control_enabled || intelli_init() ||
-		 thermal_suspended ||
+		 thermal_suspended || !hotplug_check_needed ||
 		 cpumask_empty(&core_control_mask)) {
-		return;
+		goto goodnight;
 	}
 
 	delta = (msm_thermal_info.core_limit_temp_degC -
@@ -613,19 +612,20 @@ static void __ref do_core_control(void)
 			continue;
 		if (core_temp >= msm_thermal_info.core_limit_temp_degC &&
 			cpumask_test_cpu(cpu, &core_control_mask)) {
+				cpumask_set_cpu(cpu, &cores_offlined_mask);
 				if (cpumask_test_cpu(cpu, &cores_offlined_mask) &&
 					!cpu_online(cpu))
 					continue;
 				ret = cpu_down(cpu);
 				if (ret)
 					pr_debug("cpu_down failed. you got problems\n");
-				cpumask_set_cpu(cpu, &cores_offlined_mask);
 		} else if (core_temp < delta &&
 				   cpumask_test_cpu(cpu, &core_control_mask) &&
 				   cpumask_test_cpu(cpu, &cores_offlined_mask)) {
 				/* If this core is already online, then bring up the
 				 * next offlined core.
 				 */
+				cpumask_clear_cpu(cpu, &cores_offlined_mask);
 				if (cpu_online(cpu))
 					continue;
 				if (!is_cpu_allowed(cpu))
@@ -634,29 +634,54 @@ static void __ref do_core_control(void)
 				if (ret)
 					pr_err("%s: Error %d online core %u\n",
 							KBUILD_MODNAME, ret, cpu);
-				cpumask_clear_cpu(cpu, &cores_offlined_mask);
 		}
 	}
 	mutex_unlock(&core_control_mutex);
+goodnight:
+	schedule();
+	goto top;
 }
 
 static void __ref check_temp(struct work_struct *work)
 {
+	ktime_t delta;
 	int ret = 0;
 
 	if (thermal_suspended)
 		return;
 
-	ret = do_freq_control();
-	if (ret == -EINVAL)
-		return;
-	else if (ret == 0)
-			goto reschedule;
-	else
-		do_core_control();
+	if (last_tempcheck == 0) {
+		wake_up_process(mitigator);
+		last_tempcheck = ktime_get();
+		goto reschedule;
+	}
+
+	delta = ktime_sub(ktime_get(), last_tempcheck);
+	if (ktime_compare(delta, ms_to_ktime(msm_thermal_info.poll_ms)) < 0)
+		goto reschedule;
+
+	wake_up_process(mitigator);
+	last_tempcheck = ktime_get();
 reschedule:
-		mod_delayed_work(intellithermal_wq, &check_temp_work,
+		queue_delayed_work(intellithermal_wq, &check_temp_work,
 				msecs_to_jiffies(msm_thermal_info.poll_ms));
+}
+
+static int setup_mitigator(void)
+{
+	struct sched_param param = { .sched_priority = MAX_RT_PRIO - 1 };
+	mitigator = kthread_create(mitigation_control,
+						  NULL, "mx_thermal");
+	if (IS_ERR(mitigator)) {
+		pr_err("MSM THERMAL: Failed to create kthread! Driver is broken!\n");
+		return -ENOMEM;
+	}
+	kthread_bind(mitigator, 0);
+	sched_setscheduler_nocheck(mitigator, SCHED_FIFO, &param);
+	get_task_struct(mitigator);
+	wake_up_process(mitigator);
+
+	return 0;
 }
 
 static void __ref get_table(struct work_struct *work)
@@ -667,8 +692,12 @@ static void __ref get_table(struct work_struct *work)
 	if (ret)
 		goto reschedule;
 
-	queue_delayed_work(intellithermal_wq, &check_temp_work, 0);
-	return;
+	if (!setup_mitigator()) {
+		queue_delayed_work(intellithermal_wq, &check_temp_work, 0);
+		return;
+	}
+
+	panic("NO THERMAL DRIVER\n");
 reschedule:
 		schedule_work(&get_table_work);
 }
@@ -817,11 +846,7 @@ int __init msm_thermal_init(void)
 	if (!msm_thermal_info)
 		return -ENOMEM;
 
-	for_each_nonboot_cpu(cpu) {
-		if (cpu_out_of_range_hp(cpu))
-			break;
-		cpumask_set_cpu(cpu, &core_control_mask);
-	}
+	cpumask_copy(&core_control_mask, cpu_nonboot_mask);
 	cpumask_clear(&cores_offlined_mask);
 
 	mutex_init(&core_control_mutex);
