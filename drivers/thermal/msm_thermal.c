@@ -83,132 +83,6 @@ bool thermal_core_controlled(unsigned int cpu)
  *                          Module Parameters                            *
  *************************************************************************/
 
-static int get_core_control_mask(char *buf, const struct kernel_param *kp)
-{
-	return cpumap_print_to_pagebuf(true, buf, &core_control_mask);
-}
-
-static const struct kernel_param_ops param_ops_core_control_mask = {
-	.set = NULL,
-	.get = get_core_control_mask,
-};
-
-module_param_cb(core_control_mask, &param_ops_core_control_mask, NULL, 0444);
-
-static int set_core1(const char *buf, const struct kernel_param *kp)
-{
-	unsigned int val, cpu = 1;
-
-	if (!sscanf(buf, "%u", &val))
-		return -EINVAL;
-
-	sanitize_min_max(val, 0, 1);
-
-	if (val == cpumask_test_cpu(cpu, &core_control_mask))
-		return 0;
-	else
-		val ? cpumask_set_cpu(cpu, &core_control_mask) :
-			cpumask_clear_cpu(cpu, &core_control_mask);
-
-	return 0;
-}
-
-static int get_core1(char *buf, const struct kernel_param *kp)
-{
-	ssize_t ret;
-	unsigned int tmpone;
-	unsigned int cpu = 1;
-
-	tmpone = cpumask_test_cpu(cpu, &core_control_mask);
-
-	ret = sprintf(buf, "%u", tmpone);
-
-	return ret;
-}
-
-static const struct kernel_param_ops param_ops_core1 = {
-	.set = set_core1,
-	.get = get_core1,
-};
-
-module_param_cb(core1, &param_ops_core1, NULL, 0644);
-
-static int set_core2(const char *buf, const struct kernel_param *kp)
-{
-	unsigned int val, cpu = 2;
-
-	if (!sscanf(buf, "%u", &val))
-		return -EINVAL;
-
-	sanitize_min_max(val, 0, 1);
-
-	if (val == cpumask_test_cpu(cpu, &core_control_mask))
-		return 0;
-	else
-		val ? cpumask_set_cpu(cpu, &core_control_mask) :
-			cpumask_clear_cpu(cpu, &core_control_mask);
-
-	return 0;
-}
-
-static int get_core2(char *buf, const struct kernel_param *kp)
-{
-	ssize_t ret;
-	unsigned int tmptwo;
-	unsigned int cpu = 2;
-
-	tmptwo = cpumask_test_cpu(cpu, &core_control_mask);
-
-	ret = sprintf(buf, "%u", tmptwo);
-
-	return ret;
-}
-
-static const struct kernel_param_ops param_ops_core2 = {
-	.set = set_core2,
-	.get = get_core2,
-};
-
-module_param_cb(core2, &param_ops_core2, NULL, 0644);
-
-static int set_core3(const char *buf, const struct kernel_param *kp)
-{
-	unsigned int val, cpu = 3;
-
-	if (!sscanf(buf, "%u", &val))
-		return -EINVAL;
-
-	sanitize_min_max(val, 0, 1);
-
-	if (val == cpumask_test_cpu(cpu, &core_control_mask))
-		return 0;
-	else
-		val ? cpumask_set_cpu(cpu, &core_control_mask) :
-			cpumask_clear_cpu(cpu, &core_control_mask);
-
-	return 0;
-}
-
-static int get_core3(char *buf, const struct kernel_param *kp)
-{
-	ssize_t ret;
-	unsigned int tmpthree;
-	unsigned int cpu = 3;
-
-	tmpthree = cpumask_test_cpu(cpu, &core_control_mask);
-
-	ret = sprintf(buf, "%u", tmpthree);
-
-	return ret;
-}
-
-static const struct kernel_param_ops param_ops_core3 = {
-	.set = set_core3,
-	.get = get_core3,
-};
-
-module_param_cb(core3, &param_ops_core3, NULL, 0644);
-
 static int set_thermal_limit_low(const char *buf, const struct kernel_param *kp)
 {
 	unsigned int val, cpu = 0;
@@ -731,6 +605,15 @@ static void __ref update_offline_cores(void)
 	}
 }
 
+static int show_core_control_mask(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return cpumap_print_to_pagebuf(true, buf, &core_control_mask);
+}
+
+static __refdata struct kobj_attribute core_control_mask =
+__ATTR(core_control_mask, 0444, show_core_control_mask, NULL);
+
 static ssize_t show_cc_enabled(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -767,11 +650,61 @@ done_store_cc:
 	return count;
 }
 
-static __refdata struct kobj_attribute cc_enabled_attr =
+static __refdata struct kobj_attribute cc_enabled =
 __ATTR(enabled, 0644, show_cc_enabled, store_cc_enabled);
 
+#define show_therm_cpu(object, cpu_core)				\
+static ssize_t object##_show(struct kobject *kobj,	\
+		struct kobj_attribute *attr, char *buf)	\
+{								\
+	unsigned int tmp;	\
+	tmp = cpumask_test_cpu((cpu_core), &core_control_mask);	\
+	return sprintf(buf, "%u", tmp);	\
+}
+
+#define store_therm_cpu(name, cpu_core)		\
+static ssize_t name##_store		\
+(struct kobject *kobj,	\
+		struct kobj_attribute *attr, const char *buf, size_t count)	\
+{	\
+	unsigned int val;	\
+	\
+	if (!sscanf(buf, "%u", &val))	\
+		return -EINVAL;	\
+	\
+		sanitize_min_max(val, 0, 1);	\
+	\
+	if (val == cpumask_test_cpu((cpu_core), &core_control_mask))	\
+		return count;	\
+	else	\
+		val ? cpumask_set_cpu((cpu_core), &core_control_mask) :	\
+			cpumask_clear_cpu((cpu_core), &core_control_mask);	\
+	\
+	return count;	\
+}
+
+show_therm_cpu(core1, 1);
+show_therm_cpu(core2, 2);
+show_therm_cpu(core3, 3);
+store_therm_cpu(core1, 1);
+store_therm_cpu(core2, 2);
+store_therm_cpu(core3, 3);
+
+static __refdata struct kobj_attribute core1 =
+__ATTR(core1, 0644, core1_show, core1_store);
+
+static __refdata struct kobj_attribute core2 =
+__ATTR(core2, 0644, core2_show, core2_store);
+
+static __refdata struct kobj_attribute core3 =
+__ATTR(core3, 0644, core3_show, core3_store);
+
 static __refdata struct attribute *cc_attrs[] = {
-	&cc_enabled_attr.attr,
+	&core_control_mask.attr,
+	&cc_enabled.attr,
+	&core1.attr,
+	&core2.attr,
+	&core3.attr,
 	NULL,
 };
 

@@ -248,22 +248,21 @@ again:
 	WRITE_ONCE(air_to_fuel, avg_nr_running());
 	WRITE_ONCE(current_rpm, all_cpu_load());
 	if (air_to_fuel >= sixthgear ||
-		current_rpm >= sixthgear_rpm) {
+		current_rpm >= sixthgear_rpm)
 		inject_nos(false, false);
-	} else if ((air_to_fuel >= thirdgear &&
+	else if ((air_to_fuel >= thirdgear &&
 				air_to_fuel < sixthgear) ||
 			   (current_rpm >= thirdgear_rpm &&
 				current_rpm < sixthgear_rpm)) {
 		upshift();
-	} else if ((air_to_fuel > firstgear &&
+	else if ((air_to_fuel > firstgear &&
 				air_to_fuel <= secondgear) &&
 			   (current_rpm > firstgear_rpm &&
-				current_rpm <= secondgear_rpm)) {
+				current_rpm <= secondgear_rpm))
 		downshift();
-	} else if ((air_to_fuel <= firstgear) &&
-			   (current_rpm <= firstgear_rpm)) {
+	else if ((air_to_fuel <= firstgear) &&
+			   (current_rpm <= firstgear_rpm))
 		hit_the_brakes();
-	}
 purge:
 	clutch = false;
 	mutex_unlock(&mx_mutex);
