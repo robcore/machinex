@@ -139,7 +139,7 @@ extern bool ap_fw_loaded;
 #endif /* CUSTOMER_HW4 */
 
 #ifdef ENABLE_ADAPTIVE_SCHED
-#define DEFAULT_CPUFREQ_THRESH		1000000	/* threshold frequency : 1000000 = 1GHz */
+#define DEFAULT_CPUFREQ_THRESH		810000	/* threshold frequency : 810000 = 0.81GHz */
 #ifndef CUSTOM_CPUFREQ_THRESH
 #define CUSTOM_CPUFREQ_THRESH	DEFAULT_CPUFREQ_THRESH
 #endif /* CUSTOM_CPUFREQ_THRESH */
@@ -2533,7 +2533,7 @@ static void
 dhd_sched_policy(int prio)
 {
 	struct sched_param param;
-	if (cpufreq_quick_get(0) <= CUSTOM_CPUFREQ_THRESH) {
+	if (cpufreq_quick_get(0) < CUSTOM_CPUFREQ_THRESH) {
 		param.sched_priority = 0;
 		setScheduler(current, SCHED_NORMAL, &param);
 	} else {

@@ -1354,7 +1354,7 @@ static void cpufreq_intelliactive_nop_timer(struct timer_list *t)
 
 static int __init cpufreq_intelliactive_gov_init(void)
 {
-	struct sched_param param = { .sched_priority = MAX_RT_PRIO - 1 };
+	struct sched_param param = { .sched_priority = MAX_USER_RT_PRIO - 10 };
 	struct intelliactive_cpu *icpu;
 	unsigned int cpu;
 

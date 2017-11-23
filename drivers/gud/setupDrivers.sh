@@ -7,7 +7,7 @@ export LINUX_PATH=
 # To be set, absolute path! CROSS_COMPILE variable needed by kernel eg /home/user/arm-2009q3/bin/arm-none-linux-gnueabi-
 export CROSS_COMPILE=
 # To be set, build mode debug or release
-export MODE=debug
+export MODE=release
 # To be set, the absolute path to the Linux Android NDK
 export NDK_PATH=
 

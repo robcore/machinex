@@ -367,7 +367,7 @@ static struct notifier_block mx_nb = {
 void ignition(unsigned int status)
 {
 	if (status) {
-		struct sched_param param = { .sched_priority = MAX_RT_PRIO - 1 };
+		struct sched_param param = { .sched_priority = MAX_USER_RT_PRIO - 20 };
 
 		mxget();
 		transmission = kthread_create(mx_gearbox,
