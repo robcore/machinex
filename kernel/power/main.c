@@ -559,28 +559,6 @@ void __pm_pr_dbg(bool defer, const char *fmt, ...)
 static inline void pm_print_times_init(void) {}
 #endif /* CONFIG_PM_SLEEP_DEBUG */
 
-static unsigned int mx_force_autosleep;
-static ssize_t mx_force_autosleep_show(struct kobject *kobj, struct kobj_attribute *attr,
-			     char *buf)
-{
-	return sprintf(buf, "%u\n", mx_force_autosleep);
-}
-
-static ssize_t
-mx_force_autosleep_store(struct kobject *kobj, struct kobj_attribute *attr,
-	       const char *buf, size_t count)
-{
-	int val;
-
-	if (sscanf(buf, "%d", &val) == 1) {
-		mx_force_autosleep = val;
-		return count;
-	}
-	return -EINVAL;
-}
-
-power_attr(mx_force_autosleep);
-
 struct kobject *power_kobj;
 
 /**
@@ -659,11 +637,9 @@ static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
 	state = decode_state(buf, n);
 	if (state < PM_SUSPEND_MAX) {
 		if (state == PM_SUSPEND_MEM)
-			state = mem_sleep_default;
-		if (mx_force_autosleep)
-			error = pm_autosleep_set_state(state);
-		else
-			error = pm_suspend(state);
+			state = mem_sleep_current;
+
+		error = pm_suspend(state);
 	} else if (state == PM_SUSPEND_MAX) {
 		error = hibernate();
 	} else {
@@ -672,11 +648,9 @@ static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
 
  out:
 	pm_autosleep_unlock();
-	pr_info("Suspend Sysfs Entry (%s)\n", mem_sleep_labels[state]);
 	return error ? error : n;
 }
 power_attr(state);
-
 
 #ifdef CONFIG_PM_SLEEP
 /*
@@ -783,7 +757,7 @@ static ssize_t autosleep_store(struct kobject *kobj,
 		return -EINVAL;
 
 	if (state == PM_SUSPEND_MEM)
-		state = mem_sleep_default;
+		state = mem_sleep_current;
 
 	error = pm_autosleep_set_state(state);
 	pr_info("Autosleep called:%s\n", pm_states[state] ?
@@ -1238,7 +1212,6 @@ static struct attribute * g[] = {
 	&touch_event_attr.attr,
 	&touch_event_timer_attr.attr,
 #ifdef CONFIG_PM_AUTOSLEEP
-	&mx_force_autosleep_attr.attr,
 	&autosleep_attr.attr,
 #endif
 #ifdef CONFIG_PM_WAKELOCKS
