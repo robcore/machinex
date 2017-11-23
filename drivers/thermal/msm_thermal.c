@@ -541,7 +541,6 @@ top:
 
 	if (thermal_suspended)	
 		goto top;
-		
 
 	set_current_state(TASK_RUNNING);
 	delta = (msm_thermal_info.limit_temp_degC -
