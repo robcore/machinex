@@ -539,7 +539,7 @@ top:
 
 	if (thermal_suspended) {
 		pr_err("frequency control not ready!\n");		
-		goto goodnight;
+		goto top;
 	}
 
 	delta = (msm_thermal_info.limit_temp_degC -
@@ -599,7 +599,7 @@ top:
 	if (!core_control_enabled || intelli_init() ||
 		 thermal_suspended || !hotplug_check_needed ||
 		 cpumask_empty(&core_control_mask)) {
-		goto goodnight;
+		goto top;
 	}
 
 	delta = (msm_thermal_info.core_limit_temp_degC -
