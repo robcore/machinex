@@ -36,8 +36,11 @@ static inline int smc_fastcall(void *fc_generic, size_t size)
 }
 
 /* Enable mobicore mem traces */
-#define MC_MEM_TRACES
 
+//#define MC_MEM_TRACES
+#ifdef MC_MEM_TRACES
+#undef MC_MEM_TRACES
+#endif
 /* Enable the use of vm_unmap instead of the deprecated do_munmap
  * and other 3.7 features
  */
