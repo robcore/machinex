@@ -60,7 +60,6 @@ static void mc_suspend_handler(struct work_struct *work)
 	ctx->mcp->flags.sleep_mode.SleepReq = REQ_TO_SLEEP;
 	_nsiq();
 }
-DECLARE_WORK(suspend_work, mc_suspend_handler);
 
 static inline void dump_sleep_params(struct mc_flags *flags)
 {
@@ -84,7 +83,7 @@ static int mc_suspend_notifier(struct notifier_block *nb,
 #endif
 
 	switch (event) {
-	case PM_SUSPEND_PREPARE:
+	case PM_PROACTIVE_SUSPEND:
 		/*
 		 * Make sure we have finished all the work otherwise
 		 * we end up in a race condition
@@ -94,21 +93,17 @@ static int mc_suspend_notifier(struct notifier_block *nb,
 		 * We can't go to sleep if MobiCore is not IDLE
 		 * or not Ready to sleep
 		 */
-		dump_sleep_params(&mcp->flags);
 		if (!sleep_ready()) {
 			ctx->mcp->flags.sleep_mode.SleepReq = REQ_TO_SLEEP;
-			schedule_work_on(0, &suspend_work);
+			queue_work_on(0, mxmobi, &suspend_work);
 			flush_work(&suspend_work);
 			if (!sleep_ready()) {
-				dump_sleep_params(&mcp->flags);
 				ctx->mcp->flags.sleep_mode.SleepReq = 0;
-				MCDRV_DBG_ERROR(mcd, "MobiCore can't SLEEP!");
 				return NOTIFY_BAD;
 			}
 		}
 		break;
-	case PM_POST_SUSPEND:
-		MCDRV_DBG(mcd, "Resume MobiCore system!");
+	case PM_PROACTIVE_RESUME:
 		ctx->mcp->flags.sleep_mode.SleepReq = 0;
 		break;
 	default:
@@ -149,9 +144,6 @@ static int bL_switcher_notifier_handler(struct notifier_block *this,
 			/* By this time we should be ready for sleep or we are
 			 * in the middle of something important */
 			if (!sleep_ready()) {
-				dump_sleep_params(&mcp->flags);
-				MCDRV_DBG(mcd,
-					  "MobiCore: Don't allow switch!\n");
 				ctx->mcp->flags.sleep_mode.SleepReq = 0;
 				return -EPERM;
 			}
@@ -161,7 +153,7 @@ static int bL_switcher_notifier_handler(struct notifier_block *this,
 			ctx->mcp->flags.sleep_mode.SleepReq = 0;
 			break;
 	default:
-		MCDRV_DBG(mcd, "MobiCore: Unknown switch event!\n");
+		break;
 	}
 
 	return 0;
@@ -178,31 +170,32 @@ int mc_pm_initialize(struct mc_context *context)
 
 	ctx = context;
 
+	mxmobi = create_singlethread_workqueue("mobicore_pm");
+	if (!mxmobi) {
+		pr_err("MOBICORE: Failed to allocate hotplug workqueue\n");
+		return -ENOMEM;
+	}
+	INIT_WORK(&suspend_work, mc_suspend_handler);
 	ret = register_pm_notifier(&mc_notif_block);
 	if (ret)
-		MCDRV_DBG_ERROR(mcd, "device pm register failed\n");
-#ifdef MC_BL_NOTIFIER
-	if (register_bL_swicher_notifier(&switcher_nb))
-		MCDRV_DBG_ERROR(mcd,
-				"Failed to register to bL_switcher_notifier\n");
-#endif
+		pr_err("MOBICORE pm register failed\n");
 
 	return ret;
 }
 
 int mc_pm_free(void)
 {
-	int ret = unregister_pm_notifier(&mc_notif_block);
+	int ret;
+
+	ret = unregister_pm_notifier(&mc_notif_block);
 	if (ret)
-		MCDRV_DBG_ERROR(mcd, "device pm unregister failed\n");
-#ifdef MC_BL_NOTIFIER
-	ret = unregister_bL_swicher_notifier(&switcher_nb);
-	if (ret)
-		MCDRV_DBG_ERROR(mcd, "device bl unregister failed\n");
-#endif
+		pr_err("MOBICORE pm unregister failed\n");
+
+	cancel_work_sync(&suspend_work);
+	destroy_workqueue(mxmobi);
+
 	return ret;
 }
-
 #endif /* MC_PM_RUNTIME */
 
 #ifdef MC_CRYPTO_CLOCK_MANAGEMENT
