@@ -534,13 +534,14 @@ static int __ref mitigation_control(void *data)
 top:
 	set_current_state(TASK_INTERRUPTIBLE);
 
+	schedule();
+
 	if (kthread_should_stop())
 		return 0;
 
-	schedule();
-
 	if (thermal_suspended)	
 		goto top;
+		
 
 	set_current_state(TASK_RUNNING);
 	delta = (msm_thermal_info.limit_temp_degC -
