@@ -227,7 +227,9 @@ again:
 	}
 
 	mutex_lock(&mx_mutex);
-	if (!clutch || hotplug_suspended) {
+	delta = ktime_sub(ktime_get(), last_fuelcheck);
+	if ((!should_boost && ktime_compare(delta, ms_to_ktime(sampling_rate))  < 0) ||
+		!clutch || hotplug_suspended) {
 		mutex_unlock(&mx_mutex);
 		schedule();
 		mutex_lock(&mx_mutex);
@@ -235,8 +237,7 @@ again:
 
 	set_current_state(TASK_RUNNING);
 
-	delta = ktime_sub(ktime_get(), last_fuelcheck);
-	if (should_boost && ktime_compare(delta, ms_to_ktime(sampling_rate))  > 0) {
+	if (should_boost) {
 		inject_nos(true, false);
 		last_boost = ktime_get();
 		should_boost = false;
