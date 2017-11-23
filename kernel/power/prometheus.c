@@ -31,7 +31,7 @@
 #include "power.h"
 
 #define VERSION 6
-#define VERSION_MIN 4
+#define VERSION_MIN 3
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -174,10 +174,6 @@ static void power_suspend(struct work_struct *work)
 	}
 	set_shallow_suspend();
 	pr_info("[PROMETHEUS] Shallow Suspend Completed.\n");
-	if (!pm_autosleep_lock()) {
-		pm_autosleep_set_state(PM_SUSPEND_MEM);
-		pm_autosleep_unlock();
-	}
 	mutex_unlock(&prometheus_mtx);
 }
 
