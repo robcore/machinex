@@ -232,9 +232,9 @@ again:
 		!clutch || hotplug_suspended) {
 		mutex_unlock(&mx_mutex);
 		schedule();
-		mutex_lock(&mx_mutex);
+		goto again;
 	}
-
+	mutex_lock(&mx_mutex);
 	set_current_state(TASK_RUNNING);
 
 	if (should_boost) {
