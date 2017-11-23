@@ -5175,8 +5175,7 @@ static int es325_slim_remove(struct slim_device *sbdev)
 }
 
 #ifdef ES325_SLEEP
-
-#define ES325_SLEEP_TIME	HZ
+#define ES325_SLEEP_TIME HZ
 struct delayed_work es325_work;
 struct workqueue_struct *es325_workqueue;
 static int es325_schedule_sleep_workqueue(void)

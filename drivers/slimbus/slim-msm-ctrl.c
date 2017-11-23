@@ -44,17 +44,17 @@
 #define SLIM_USR_MC_DISCONNECT_PORT	0x2E
 
 /* MSM Slimbus peripheral settings */
-#define MSM_SLIM_PERF_SUMM_THRESHOLD	0x8000
-#define MSM_SLIM_NCHANS			32
-#define MSM_SLIM_NPORTS			24
-#define MSM_SLIM_AUTOSUSPEND		MSEC_PER_SEC
+#define MSM_SLIM_PERF_SUMM_THRESHOLD 0x8000
+#define MSM_SLIM_NCHANS 32
+#define MSM_SLIM_NPORTS 24
+#define MSM_SLIM_AUTOSUSPEND MSEC_PER_SEC
 
 /*
  * Need enough descriptors to receive present messages from slaves
  * if received simultaneously. Present message needs 3 descriptors
  * and this size will ensure around 10 simultaneous reports.
  */
-#define MSM_SLIM_DESC_NUM		32
+#define MSM_SLIM_DESC_NUM 32
 
 #define SLIM_MSG_ASM_FIRST_WORD(l, mt, mc, dt, ad) \
 		((l) | ((mt) << 5) | ((mc) << 8) | ((dt) << 15) | ((ad) << 16))
