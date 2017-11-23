@@ -605,14 +605,14 @@ static void __ref update_offline_cores(void)
 	}
 }
 
-static int show_core_control_mask(struct kobject *kobj,
+static int show_cc_mask(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
 	return cpumap_print_to_pagebuf(true, buf, &core_control_mask);
 }
 
-static __refdata struct kobj_attribute core_control_mask =
-__ATTR(core_control_mask, 0444, show_core_control_mask, NULL);
+static __refdata struct kobj_attribute cc_mask =
+__ATTR(core_control_mask, 0444, show_cc_mask, NULL);
 
 static ssize_t show_cc_enabled(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -700,7 +700,7 @@ static __refdata struct kobj_attribute core3 =
 __ATTR(core3, 0644, core3_show, core3_store);
 
 static __refdata struct attribute *cc_attrs[] = {
-	&core_control_mask.attr,
+	&cc_mask.attr,
 	&cc_enabled.attr,
 	&core1.attr,
 	&core2.attr,
