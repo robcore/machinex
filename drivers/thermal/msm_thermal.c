@@ -537,10 +537,10 @@ top:
 	if (kthread_should_stop())
 		return 0;
 
-	if (thermal_suspended) {
-		pr_err("frequency control not ready!\n");		
-		goto goodnight;
-	}
+	schedule();
+
+	if (thermal_suspended)	
+		goto top;
 
 	set_current_state(TASK_RUNNING);
 	delta = (msm_thermal_info.limit_temp_degC -
@@ -640,8 +640,7 @@ top:
 		}
 	}
 	mutex_unlock(&core_control_mutex);
-goodnight:
-	schedule();
+
 	goto top;
 }
 
