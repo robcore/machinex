@@ -601,7 +601,7 @@ top:
 	if (!core_control_enabled || intelli_init() ||
 		 thermal_suspended || !hotplug_check_needed ||
 		 cpumask_empty(&core_control_mask)) {
-		goto goodnight;
+		goto top;
 	}
 
 	delta = (msm_thermal_info.core_limit_temp_degC -
