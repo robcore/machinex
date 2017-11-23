@@ -15,7 +15,7 @@
 #define __MSM_THERMAL_H
 
 struct msm_thermal_data {
-	u64 poll_ms;
+	uint32_t poll_ms;
 	int32_t limit_temp_degC;
 	int32_t temp_hysteresis_degC;
 	uint32_t freq_step;
