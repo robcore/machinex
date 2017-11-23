@@ -219,6 +219,14 @@ static int __ref mx_gearbox(void *data)
 
 again:
 	set_current_state(TASK_INTERRUPTIBLE);
+
+	if (kthread_should_stop()) {
+		mutex_lock(&mx_mutex);
+		inject_nos(false, true);
+		mutex_unlock(&mx_mutex);
+		return 0;
+	}
+
 	mutex_lock(&mx_mutex);
 	delta = ktime_sub(ktime_get(), last_fuelcheck);
 	if ((!should_boost && ktime_compare(delta, ms_to_ktime(sampling_rate))  < 0) ||
