@@ -397,6 +397,7 @@ void tick_shutdown(unsigned int cpu)
 		 * the set mode function!
 		 */
 		clockevent_set_state(dev, CLOCK_EVT_STATE_DETACHED);
+		dev->mode = CLOCK_EVT_MODE_UNUSED;
 		clockevents_exchange_device(dev, NULL);
 		dev->event_handler = clockevents_handle_noop;
 		td->evtdev = NULL;
