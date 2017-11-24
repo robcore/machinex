@@ -298,17 +298,22 @@ static int clockevents_program_min_delta(struct clock_event_device *dev)
 static int clockevents_program_min_delta(struct clock_event_device *dev)
 {
 	unsigned long long clc;
-	int64_t delta;
+	int64_t delta = 0;
+	int i;
 
-	delta = dev->min_delta_ns;
-	dev->next_event = ktime_add_ns(ktime_get(), delta);
+	for (i = 0; i < 10; i++) {
+		delta += dev->min_delta_ns;
+		dev->next_event = ktime_add_ns(ktime_get(), delta);
 
-	if (clockevent_state_shutdown(dev))
-		return 0;
+		if (clockevent_state_shutdown(dev))
+			return 0;
 
-	dev->retries++;
-	clc = ((unsigned long long) delta * dev->mult) >> dev->shift;
-	return dev->set_next_event((unsigned long) clc, dev);
+		dev->retries++;
+		clc = ((unsigned long long) delta * dev->mult) >> dev->shift;
+		if (dev->set_next_event((unsigned long) clc, dev) == 0)
+			return 0;
+	}
+	return -ETIME;
 }
 
 #endif /* CONFIG_GENERIC_CLOCKEVENTS_MIN_ADJUST */
@@ -602,14 +607,12 @@ void clockevents_handle_noop(struct clock_event_device *dev)
  * @old:	device to release (can be NULL)
  * @new:	device to request (can be NULL)
  *
- * Called from the notifier chain. clockevents_lock is held already
+ * Called from various tick functions with clockevents_lock held and
+ * interrupts disabled.
  */
 void clockevents_exchange_device(struct clock_event_device *old,
 				 struct clock_event_device *new)
 {
-	unsigned long flags;
-
-	local_irq_save(flags);
 	/*
 	 * Caller releases a clock event device. We queue it into the
 	 * released list and do a notify add later.
@@ -625,7 +628,6 @@ void clockevents_exchange_device(struct clock_event_device *old,
 		BUG_ON(!clockevent_state_detached(new));
 		clockevents_shutdown(new);
 	}
-	local_irq_restore(flags);
 }
 
 /**
