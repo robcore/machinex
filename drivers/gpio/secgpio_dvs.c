@@ -232,21 +232,15 @@ static ssize_t secgpio_ctrl_file_write(
 	int gpio_ctrl[3] = {0,}, num = 0;
 	char temp_buf[50];
 
-	pr_info("[secgpio_dvs] GPIO onoff  buf = %s\n", buf);
-
 	memset(temp_buf, 0, 50);
 	strlcpy(temp_buf, buf, 50);
 	token = strtok(temp_buf, comp);
 
 	for (num = 0; num < 3; num++) {
 		if (token != NULL) {
-			pr_info("[secgpio_dvs] GPIO Control TOKEN = %s\n",
-				token);
 			gpio_ctrl[num] = atoi(token);
 			token = strtok(NULL, comp);
 		}
-		pr_info("[secgpio_dvs] GPIO Control[%d] = %d\n",
-			num, gpio_ctrl[num]);
 	}
 	/*
 		gpio_ctrl[0] = IN/OUT, gpio_ctrl[1] = GPIO NUMBER,
@@ -307,8 +301,6 @@ static int secgpio_dvs_probe(struct platform_device *pdev)
 	struct device *secgpio_dotest;
 	struct gpio_dvs *gdvs = dev_get_platdata(&pdev->dev);
 
-	pr_info("[secgpio_dvs] %s has been created!!!\n", __func__);
-
 	secgpio_dvs_class = class_create(THIS_MODULE, "secgpio_check");
 	if (IS_ERR(secgpio_dvs_class)) {
 		ret = PTR_ERR(secgpio_dvs_class);
@@ -358,7 +350,6 @@ static int __init secgpio_dvs_init(void)
 {
 	int ret;
 	ret = platform_driver_register(&secgpio_dvs);
-	pr_info("[secgpio_dvs] secgpio_dvs_init has been initialized!!!\n");
 	return ret;
 }
 

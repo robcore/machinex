@@ -36,6 +36,7 @@
 #include "power.h"
 
 const char * const pm_labels[] = {
+	[PM_SUSPEND_ON]		= "on",
 	[PM_SUSPEND_TO_IDLE] = "freeze",
 	[PM_SUSPEND_STANDBY] = "standby",
 	[PM_SUSPEND_MEM] = "mem",
