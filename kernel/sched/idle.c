@@ -14,10 +14,6 @@
 
 #include "sched.h"
 
-static void quiet_vmstat(void)
-{
-}
-
 /**
  * sched_idle_set_state - Record idle state for the current CPU.
  * @idle_state: State to record.
@@ -28,7 +24,6 @@ void sched_idle_set_state(struct cpuidle_state *idle_state)
 }
 
 static int __read_mostly cpu_idle_force_poll;
-int cpu_idle_force_poll_hook;
 
 void cpu_idle_poll_ctrl(bool enable)
 {
@@ -38,14 +33,12 @@ void cpu_idle_poll_ctrl(bool enable)
 		cpu_idle_force_poll--;
 		WARN_ON_ONCE(cpu_idle_force_poll < 0);
 	}
-	cpu_idle_force_poll_hook = cpu_idle_force_poll;
 }
 
 #ifdef CONFIG_GENERIC_IDLE_POLL_SETUP
 static int __init cpu_idle_poll_setup(char *__unused)
 {
 	cpu_idle_force_poll = 1;
-	cpu_idle_force_poll_hook = cpu_idle_force_poll;
 	return 1;
 }
 __setup("nohlt", cpu_idle_poll_setup);
@@ -53,7 +46,6 @@ __setup("nohlt", cpu_idle_poll_setup);
 static int __init cpu_idle_nopoll_setup(char *__unused)
 {
 	cpu_idle_force_poll = 0;
-	cpu_idle_force_poll_hook = cpu_idle_force_poll;
 	return 1;
 }
 __setup("hlt", cpu_idle_nopoll_setup);
@@ -80,7 +72,6 @@ void __weak arch_cpu_idle_dead(void) { }
 void __weak arch_cpu_idle(void)
 {
 	cpu_idle_force_poll = 1;
-	cpu_idle_force_poll_hook = cpu_idle_force_poll;
 	local_irq_enable();
 }
 
@@ -209,6 +200,7 @@ exit_idle:
  */
 static void do_idle(void)
 {
+	int cpu = smp_processor_id();
 	/*
 	 * If the arch has a polling bit, we maintain an invariant:
 	 *
@@ -219,14 +211,13 @@ static void do_idle(void)
 	 */
 
 	__current_set_polling();
-	quiet_vmstat();
 	tick_nohz_idle_enter();
 
 	while (!need_resched()) {
 		check_pgt_cache();
 		rmb();
 
-		if (cpu_is_offline(smp_processor_id())) {
+		if (cpu_is_offline(cpu)) {
 			cpuhp_report_idle_dead();
 			arch_cpu_idle_dead();
 		}
