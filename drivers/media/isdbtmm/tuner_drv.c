@@ -735,12 +735,12 @@ int tuner_kernel_thread( void * arg )
     flags = 0;
     ktread_flg = 0;
 	adap = 0;
-    param.sched_priority = TUNER_CONFIG_KTH_PRI;
+    param.sched_priority = DEFAULT_PRIO;
 
     daemonize( "tuner_kthread" ); 
     oldfs = get_fs();
     set_fs( KERNEL_DS );
-    ret = sched_setscheduler( g_tuner_kthread_id, SCHED_FIFO, &param );
+    ret = sched_setscheduler( g_tuner_kthread_id, SCHED_NORMAL, &param );
     set_fs( oldfs );
 
     buff[0] = (unsigned char)TUNER_DRV_ADR_INTCND_F;

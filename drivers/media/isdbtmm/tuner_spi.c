@@ -828,7 +828,7 @@ static long SMT113J_SPI_ioctl(struct file *filp,
 static int smt113j_spi_thread_Init ( void )
 {
 	int ret = 0;
-	struct sched_param param = { .sched_priority = 99 };
+	struct sched_param param = { .sched_priority = DEFAULT_PRIO };
 	
 	DEBUG_PRINT("smt113j_spi_thread_Init: Start");
 	
@@ -859,7 +859,7 @@ static int smt113j_spi_thread_Init ( void )
 	}
 	
 	ret = sched_setscheduler ( spi_work_thread->thread_task, 
-							   SCHED_FIFO, 
+							   SCHED_NORMAL, 
 							   &param );
 	
 	if ( ret < 0 ) 

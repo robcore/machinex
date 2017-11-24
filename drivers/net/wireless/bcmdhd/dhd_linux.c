@@ -575,15 +575,15 @@ uint dhd_master_mode = TRUE;
 #endif /* CUSTOMER_HW4 && GAN_LITE_NAT_KEEPALIVE_FILTER */
 module_param(dhd_master_mode, uint, 0644);
 
-int dhd_watchdog_prio = 0;
+int dhd_watchdog_prio = DEFAULT_PRIO;
 module_param(dhd_watchdog_prio, int, 0644);
 
 /* DPC thread priority */
-int dhd_dpc_prio = CUSTOM_DPC_PRIO_SETTING;
+int dhd_dpc_prio = DEFAULT_PRIO;
 module_param(dhd_dpc_prio, int, 0644);
 
 /* RX frame thread priority */
-int dhd_rxf_prio = CUSTOM_RXF_PRIO_SETTING;
+int dhd_rxf_prio = DEFAULT_PRIO;
 module_param(dhd_rxf_prio, int, 0644);
 
 #if !defined(BCMDHDUSB)
@@ -2453,9 +2453,8 @@ dhd_watchdog_thread(void *data)
 	 */
 	if (dhd_watchdog_prio > 0) {
 		struct sched_param param;
-		param.sched_priority = (dhd_watchdog_prio < MAX_RT_PRIO)?
-			dhd_watchdog_prio:(MAX_RT_PRIO-1);
-		setScheduler(current, SCHED_FIFO, &param);
+		param.sched_priority = dhd_watchdog_prio;
+		setScheduler(current, SCHED_NORMAL, &param);
 	}
 
 	while (1)
@@ -2528,19 +2527,14 @@ static void dhd_watchdog(ulong data)
 
 #ifdef ENABLE_ADAPTIVE_SCHED
 /* DPC thread policy */
-static int dhd_dpc_poli = SCHED_FIFO;
+static int dhd_dpc_poli = SCHED_NORMAL;
 static void
 dhd_sched_policy(int prio)
 {
 	struct sched_param param;
-	if (cpufreq_quick_get(0) < CUSTOM_CPUFREQ_THRESH) {
-		param.sched_priority = 0;
-		setScheduler(current, SCHED_NORMAL, &param);
-	} else {
-		if (get_scheduler_policy(current) != SCHED_FIFO) {
-			param.sched_priority = (prio < MAX_RT_PRIO)? prio : (MAX_RT_PRIO-1);
-			setScheduler(current, dhd_dpc_poli, &param);
-		}
+	if (get_scheduler_policy(current) != SCHED_NORMAL) {
+		param.sched_priority = DEFAULT_PRIO;
+		setScheduler(current, dhd_dpc_poli, &param);
 	}
 }
 #endif /* ENABLE_ADAPTIVE_SCHED */
@@ -2579,8 +2573,8 @@ dhd_dpc_thread(void *data)
 	if (dhd_dpc_prio > 0)
 	{
 		struct sched_param param;
-		param.sched_priority = (dhd_dpc_prio < MAX_RT_PRIO)?dhd_dpc_prio:(MAX_RT_PRIO-1);
-		setScheduler(current, SCHED_FIFO, &param);
+		param.sched_priority = dhd_dpc_prio;
+		setScheduler(current, SCHED_NORMAL, &param);
 	}
 
 #if defined(CUSTOMER_HW4) && defined(ARGOS_CPU_SCHEDULER)
@@ -2697,8 +2691,8 @@ dhd_rxf_thread(void *data)
 	if (dhd_rxf_prio > 0)
 	{
 		struct sched_param param;
-		param.sched_priority = (dhd_rxf_prio < MAX_RT_PRIO)?dhd_rxf_prio:(MAX_RT_PRIO-1);
-		setScheduler(current, SCHED_FIFO, &param);
+		param.sched_priority = dhd_rxf_prio;
+		setScheduler(current, SCHED_NORMAL, &param);
 	}
 
 	DAEMONIZE("dhd_rxf");
@@ -3420,8 +3414,8 @@ dhd_stop(struct net_device *net)
 
 #ifdef ENABLE_CONTROL_SCHED
 	dhd_sysfs_destroy_node(net);
-	dhd_dpc_prio = CUSTOM_DPC_PRIO_SETTING;
-	dhd_dpc_poli = SCHED_FIFO;
+	dhd_dpc_prio = DEFAULT_PRIO;
+	dhd_dpc_poli = SCHED_NORMAL;
 #endif	/* ENABLE_CONTROL_SCHED */
 
 #ifdef WL_CFG80211

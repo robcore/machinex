@@ -80,11 +80,11 @@ static int process_sdio_pending_irqs(struct mmc_card *card)
 static int sdio_irq_thread(void *_host)
 {
 	struct mmc_host *host = _host;
-	struct sched_param param = { .sched_priority = 1 };
+	struct sched_param param = { .sched_priority = DEFAULT_PRIO };
 	unsigned long period, idle_period;
 	int ret;
 
-	sched_setscheduler(current, SCHED_FIFO, &param);
+	sched_setscheduler(current, SCHED_NORMAL, &param);
 
 	/*
 	 * We want to allow for SDIO cards to work even on non SDIO
