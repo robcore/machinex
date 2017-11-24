@@ -156,6 +156,8 @@ int boot_secondary(unsigned int cpu, struct task_struct *idle)
 }
 
 #ifdef CONFIG_HOTPLUG_CPU
+static void percpu_timer_stop(void);
+
 static int platform_cpu_kill(unsigned int cpu)
 {
 	if (smp_ops.cpu_kill)
@@ -204,6 +206,11 @@ int __cpu_disable(void)
 	 * OK - migrate IRQs away from this CPU
 	 */
 	migrate_irqs();
+
+	/*
+	 * Stop the local timer for this CPU.
+	 */
+	percpu_timer_stop();
 
 	/*
 	 * Flush user cache and TLB mappings, and then remove this CPU
@@ -377,6 +384,11 @@ asmlinkage void secondary_start_kernel(void)
 	set_cpu_online(cpu, true);
 	complete(&cpu_running);
 
+	/*
+	 * Setup the percpu timer for this CPU.
+	 */
+	percpu_timer_setup();
+
 	local_irq_enable();
 	local_fiq_enable();
 
@@ -422,6 +434,12 @@ void __init smp_prepare_cpus(unsigned int max_cpus)
 	if (max_cpus > ncores)
 		max_cpus = ncores;
 	if (ncores > 1 && max_cpus) {
+		/*
+		 * Enable the local timer or broadcast device for the
+		 * boot CPU, but only if we have more than one CPU.
+		 */
+		percpu_timer_setup();
+
 		/*
 		 * Initialise the present map, which describes the set of CPUs
 		 * actually populated at the present time. A platform should
