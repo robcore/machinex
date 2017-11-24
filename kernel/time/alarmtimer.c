@@ -26,7 +26,7 @@
 #include <linux/workqueue.h>
 #include <linux/freezer.h>
 #include <linux/compat.h>
-#include <linux/export.h>
+#include <linux/module.h>
 
 #include "posix-timers.h"
 
