@@ -636,9 +636,13 @@ static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
 
 	state = decode_state(buf, n);
 	if (state == PM_SUSPEND_ON) {
-		wake_lock_timeout(&main_wake_lock, 1000);
+		pm_wake_lock("main");
 		error = 0;
-	} else if (state < PM_SUSPEND_MAX) {
+		goto out;
+	}
+
+	pm_wake_unlock("main");
+	if (state < PM_SUSPEND_MAX) {
 		if (state == PM_SUSPEND_MEM)
 			state = mem_sleep_default;
 			error = pm_suspend(state);
