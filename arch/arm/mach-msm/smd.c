@@ -558,11 +558,11 @@ static int smsm_pm_notifier(struct notifier_block *nb,
 				unsigned long event, void *unused)
 {
 	switch (event) {
-	case PM_PROACTIVE_SUSPEND:
+	case PM_SUSPEND_PREPARE:
 		smsm_change_state(SMSM_APPS_STATE, SMSM_PROC_AWAKE, 0);
 		break;
 
-	case PM_PROACTIVE_RESUME:
+	case PM_POST_SUSPEND:
 		smsm_change_state(SMSM_APPS_STATE, 0, SMSM_PROC_AWAKE);
 		break;
 	}
