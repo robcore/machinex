@@ -636,8 +636,9 @@ static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
 
 	state = decode_state(buf, n);
 	if (state == PM_SUSPEND_ON) {
-		pm_wake_lock("main");
+		wake_lock_timeout(&main_wake_lock, 1000);
 		error = 0;
+		pr_info("Suspend Sysfs Entry: On");
 		goto out;
 	}
 
@@ -646,13 +647,13 @@ static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
 		if (state == PM_SUSPEND_MEM)
 			state = mem_sleep_default;
 			error = pm_suspend(state);
+			pr_info("Suspend Sysfs Entry: (%s)\n", mem_sleep_labels[state]);
 	} else if (state == PM_SUSPEND_MAX) {
 		error = hibernate();
 	} else
 		error = -EINVAL;
  out:
 	pm_autosleep_unlock();
-	pr_info("Suspend Sysfs Entry (%s)\n", mem_sleep_labels[state]);
 	return error ? error : n;
 }
 power_attr(state);
