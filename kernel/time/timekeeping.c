@@ -135,13 +135,9 @@ static void tk_set_wall_to_mono(struct timekeeper *tk, struct timespec64 wtm)
 	tk->offs_tai = ktime_add(tk->offs_real, ktime_set(tk->tai_offset, 0));
 }
 
-static void tk_set_sleep_time(struct timekeeper *tk, struct timespec64 t)
+static inline void tk_update_sleep_time(struct timekeeper *tk, ktime_t delta)
 {
-	/* Verify consistency before modifying */
-	WARN_ON_ONCE(tk->offs_boot != timespec64_to_ktime(tk->total_sleep_time));
-
-	tk->total_sleep_time	= t;
-	tk->offs_boot		= timespec64_to_ktime(t);
+	tk->offs_boot = ktime_add(tk->offs_boot, delta);
 }
 
 /*
@@ -179,7 +175,7 @@ static void timekeeping_check_update(struct timekeeper *tk, u64 offset)
 		printk_deferred("         timekeeping: Your kernel is sick, but tries to cope by capping time updates\n");
 	} else {
 		if (offset > (max_cycles >> 1)) {
-			printk_deferred("INFO: timekeeping: Cycle offset (%lld) is larger than the the '%s' clock's 50%% safety margin (%lld)\n",
+			printk_deferred("INFO: timekeeping: Cycle offset (%lld) is larger than the '%s' clock's 50%% safety margin (%lld)\n",
 					offset, name, max_cycles >> 1);
 			printk_deferred("      timekeeping: Your kernel is still fine, but is feeling a bit nervous\n");
 		}
@@ -1607,7 +1603,7 @@ static void __timekeeping_inject_sleeptime(struct timekeeper *tk,
 	}
 	tk_xtime_add(tk, delta);
 	tk_set_wall_to_mono(tk, timespec64_sub(tk->wall_to_monotonic, *delta));
-	tk_set_sleep_time(tk, timespec64_add(tk->total_sleep_time, *delta));
+	tk_update_sleep_time(tk, timespec64_to_ktime(*delta));
 	tk_debug_account_sleep_time(delta);
 }
 
@@ -1833,6 +1829,7 @@ static __always_inline void timekeeping_apply_adjustment(struct timekeeper *tk,
 	mult_adj <<= adj_scale;
 	interval <<= adj_scale;
 	offset <<= adj_scale;
+
 	/*
 	 * So the following can be confusing.
 	 *
@@ -2016,7 +2013,7 @@ static void timekeeping_adjust(struct timekeeper *tk, s64 offset)
 static inline unsigned int accumulate_nsecs_to_secs(struct timekeeper *tk)
 {
 	u64 nsecps = (u64)NSEC_PER_SEC << tk->tkr_mono.shift;
-	unsigned int action = 0;
+	unsigned int clock_set = 0;
 
 	while (tk->tkr_mono.xtime_nsec >= nsecps) {
 		int leap;
@@ -2039,10 +2036,10 @@ static inline unsigned int accumulate_nsecs_to_secs(struct timekeeper *tk)
 			__timekeeping_set_tai_offset(tk, tk->tai_offset - leap);
 
 			clock_was_set_delayed();
-			action = TK_CLOCK_WAS_SET;
+			clock_set = TK_CLOCK_WAS_SET;
 		}
 	}
-	return action;
+	return clock_set;
 }
 
 /**
@@ -2381,7 +2378,7 @@ int do_adjtimex(struct timex *txc)
 		return ret;
 
 	if (txc->modes & ADJ_SETOFFSET) {
-		struct timespec delta;
+		struct timespec64 delta;
 		delta.tv_sec  = txc->time.tv_sec;
 		delta.tv_nsec = txc->time.tv_usec;
 		if (!(txc->modes & ADJ_NANO))
