@@ -137,7 +137,7 @@ struct msm_clock_percpu_data {
 	uint32_t                  sleep_offset;
 	uint32_t                  alarm_vtime;
 	uint32_t                  alarm;
-	uint32_t                  non_sleep_offset;
+	u64                  non_sleep_offset;
 	uint32_t                  in_sync;
 	u64                   stopped_tick;
 	int                       stopped;
@@ -211,7 +211,7 @@ static irqreturn_t msm_timer_interrupt(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static uint32_t msm_read_timer_count(struct msm_clock *clock, int global)
+static u64 msm_read_timer_count(struct msm_clock *clock, int global)
 {
 	uint32_t t1, t2, t3;
 	int loop_count = 0;
@@ -290,9 +290,7 @@ static int msm_timer_set_next_event(unsigned long cycles,
 	int i;
 	struct msm_clock *clock;
 	struct msm_clock_percpu_data *clock_state;
-	uint32_t now;
-	uint32_t alarm;
-	int late;
+	u64 now, alarm, late;
 
 	clock = clockevent_to_clock(evt);
 	clock_state = this_cpu_ptr(&msm_clocks_percpu)[clock->index];
@@ -607,13 +605,6 @@ static void msm_timer_sync_update(struct msm_timer_sync_data_t *data,
 		else
 			dst_clk_state->non_sleep_offset =
 				new_offset - dst_clk_state->sleep_offset;
-
-		if (msm_timer_debug_mask & MSM_TIMER_DEBUG_SYNC)
-			printk(KERN_INFO "sync clock %s: "
-				"src %u, new offset %u + %u\n",
-				dst_clk->clocksource.name, src_clk_val,
-				dst_clk_state->sleep_offset,
-				dst_clk_state->non_sleep_offset);
 	}
 }
 
@@ -702,12 +693,10 @@ static void msm_timer_reactivate_alarm(struct msm_clock *clock)
 int64_t msm_timer_enter_idle(void)
 {
 	struct msm_clock *gpt_clk = &msm_clocks[MSM_CLOCK_GPT];
-	struct msm_clock *clock = __get_cpu_var(msm_active_clock);
+	struct msm_clock *clock = *this_cpu_ptr(&msm_active_clock);
 	struct msm_clock_percpu_data *clock_state =
 		this_cpu_ptr(&msm_clocks_percpu)[clock->index];
-	uint32_t alarm;
-	uint32_t count;
-	int32_t delta;
+	u64 alarm, count, delta;
 
 	BUG_ON(clock != &msm_clocks[MSM_CLOCK_GPT] &&
 		clock != &msm_clocks[MSM_CLOCK_DGT]);
@@ -723,8 +712,6 @@ int64_t msm_timer_enter_idle(void)
 	delta = alarm - count;
 	if (delta <= -(int32_t)((clock->freq << clock->shift) >> 10)) {
 		/* timer should have triggered 1ms ago */
-		printk(KERN_ERR "msm_timer_enter_idle: timer late %d, "
-			"reprogram it\n", delta);
 		msm_timer_reactivate_alarm(clock);
 	}
 	if (delta <= 0)
