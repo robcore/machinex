@@ -32,6 +32,10 @@
 
 #include <trace/events/timer.h>
 
+struct rq_data rq_info;
+struct workqueue_struct *rq_wq;
+spinlock_t rq_lock;
+
 /*
  * Per-CPU nohz control structure
  */
