@@ -994,6 +994,7 @@ static void broadcast_timer_setup(void)
 			  CLOCK_EVT_FEAT_DUMMY;
 	evt->rating	= 100;
 	evt->mult	= 1;
+	evt->cpumask = cpumask_of(smp_processor_id());
 
 	clockevents_register_device(evt);
 }
