@@ -20,11 +20,30 @@
 extern int rtc_month_days(unsigned int month, unsigned int year);
 extern int rtc_year_days(unsigned int day, unsigned int month, unsigned int year);
 extern int rtc_valid_tm(struct rtc_time *tm);
-extern int rtc_tm_to_time(struct rtc_time *tm, unsigned long *time);
-extern void rtc_time_to_tm(unsigned long time, struct rtc_time *tm);
+extern time64_t rtc_tm_to_time64(struct rtc_time *tm);
+extern void rtc_time64_to_tm(time64_t time, struct rtc_time *tm);
 ktime_t rtc_tm_to_ktime(struct rtc_time tm);
 struct rtc_time rtc_ktime_to_tm(ktime_t kt);
 
+/*
+ * rtc_tm_sub - Return the difference in seconds.
+ */
+static inline time64_t rtc_tm_sub(struct rtc_time *lhs, struct rtc_time *rhs)
+{
+	return rtc_tm_to_time64(lhs) - rtc_tm_to_time64(rhs);
+}
+
+static inline void rtc_time_to_tm(unsigned long time, struct rtc_time *tm)
+{
+	rtc_time64_to_tm(time, tm);
+}
+
+static inline int rtc_tm_to_time(struct rtc_time *tm, unsigned long *time)
+{
+	*time = rtc_tm_to_time64(tm);
+
+	return 0;
+}
 
 #include <linux/device.h>
 #include <linux/seq_file.h>
@@ -65,9 +84,12 @@ struct rtc_class_ops {
 	int (*set_bootalarm)(struct device *, struct rtc_wkalrm *);
 #endif	
 	int (*proc)(struct device *, struct seq_file *);
+	int (*set_mmss64)(struct device *, time64_t secs);
 	int (*set_mmss)(struct device *, unsigned long secs);
 	int (*read_callback)(struct device *, int data);
 	int (*alarm_irq_enable)(struct device *, unsigned int enabled);
+	int (*read_offset)(struct device *, long *offset);
+	int (*set_offset)(struct device *, long offset);
 };
 
 #define RTC_DEVICE_NAME_SIZE 20
@@ -119,6 +141,22 @@ struct rtc_device {
 	struct work_struct irqwork;
 	/* Some hardware can't support UIE mode */
 	int uie_unsupported;
+
+	/* Number of nsec it takes to set the RTC clock. This influences when
+	 * the set ops are called. An offset:
+	 *   - of 0.5 s will call RTC set for wall clock time 10.0 s at 9.5 s
+	 *   - of 1.5 s will call RTC set for wall clock time 10.0 s at 8.5 s
+	 *   - of -0.5 s will call RTC set for wall clock time 10.0 s at 10.5 s
+	 */
+	long set_offset_nsec;
+
+	bool registered;
+
+	struct nvmem_config *nvmem_config;
+	struct nvmem_device *nvmem;
+	/* Old ABI support */
+	bool nvram_old_abi;
+	struct bin_attribute *nvram;
 
 #ifdef CONFIG_RTC_INTF_DEV_UIE_EMUL
 	struct work_struct uie_task;
@@ -186,8 +224,10 @@ int rtc_control(rtc_task_t *t, unsigned int cmd, unsigned long arg);
 
 void rtc_timer_init(struct rtc_timer *timer, void (*f)(void *p), void *data);
 int rtc_timer_start(struct rtc_device *rtc, struct rtc_timer *timer,
-		ktime_t expires, ktime_t period);
-int rtc_timer_cancel(struct rtc_device *rtc, struct rtc_timer *timer);
+		    ktime_t expires, ktime_t period);
+void rtc_timer_cancel(struct rtc_device *rtc, struct rtc_timer *timer);
+int rtc_read_offset(struct rtc_device *rtc, long *offset);
+int rtc_set_offset(struct rtc_device *rtc, long offset);
 void rtc_timer_do_work(struct work_struct *work);
 
 static inline bool is_leap_year(unsigned int year)
