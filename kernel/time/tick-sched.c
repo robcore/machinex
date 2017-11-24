@@ -30,7 +30,7 @@
 
 #include "tick-internal.h"
 /*temporary hack*/
-#include "../../arch/arm/include/asm/irq_work.h"
+#include <asm/irq_work.h>
 
 
 struct rq_data rq_info;
