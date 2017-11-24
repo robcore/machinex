@@ -24,6 +24,7 @@ void sched_idle_set_state(struct cpuidle_state *idle_state)
 }
 
 static int __read_mostly cpu_idle_force_poll;
+int cpu_idle_force_poll_hook;
 
 void cpu_idle_poll_ctrl(bool enable)
 {
@@ -33,12 +34,14 @@ void cpu_idle_poll_ctrl(bool enable)
 		cpu_idle_force_poll--;
 		WARN_ON_ONCE(cpu_idle_force_poll < 0);
 	}
+	cpu_idle_force_poll_hook = cpu_idle_force_poll;
 }
 
 #ifdef CONFIG_GENERIC_IDLE_POLL_SETUP
 static int __init cpu_idle_poll_setup(char *__unused)
 {
 	cpu_idle_force_poll = 1;
+	cpu_idle_force_poll_hook = cpu_idle_force_poll;
 	return 1;
 }
 __setup("nohlt", cpu_idle_poll_setup);
@@ -46,6 +49,7 @@ __setup("nohlt", cpu_idle_poll_setup);
 static int __init cpu_idle_nopoll_setup(char *__unused)
 {
 	cpu_idle_force_poll = 0;
+	cpu_idle_force_poll_hook = cpu_idle_force_poll;
 	return 1;
 }
 __setup("hlt", cpu_idle_nopoll_setup);
@@ -72,6 +76,7 @@ void __weak arch_cpu_idle_dead(void) { }
 void __weak arch_cpu_idle(void)
 {
 	cpu_idle_force_poll = 1;
+	cpu_idle_force_poll_hook = cpu_idle_force_poll;
 	local_irq_enable();
 }
 
