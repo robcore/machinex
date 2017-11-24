@@ -578,7 +578,7 @@ static ssize_t state_show(struct kobject *kobj, struct kobj_attribute *attr,
 #ifdef CONFIG_SUSPEND
 	suspend_state_t i;
 
-	for (i = PM_SUSPEND_MIN; i < PM_SUSPEND_MAX; i++)
+	for (i = PM_SUSPEND_ON; i < PM_SUSPEND_MAX; i++)
 		if (pm_states[i])
 			s += sprintf(s,"%s ", pm_states[i]);
 
