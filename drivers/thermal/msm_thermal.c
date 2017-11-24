@@ -545,7 +545,7 @@ reschedule:
 
 static int setup_mitigator(void)
 {
-	struct sched_param param = { .sched_priority = MAX_USER_RT_PRIO - 1 };
+	struct sched_param param = { .sched_priority = DEFAULT_PRIO };
 	mitigator = kthread_create(mitigation_control,
 						  NULL, "mx_thermal");
 	if (IS_ERR(mitigator)) {
@@ -553,7 +553,7 @@ static int setup_mitigator(void)
 		return -ENOMEM;
 	}
 	kthread_bind(mitigator, 0);
-	sched_setscheduler_nocheck(mitigator, SCHED_FIFO, &param);
+	sched_setscheduler_nocheck(mitigator, SCHED_NORMAL, &param);
 	get_task_struct(mitigator);
 	wake_up_process(mitigator);
 
