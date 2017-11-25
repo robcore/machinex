@@ -3433,8 +3433,8 @@ static int tcp_clean_rtx_queue(struct sock *sk, int prior_fackets,
 			if (!(flag & FLAG_RETRANS_DATA_ACKED)) {
 				/* High resolution needed and available? */
 				if (ca_ops->flags & TCP_CONG_RTT_STAMP &&
-				    !ktime_equal(last_ackt,
-						 net_invalid_timestamp()))
+				    (ktime_compare(last_ackt,
+						 net_invalid_timestamp()) != 0))
 					rtt_us = ktime_us_delta(ktime_get_real(),
 								last_ackt);
 				else if (ca_seq_rtt >= 0)

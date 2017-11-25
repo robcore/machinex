@@ -908,7 +908,7 @@ void dlm_scan_waiters(struct dlm_ls *ls)
 	mutex_lock(&ls->ls_waiters_mutex);
 
 	list_for_each_entry(lkb, &ls->ls_waiters, lkb_wait_reply) {
-		if (ktime_equal(lkb->lkb_wait_time, zero))
+		if (ktime_compare(lkb->lkb_wait_time, zero) > 0)
 			continue;
 
 		debug_scanned++;

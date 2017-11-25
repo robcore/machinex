@@ -402,7 +402,7 @@ ssize_t mdp4_dtv_show_event(struct device *dev,
 	timestamp = vctrl->vsync_time;
 
 	ret = wait_event_interruptible(vctrl->wait_queue,
-			!ktime_equal(timestamp, vctrl->vsync_time) &&
+			(ktime_compare(timestamp, vctrl->vsync_time) != 0) &&
 			vctrl->vsync_irq_enabled);
 	if (ret == -ERESTARTSYS)
 		return ret;
