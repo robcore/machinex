@@ -2375,6 +2375,8 @@ static struct platform_driver mdp_driver = {
 };
 
 static unsigned int screen_wake_lock;
+module_param(screen_wake_lock, uint, 0644);
+
 static int mdp_off(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -3448,7 +3450,7 @@ static void mdp_suspend_sub(void)
 	/* cancel pipe ctrl worker */
 	cancel_delayed_work(&mdp_pipe_ctrl_worker);
 
-	/* for workder can't be cancelled... */
+	/* if can't be cancelled... */
 	flush_workqueue(mdp_pipe_ctrl_wq);
 
 	/* let's wait for PPP completion */
