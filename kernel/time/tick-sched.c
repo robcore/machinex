@@ -151,7 +151,6 @@ static void tick_sched_handle(struct tick_sched *ts, struct pt_regs *regs)
 	 * when we go busy again does not account too much ticks.
 	 */
 	if (ts->tick_stopped) {
-		touch_softlockup_watchdog_sched();
 		if (is_idle_task(current))
 			ts->idle_jiffies++;
 		/*
@@ -508,8 +507,6 @@ static void tick_nohz_update_jiffies(ktime_t now)
 	local_irq_save(flags);
 	tick_do_update_jiffies64(now);
 	local_irq_restore(flags);
-
-	touch_softlockup_watchdog_sched();
 }
 
 /*
@@ -812,7 +809,6 @@ static void tick_nohz_restart_sched_tick(struct tick_sched *ts, ktime_t now)
 	timer_clear_idle();
 
 	calc_load_nohz_stop();
-	touch_softlockup_watchdog_sched();
 	/*
 	 * Cancel the scheduled timer and restore the tick
 	 */
