@@ -2374,7 +2374,7 @@ static struct platform_driver mdp_driver = {
 	},
 };
 
-unsigned int screen_wake_lock;
+static unsigned int screen_wake_lock;
 static int mdp_off(struct platform_device *pdev)
 {
 	int ret = 0;
