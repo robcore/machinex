@@ -554,6 +554,23 @@ static inline bool schedule_work(struct work_struct *work)
 }
 
 /**
+ * schedule_work - put work task in global workqueue
+ * @work: job to be done
+ *
+ * Returns %false if @work was already on the kernel-global workqueue and
+ * %true otherwise.
+ *
+ * This puts a job in the kernel-global workqueue if it was not already
+ * queued and leaves it in the same position on the kernel-global
+ * workqueue otherwise.
+ */
+static inline bool schedule_hipri_work(struct work_struct *work)
+{
+	return queue_work(system_highpri_wq, work);
+}
+
+
+/**
  * flush_scheduled_work - ensure that any scheduled work has run to completion.
  *
  * Forces execution of the kernel-global workqueue and blocks until its

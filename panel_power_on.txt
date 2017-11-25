@@ -1,0 +1,226 @@
+arch/arm/mach-msm/board-8960-display.c
+drivers/video/msm/hdmi_msm.c
+drivers/video/msm/hdmi_msm.h
+drivers/video/msm/mdp4_overlay_atv.c
+drivers/video/msm/mdp4_overlay.c
+drivers/video/msm/mdp4_overlay_dsi_cmd.c
+drivers/video/msm/mdp4_overlay_dsi_video.c
+drivers/video/msm/mdp4_overlay_dtv.c
+drivers/video/msm/mdp4_overlay_lcdc.c
+drivers/video/msm/mdp4_overlay_mddi.c
+drivers/video/msm/mdp4_overlay_writeback.c
+drivers/video/msm/mdp4_util.c
+drivers/video/msm/mdp.c
+drivers/video/msm/mdp_dma.c
+drivers/video/msm/mdp_dma_dsi_video.c
+drivers/video/msm/mdp_dma_lcdc.c
+drivers/video/msm/mdp_dma_s.c
+drivers/video/msm/mdp_dma_tv.c
+drivers/video/msm/mdp_vsync.c
+drivers/video/msm/mdss/mdss_fb.c
+drivers/video/msm/mdss/mdss_fb.h
+drivers/video/msm/mdss/mdss_mdp_overlay.c
+drivers/video/msm/mipi_dsi.c
+drivers/video/msm/mipi_himax_tft.c
+drivers/video/msm/mipi_hx8389b.c
+drivers/video/msm/mipi_hx8389b_tft.c
+drivers/video/msm/mipi_novatek_NT35596.c
+drivers/video/msm/mipi_samsung_esd_refresh-8960.c
+drivers/video/msm/mipi_samsung_esd_refresh.c
+drivers/video/msm/mipi_samsung_octa.c
+drivers/video/msm/mipi_samsung_octa.c-bkp
+drivers/video/msm/mipi_samsung_oled-8930.c
+drivers/video/msm/mipi_samsung_oled-8960.c
+drivers/video/msm/mipi_samsung_oled.c
+drivers/video/msm/mipi_samsung_tft.c
+drivers/video/msm/msm_fb.c
+drivers/video/msm/msm_fb.h
+drivers/video/omap2/displays/panel-acx565akm.c
+drivers/video/omap2/displays/panel-generic-dpi.c
+drivers/video/omap2/displays/panel-lgphilips-lb035q02.c
+drivers/video/omap2/displays/panel-n8x0.c
+drivers/video/omap2/displays/panel-nec-nl8048hl11-01b.c
+drivers/video/omap2/displays/panel-picodlp.c
+patches-all/allpatches.txt
+arch/arm/mach-msm/board-8960-display.c:		espresso_panel_power_on = true;
+arch/arm/mach-msm/board-8960-display.c:	if (!espresso_panel_power_on) {
+arch/arm/mach-msm/board-8960-display.c:static bool espresso_panel_power_on;
+drivers/video/msm/hdmi_msm.c:	hdmi_msm_state->panel_power_on = FALSE;
+drivers/video/msm/hdmi_msm.c:		hdmi_msm_state->panel_power_on = TRUE;
+drivers/video/msm/hdmi_msm.c:		if (hdmi_msm_state->panel_power_on)
+drivers/video/msm/hdmi_msm.c:	if (!hdmi_msm_state->panel_power_on) {
+drivers/video/msm/hdmi_msm.h:	boolean panel_power_on;
+drivers/video/msm/mdp4_overlay_atv.c:	if (!mfd->panel_power_on)
+drivers/video/msm/mdp4_overlay.c:	if (!mfb->panel_power_on)
+drivers/video/msm/mdp4_overlay.c:			if (mfd->panel_power_on)
+drivers/video/msm/mdp4_overlay.c:			if (mfd->panel_power_on)
+drivers/video/msm/mdp4_overlay.c:	if (!mfd->panel_power_on)
+drivers/video/msm/mdp4_overlay.c:	if (!mfd->panel_power_on)
+drivers/video/msm/mdp4_overlay.c:	if (!mfd->panel_power_on)
+drivers/video/msm/mdp4_overlay.c:	if (!mfd->panel_power_on)
+drivers/video/msm/mdp4_overlay.c:	if (!mfd->panel_power_on)
+drivers/video/msm/mdp4_overlay.c:	if (!mfd->panel_power_on)
+drivers/video/msm/mdp4_overlay.c:	if (!mfd->panel_power_on)
+drivers/video/msm/mdp4_overlay.c:	if (!mfd->panel_power_on)
+drivers/video/msm/mdp4_overlay.c:	if (!mfd->panel_power_on)
+drivers/video/msm/mdp4_overlay.c:		if (!mfd->panel_power_on)		/* suspended */
+drivers/video/msm/mdp4_overlay.c:	if (!mfd->panel_power_on) /* suspended */
+drivers/video/msm/mdp4_overlay_dsi_cmd.c:	if (!mfd->panel_power_on) {
+drivers/video/msm/mdp4_overlay_dsi_video.c:	if (!pipe || !mfd->panel_power_on) {
+drivers/video/msm/mdp4_overlay_dtv.c:	if (!mfd->panel_power_on) {
+drivers/video/msm/mdp4_overlay_lcdc.c:	if (!pipe || !mfd->panel_power_on) {
+drivers/video/msm/mdp4_overlay_mddi.c:	if (mddi_mfd->panel_power_on == 0)
+drivers/video/msm/mdp4_overlay_mddi.c:	if (mfd && mfd->panel_power_on) {
+drivers/video/msm/mdp4_overlay_mddi.c:	if (mfd && mfd->panel_power_on) {
+drivers/video/msm/mdp4_overlay_writeback.c:	if (mfd && !mfd->panel_power_on)
+drivers/video/msm/mdp4_overlay_writeback.c:	if (mfd && !mfd->panel_power_on)
+drivers/video/msm/mdp4_overlay_writeback.c:	if (mfd && !mfd->panel_power_on)
+drivers/video/msm/mdp4_util.c:	if(!mfd->panel_power_on) {
+drivers/video/msm/mdp.c:	if (!mfd->panel_power_on) {
+drivers/video/msm/mdp_dma.c:	if ((mfd) && (mfd->panel_power_on)) {
+drivers/video/msm/mdp_dma_dsi_video.c:	if (!mfd->panel_power_on)
+drivers/video/msm/mdp_dma_lcdc.c:	if (!mfd->panel_power_on)
+drivers/video/msm/mdp_dma_s.c:	if ((mfd) && (!mfd->dma->busy) && (mfd->panel_power_on)) {
+drivers/video/msm/mdp_dma_tv.c:	if (!mfd->panel_power_on)
+drivers/video/msm/mdp_vsync.c:	if ((mfd->panel_info.lcd.vsync_enable) && (mfd->panel_power_on)
+drivers/video/msm/mdp_vsync.c:		if (mfd->panel_power_on) {
+drivers/video/msm/mdp_vsync.c:		if (mfd->panel_power_on) {
+drivers/video/msm/mdp_vsync.c:		     mfd->panel_info.lcd.vsync_enable, mfd->panel_power_on,
+drivers/video/msm/mdss/mdss_fb.c:			curr_pwr_state = mfd->panel_power_on;
+drivers/video/msm/mdss/mdss_fb.c:	if ((!mfd->op_enable) || (!mfd->panel_power_on))
+drivers/video/msm/mdss/mdss_fb.c:	if ((!mfd->op_enable) || (!mfd->panel_power_on))                           
+drivers/video/msm/mdss/mdss_fb.c:		if (!mfd->panel_power_on) {
+drivers/video/msm/mdss/mdss_fb.c:		if (mfd->panel_power_on) {
+drivers/video/msm/mdss/mdss_fb.c:	if (!mfd->panel_power_on || !bl_updated) {
+drivers/video/msm/mdss/mdss_fb.c:	if (mfd->suspend.panel_power_on) {
+drivers/video/msm/mdss/mdss_fb.c:				mfd->panel_power_on = curr_pwr_state;
+drivers/video/msm/mdss/mdss_fb.c:			mfd->panel_power_on = false;
+drivers/video/msm/mdss/mdss_fb.c:	mfd->panel_power_on = false;
+drivers/video/msm/mdss/mdss_fb.c:				mfd->panel_power_on = true;
+drivers/video/msm/mdss/mdss_fb.c:	mfd->suspend.panel_power_on = mfd->panel_power_on;
+drivers/video/msm/mdss/mdss_fb.h:	int panel_power_on;
+drivers/video/msm/mdss/mdss_fb.h:	int panel_power_on;
+drivers/video/msm/mdss/mdss_mdp_overlay.c:	if (!mfd->ctl || !mfd->panel_power_on)
+drivers/video/msm/mipi_dsi.c:		if (mfd->panel_power_on == TRUE) {
+drivers/video/msm/mipi_himax_tft.c:	if (!mfd->panel_power_on) {
+drivers/video/msm/mipi_himax_tft.c:	if (!msd.mpd->set_brightness_level ||  !mfd->panel_power_on)
+drivers/video/msm/mipi_himax_tft.c:	if (power == mfd->panel_power_on)
+drivers/video/msm/mipi_himax_tft.c:	if (power == mfd->panel_power_on)
+drivers/video/msm/mipi_himax_tft.c:	pr_info("mipi_samsung_disp_get_power(%d)\n", mfd->panel_power_on);
+drivers/video/msm/mipi_himax_tft.c:	pr_info("mipi_samsung_disp_get_power(%d)\n", mfd->panel_power_on);
+drivers/video/msm/mipi_himax_tft.c:	rc = snprintf((char *)buf, sizeof(buf), "%d\n", mfd->panel_power_on);
+drivers/video/msm/mipi_himax_tft.c:	return mfd->panel_power_on;
+drivers/video/msm/mipi_hx8389b.c:	if (!mfd->panel_power_on)
+drivers/video/msm/mipi_hx8389b_tft.c:	if (!mfd->panel_power_on)
+drivers/video/msm/mipi_novatek_NT35596.c:	if (!mfd->panel_power_on)
+drivers/video/msm/mipi_novatek_NT35596.c:	if (!mfd->panel_power_on) {
+drivers/video/msm/mipi_novatek_NT35596.c:	if (power == mfd->panel_power_on)
+drivers/video/msm/mipi_novatek_NT35596.c:	if (power == mfd->panel_power_on)
+drivers/video/msm/mipi_novatek_NT35596.c:	pr_info("mipi_novatek_disp_get_power(%d)\n", mfd->panel_power_on);
+drivers/video/msm/mipi_novatek_NT35596.c:	pr_info("mipi_novatek_disp_get_power(%d)\n", mfd->panel_power_on);
+drivers/video/msm/mipi_novatek_NT35596.c:	rc = sprintf(buf, "%d\n", mfd->panel_power_on);
+drivers/video/msm/mipi_novatek_NT35596.c:	return mfd->panel_power_on;
+drivers/video/msm/mipi_samsung_esd_refresh-8960.c:	}else if(!esd_enable->esd_ignore && mfd->panel_power_on ){
+drivers/video/msm/mipi_samsung_esd_refresh-8960.c:	if (mfd->panel_power_on) {
+drivers/video/msm/mipi_samsung_esd_refresh-8960.c:	if (!mfd->panel_power_on || p_esd_data->refresh_ongoing
+drivers/video/msm/mipi_samsung_esd_refresh.c:	if (mfd->panel_power_on) {
+drivers/video/msm/mipi_samsung_esd_refresh.c:	if (!mfd->panel_power_on || p_esd_data->refresh_ongoing
+drivers/video/msm/mipi_samsung_octa.c-bkp:	if (mfd->panel_power_on) {
+drivers/video/msm/mipi_samsung_octa.c-bkp:	if (mfd->panel_power_on) {
+drivers/video/msm/mipi_samsung_octa.c-bkp:	if (mfd->panel_power_on == FALSE) {
+drivers/video/msm/mipi_samsung_octa.c-bkp:	if (mfd->panel_power_on == FALSE) {
+drivers/video/msm/mipi_samsung_octa.c-bkp:	if (mfd->panel_power_on == TRUE) {
+drivers/video/msm/mipi_samsung_octa.c-bkp:	if (power == mfd->panel_power_on)
+drivers/video/msm/mipi_samsung_octa.c-bkp:	pr_info("mipi_samsung_disp_get_power(%d)\n", mfd->panel_power_on);
+drivers/video/msm/mipi_samsung_octa.c-bkp:	rc = snprintf((char *)buf, sizeof(*buf), "%d\n", mfd->panel_power_on);
+drivers/video/msm/mipi_samsung_octa.c:	if (mfd->panel_power_on) {
+drivers/video/msm/mipi_samsung_octa.c:	if (mfd->panel_power_on) {
+drivers/video/msm/mipi_samsung_octa.c:	if (mfd->panel_power_on == FALSE) {
+drivers/video/msm/mipi_samsung_octa.c:	if (mfd->panel_power_on == FALSE) {
+drivers/video/msm/mipi_samsung_octa.c:	if (mfd->panel_power_on == TRUE) {
+drivers/video/msm/mipi_samsung_octa.c:	if (power == mfd->panel_power_on)
+drivers/video/msm/mipi_samsung_octa.c:	pr_info("mipi_samsung_disp_get_power(%d)\n", mfd->panel_power_on);
+drivers/video/msm/mipi_samsung_octa.c:	rc = snprintf((char *)buf, sizeof(*buf), "%d\n", mfd->panel_power_on);
+drivers/video/msm/mipi_samsung_oled-8930.c:	if (!mfd->panel_power_on) {
+drivers/video/msm/mipi_samsung_oled-8930.c:	if (mfd->panel_power_on) {
+drivers/video/msm/mipi_samsung_oled-8930.c:	if (mfd->panel_power_on) {
+drivers/video/msm/mipi_samsung_oled-8930.c:	if (mfd->panel_power_on == FALSE) {
+drivers/video/msm/mipi_samsung_oled-8930.c:	if (mfd->panel_power_on == FALSE) {
+drivers/video/msm/mipi_samsung_oled-8930.c:	if (!msd.mpd->set_gamma ||  !mfd->panel_power_on ||\
+drivers/video/msm/mipi_samsung_oled-8930.c:	if (!msd.mpd->set_gamma ||  !mfd->panel_power_on ||\
+drivers/video/msm/mipi_samsung_oled-8930.c:	if (power == mfd->panel_power_on)
+drivers/video/msm/mipi_samsung_oled-8930.c:	if (power == mfd->panel_power_on)
+drivers/video/msm/mipi_samsung_oled-8930.c:	pr_info("mipi_samsung_disp_get_power(%d)\n", mfd->panel_power_on);
+drivers/video/msm/mipi_samsung_oled-8930.c:	pr_info("mipi_samsung_disp_get_power(%d)\n", mfd->panel_power_on);
+drivers/video/msm/mipi_samsung_oled-8930.c:	rc = snprintf((char *)buf, sizeof(*buf), "%d\n", mfd->panel_power_on);
+drivers/video/msm/mipi_samsung_oled-8930.c:	return mfd->panel_power_on;
+drivers/video/msm/mipi_samsung_oled-8960.c:	if (!mfd->panel_power_on) {
+drivers/video/msm/mipi_samsung_oled-8960.c:	if (mfd->panel_power_on) {
+drivers/video/msm/mipi_samsung_oled-8960.c:	if (!msd.mpd->set_gamma ||  !mfd->panel_power_on ||\
+drivers/video/msm/mipi_samsung_oled-8960.c:	if (power == mfd->panel_power_on)
+drivers/video/msm/mipi_samsung_oled-8960.c:	if (power == mfd->panel_power_on)
+drivers/video/msm/mipi_samsung_oled-8960.c:	pr_info("mipi_samsung_disp_get_power(%d)\n", mfd->panel_power_on);
+drivers/video/msm/mipi_samsung_oled-8960.c:	pr_info("mipi_samsung_disp_get_power(%d)\n", mfd->panel_power_on);
+drivers/video/msm/mipi_samsung_oled-8960.c:	rc = snprintf((char *)buf, sizeof(buf), "%d\n", mfd->panel_power_on);
+drivers/video/msm/mipi_samsung_oled-8960.c:	return mfd->panel_power_on;
+drivers/video/msm/mipi_samsung_oled.c:	if (!mfd->panel_power_on) {
+drivers/video/msm/mipi_samsung_oled.c:	if (!msd.mpd->set_gamma ||  !mfd->panel_power_on ||\
+drivers/video/msm/mipi_samsung_oled.c:	if (power == mfd->panel_power_on)
+drivers/video/msm/mipi_samsung_oled.c:	if (power == mfd->panel_power_on)
+drivers/video/msm/mipi_samsung_oled.c:	pr_info("mipi_samsung_disp_get_power(%d)\n", mfd->panel_power_on);
+drivers/video/msm/mipi_samsung_oled.c:	pr_info("mipi_samsung_disp_get_power(%d)\n", mfd->panel_power_on);
+drivers/video/msm/mipi_samsung_oled.c:	rc = snprintf((char *)buf, sizeof(buf), "%d\n", mfd->panel_power_on);
+drivers/video/msm/mipi_samsung_oled.c:	return mfd->panel_power_on;
+drivers/video/msm/mipi_samsung_tft.c:	if (mfd->panel_power_on == FALSE) {
+drivers/video/msm/mipi_samsung_tft.c:	if (mfd->panel_power_on == FALSE) {
+drivers/video/msm/mipi_samsung_tft.c:	if (mfd->panel_power_on == TRUE)
+drivers/video/msm/mipi_samsung_tft.c:	if (power == mfd->panel_power_on)
+drivers/video/msm/mipi_samsung_tft.c:	pr_info("mipi_samsung_disp_get_power(%d)\n", mfd->panel_power_on);
+drivers/video/msm/mipi_samsung_tft.c:	rc = snprintf((char *)buf, sizeof(buf), "%d\n", mfd->panel_power_on);
+drivers/video/msm/msm_fb.c:			curr_pwr_state = mfd->panel_power_on;
+drivers/video/msm/msm_fb.c:			if ((!mfd->op_enable) || (!mfd->panel_power_on))
+drivers/video/msm/msm_fb.c:		if ((!mfd->op_enable) || (!mfd->panel_power_on))
+drivers/video/msm/msm_fb.c:	if ((!mfd->op_enable) || (!mfd->panel_power_on))
+drivers/video/msm/msm_fb.c:	if ((mfd->panel_info.type == DTV_PANEL) && !mfd->panel_power_on) {
+drivers/video/msm/msm_fb.c:		if (!mfd->panel_power_on)
+drivers/video/msm/msm_fb.c:		if (!mfd->panel_power_on)
+drivers/video/msm/msm_fb.c:		if (!mfd->panel_power_on)
+drivers/video/msm/msm_fb.c:		if (!mfd->panel_power_on)
+drivers/video/msm/msm_fb.c:		if (!mfd->panel_power_on) {
+drivers/video/msm/msm_fb.c:		if (mfd->panel_power_on) {
+drivers/video/msm/msm_fb.c:	if (!mfd->panel_power_on || !bl_updated) {
+drivers/video/msm/msm_fb.c:		if (!mfd->panel_power_on) /* suspended */
+drivers/video/msm/msm_fb.c:	if (!mfd->panel_power_on) /* suspended */
+drivers/video/msm/msm_fb.c:	if (mfd->suspend.panel_power_on) {
+drivers/video/msm/msm_fb.c:				mfd->panel_power_on = curr_pwr_state;
+drivers/video/msm/msm_fb.c:			mfd->panel_power_on = FALSE;
+drivers/video/msm/msm_fb.c:	mfd->panel_power_on = FALSE;
+drivers/video/msm/msm_fb.c:	mfd->panel_power_on = FALSE;
+drivers/video/msm/msm_fb.c:				mfd->panel_power_on = TRUE;
+drivers/video/msm/msm_fb.c:			mfd->suspend.panel_power_on = FALSE;
+drivers/video/msm/msm_fb.c:		mfd->suspend.panel_power_on = false;
+drivers/video/msm/msm_fb.c:		mfd->suspend.panel_power_on = mfd->panel_power_on;
+drivers/video/msm/msm_fb.c:			mfd->suspend.panel_power_on = TRUE;
+drivers/video/msm/msm_fb.c:			msm_fb_debugfs_file_create(sub_dir, "panel_power_on",
+drivers/video/msm/msm_fb.c:						   panel_power_on);
+drivers/video/msm/msm_fb.h:	boolean panel_power_on;
+drivers/video/msm/msm_fb.h:	boolean panel_power_on;
+drivers/video/omap2/displays/panel-acx565akm.c:	r = acx_panel_power_on(dssdev);
+drivers/video/omap2/displays/panel-acx565akm.c:	r = acx_panel_power_on(dssdev);
+drivers/video/omap2/displays/panel-acx565akm.c:static int acx_panel_power_on(struct omap_dss_device *dssdev)
+drivers/video/omap2/displays/panel-generic-dpi.c:	r = generic_dpi_panel_power_on(dssdev);
+drivers/video/omap2/displays/panel-generic-dpi.c:	r = generic_dpi_panel_power_on(dssdev);
+drivers/video/omap2/displays/panel-generic-dpi.c:static int generic_dpi_panel_power_on(struct omap_dss_device *dssdev)
+drivers/video/omap2/displays/panel-lgphilips-lb035q02.c:	r = lb035q02_panel_power_on(dssdev);
+drivers/video/omap2/displays/panel-lgphilips-lb035q02.c:	r = lb035q02_panel_power_on(dssdev);
+drivers/video/omap2/displays/panel-lgphilips-lb035q02.c:static int lb035q02_panel_power_on(struct omap_dss_device *dssdev)
+drivers/video/omap2/displays/panel-n8x0.c:	r = n8x0_panel_power_on(dssdev);
+drivers/video/omap2/displays/panel-n8x0.c:	r = n8x0_panel_power_on(dssdev);
+drivers/video/omap2/displays/panel-n8x0.c:static int n8x0_panel_power_on(struct omap_dss_device *dssdev)
+drivers/video/omap2/displays/panel-nec-nl8048hl11-01b.c:	r = nec_8048_panel_power_on(dssdev);
+drivers/video/omap2/displays/panel-nec-nl8048hl11-01b.c:	r = nec_8048_panel_power_on(dssdev);
+drivers/video/omap2/displays/panel-nec-nl8048hl11-01b.c:static int nec_8048_panel_power_on(struct omap_dss_device *dssdev)
+drivers/video/omap2/displays/panel-picodlp.c:	r = picodlp_panel_power_on(dssdev);
+drivers/video/omap2/displays/panel-picodlp.c:	r = picodlp_panel_power_on(dssdev);
+drivers/video/omap2/displays/panel-picodlp.c:static int picodlp_panel_power_on(struct omap_dss_device *dssdev)
+patches-all/allpatches.txt:/root/machinex/patches-all/patches8001-16000/7849-check-for-mfd-panel_power_on-in-mdp4-overlay-set.patch
