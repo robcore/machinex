@@ -339,7 +339,6 @@ static int msm_timer_shutdown(struct clock_event_device *evt)
 
 	local_irq_save(irq_flags);
 
-
 	cur_clock = &get_cpu_var(msm_active_clock);
 	if (*cur_clock == clock)
 		*cur_clock = NULL;
@@ -924,8 +923,8 @@ static int msm_local_timer_starting_cpu(unsigned int cpu)
 	evt->features = CLOCK_EVT_FEAT_ONESHOT;
 	evt->rating = clock->clockevent.rating;
 	evt->set_state_shutdown = msm_timer_shutdown;
-	evt->set_state_oneshot = msm_timer_oneshot;
-	evt->tick_resume = msm_timer_oneshot;
+	evt->set_state_oneshot = msm_timer_shutdown;
+	evt->tick_resume = msm_timer_shutdown;
 	evt->set_next_event = msm_timer_set_next_event;
 	evt->shift = clock->clockevent.shift;
 	evt->mult = div_sc(clock->freq, NSEC_PER_SEC, evt->shift);
