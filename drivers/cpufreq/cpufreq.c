@@ -929,7 +929,7 @@ static ssize_t hard_cpu_online_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	
-	return sprintf(buf, "%u\n", cpu_online(dev->id) ? 0 : 1);
+	return sprintf(buf, "%u\n", cpu_online(dev->id) ? 1 : 0);
 }
 
 #define show_one_hardlimit(object)				\
