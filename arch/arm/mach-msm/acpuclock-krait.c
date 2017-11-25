@@ -1329,22 +1329,22 @@ static unsigned int msm_cpufreq_get_freq(unsigned int cpu)
 }
 
 static struct cpufreq_frequency_table freq_table[] = {
-	[0] = {384000},
-	[1] = {486000},
-	[2] = {594000},
-	[3] = {702000},
-	[4] = {810000},
-	[5] = {918000},
-	[6] = {1026000},
-	[7] = {1134000},
-	[8] = {1242000},
-	[9] = {1350000},
-	[10] = {1458000},
-	[11] = {1566000},
-	[12] = {1674000},
-	[13] = {1782000},
-	[14] = {1890000},
-	[15] = {CPUFREQ_TABLE_END},
+	{ .frequency = 384000 },
+	{ .frequency = 486000 },
+	{ .frequency = 594000 },
+	{ .frequency = 702000 },
+	{ .frequency = 810000 },
+	{ .frequency = 918000 },
+	{ .frequency = 1026000 },
+	{ .frequency = 1134000 },
+	{ .frequency = 1242000 },
+	{ .frequency = 1350000 },
+	{ .frequency = 1458000 },
+	{ .frequency = 1566000 },
+	{ .frequency = 1674000 },
+	{ .frequency = 1782000 },
+	{ .frequency = 1890000 },
+	{ .frequency = CPUFREQ_TABLE_END }
 };
 
 static inline int msm_cpufreq_init(struct cpufreq_policy *policy)
