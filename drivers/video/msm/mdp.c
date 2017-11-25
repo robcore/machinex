@@ -2353,23 +2353,6 @@ static void mdp_shutdown(struct platform_device *pdev);
 #endif
 static int mdp_remove(struct platform_device *pdev);
 
-static int mdp_runtime_suspend(struct device *dev)
-{
-	dev_dbg(dev, "pm_runtime: suspending...\n");
-	return 0;
-}
-
-static int mdp_runtime_resume(struct device *dev)
-{
-	dev_dbg(dev, "pm_runtime: resuming...\n");
-	return 0;
-}
-
-static struct dev_pm_ops mdp_dev_pm_ops = {
-	.runtime_suspend = mdp_runtime_suspend,
-	.runtime_resume = mdp_runtime_resume,
-};
-
 
 static struct platform_driver mdp_driver = {
 	.probe = mdp_probe,
@@ -2388,15 +2371,19 @@ static struct platform_driver mdp_driver = {
 		 * platform.c.
 		 */
 		.name = "mdp",
-		.pm = &mdp_dev_pm_ops,
 	},
 };
 
+unsigned int screen_wake_lock;
 static int mdp_off(struct platform_device *pdev)
 {
 	int ret = 0;
-	struct msm_fb_data_type *mfd = platform_get_drvdata(pdev);
+	struct msm_fb_data_type *mfd;
 
+	if (screen_wake_lock)
+		return -EBUSY;
+
+	mfd = platform_get_drvdata(pdev);
 	pr_info("%s:+\n", __func__);
 	mdp_histogram_ctrl_all(FALSE);
 	atomic_set(&vsync_cntrl.suspend, 1);

@@ -925,6 +925,13 @@ show_one(scaling_min_freq, min);
 show_one(scaling_max_freq, max);
 #ifdef CONFIG_CPUFREQ_HARDLIMIT
 
+static ssize_t hard_cpu_online_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	
+	return sprintf(buf, "%u\n", cpu_online(dev->id) ? 0 : 1);
+}
+
 #define show_one_hardlimit(object)				\
 static ssize_t object##_show(struct device *dev,			\
 		struct device_attribute *attr, char *buf)	\
@@ -1264,6 +1271,7 @@ define_one_global_rw(vdd_levels);
 #endif
 define_one_global_rw(GPU_mV_table);
 #ifdef CONFIG_CPUFREQ_HARDLIMIT
+DEVICE_ATTR_RO(hard_cpu_online);
 DEVICE_ATTR_RW(hardlimit_max_screen_on);
 DEVICE_ATTR_RW(hardlimit_max_screen_off);
 DEVICE_ATTR_RW(hardlimit_min_screen_on);
@@ -1289,6 +1297,7 @@ static struct attribute *default_attrs[] = {
 };
 
 static struct attribute *hardlimit_attrs[] = {
+	&dev_attr_hard_cpu_online.attr,
 	&dev_attr_hardlimit_max_screen_on.attr,
 	&dev_attr_hardlimit_max_screen_off.attr,
 	&dev_attr_hardlimit_min_screen_on.attr,
