@@ -94,6 +94,11 @@ do { 				\
 	if (debug_intelli_plug)		\
 		pr_info(msg);	\
 } while (0)
+#define mx_info(msg...)		\
+do { 				\
+	if (mxfb_debug)		\
+		pr_info(msg);	\
+} while (0)
 
 static unsigned int nr_run_thresholds_balance[] = {
 	(THREAD_CAPACITY * 625 * MULT_FACTOR) / DIV_FACTOR,

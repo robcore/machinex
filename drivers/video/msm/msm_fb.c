@@ -67,6 +67,14 @@ static unsigned char *fbram_phys;
 static int fbram_size;
 static boolean bf_supported;
 
+unsigned int mxfb_debug;
+module_param(mxfb_debug, uint, 0644);
+#define mx_info(msg...)		\
+do { 				\
+	if (mxfb_debug)		\
+		pr_info(msg);	\
+} while (0)
+
 static struct platform_device *pdev_list[MSM_FB_MAX_DEV_LIST];
 static int pdev_list_cnt;
 
@@ -644,7 +652,7 @@ static int msm_fb_suspend_sub(struct msm_fb_data_type *mfd)
 	 */
 	mfd->suspend.sw_refreshing_enable = mfd->sw_refreshing_enable;
 	mfd->suspend.op_enable = mfd->op_enable;
-	pr_info("MSM FB: %s Panel Op Enable %s\n", __func__, mfd->suspend.op_enable ? "On" : "Off");
+	mx_info("MSM FB: %s Panel Op Enable %s\n", __func__, mfd->suspend.op_enable ? "On" : "Off");
 
 	/*
 	 * For HDMI/DTV, panel needs not to be turned ON during resume
@@ -654,10 +662,10 @@ static int msm_fb_suspend_sub(struct msm_fb_data_type *mfd)
 	if (mfd->panel_info.type == HDMI_PANEL ||
 	    mfd->panel_info.type == DTV_PANEL) {
 		mfd->suspend.panel_power_on = false;
-		pr_info("MSM FB: %s Panel Power %s\n", __func__, mfd->suspend.panel_power_on ? "On" : "Off");
+		mx_info("MSM FB: %s Panel Power %s\n", __func__, mfd->suspend.panel_power_on ? "On" : "Off");
 	} else {
 		mfd->suspend.panel_power_on = mfd->panel_power_on;
-		pr_info("MSM FB: %s Panel Power %s\n", __func__, mfd->suspend.panel_power_on ? "On" : "Off");
+		mx_info("MSM FB: %s Panel Power %s\n", __func__, mfd->suspend.panel_power_on ? "On" : "Off");
 	}
 	mfd->suspend.op_suspend = true;
 
@@ -1025,10 +1033,10 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 				down(&mfd->sem);
 				mfd->panel_power_on = true;
 				up(&mfd->sem);
-				pr_info("MSM FB: %s Panel Power %s\n", __func__, mfd->panel_power_on ? "On" : "Off");
+				mx_info("MSM FB: %s Panel Power %s\n", __func__, mfd->panel_power_on ? "On" : "Off");
 				mfd->panel_driver_on = mfd->op_enable;
-				pr_info("MSM FB: %s Panel Power %s\n", __func__, mfd->panel_power_on ? "On" : "Off");
-				pr_info("MSM FB: %s Panel Driver %s\n", __func__, mfd->panel_driver_on ? "On" : "Off");
+				mx_info("MSM FB: %s Panel Power %s\n", __func__, mfd->panel_power_on ? "On" : "Off");
+				mx_info("MSM FB: %s Panel Driver %s\n", __func__, mfd->panel_driver_on ? "On" : "Off");
 			}
 		}
 #if defined(CONFIG_MIPI_SAMSUNG_ESD_REFRESH) || defined(CONFIG_ESD_ERR_FG_RECOVERY)
@@ -1069,7 +1077,7 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 
 			msm_fb_release_timeline(mfd);
 			mfd->op_enable = true;
-			pr_info("MSM FB: %s Panel Power %s\n", __func__, mfd->panel_power_on ? "On" : "Off");
+			mx_info("MSM FB: %s Panel Power %s\n", __func__, mfd->panel_power_on ? "On" : "Off");
 		}
 #if defined(CONFIG_MIPI_SAMSUNG_ESD_REFRESH) || defined(CONFIG_ESD_ERR_FG_RECOVERY)
 		mutex_unlock(&power_state_change);
@@ -1193,10 +1201,10 @@ static int msm_fb_blank(int blank_mode, struct fb_info *info)
 			wait for the system to resume */
 			while (mfd->suspend.op_suspend)
 				msleep_interruptible(2);
-			pr_info("MSM FB: %s Panel Power %s\n", __func__, mfd->panel_power_on ? "On" : "Off");
+			mx_info("MSM FB: %s Panel Power %s\n", __func__, mfd->panel_power_on ? "On" : "Off");
 		} else {
 			mfd->suspend.panel_power_on = false;
-			pr_info("MSM FB: %s Panel Power %s\n", __func__, mfd->panel_power_on ? "On" : "Off");
+			mx_info("MSM FB: %s Panel Power %s\n", __func__, mfd->panel_power_on ? "On" : "Off");
 		}
 	}
 	return msm_fb_blank_sub(blank_mode, info, mfd->op_enable);
@@ -1560,7 +1568,7 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 	mfd->sw_currently_refreshing = false;
 	mfd->sw_refreshing_enable = true;
 	mfd->panel_power_on = false;
-	pr_info("MSM FB: %s Panel Power %s\n", __func__, mfd->panel_power_on ? "On" : "Off");
+	mx_info("MSM FB: %s Panel Power %s\n", __func__, mfd->panel_power_on ? "On" : "Off");
 
 	mfd->pan_waiting = false;
 	init_completion(&mfd->pan_comp);
@@ -1625,7 +1633,7 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 
 	mfd->op_enable = true;
 	mfd->panel_power_on = false;
-	pr_info("MSM FB: %s Panel Power %s\n", __func__, mfd->panel_power_on ? "On" : "Off");
+	mx_info("MSM FB: %s Panel Power %s\n", __func__, mfd->panel_power_on ? "On" : "Off");
 	/* cursor memory allocation */
 	if (mfd->cursor_update) {
 		unsigned long cursor_buf_iommu = 0;
