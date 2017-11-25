@@ -1365,7 +1365,7 @@ static inline int msm_cpufreq_init(struct cpufreq_policy *policy)
 
 static int msm_cpufreq_resume(void)
 {
-	int cpu;
+	unsigned int cpu;
 	struct cpufreq_policy *policy;
 
 	/*
