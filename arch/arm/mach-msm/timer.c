@@ -296,7 +296,7 @@ static int msm_timer_set_next_event(unsigned long cycles,
 	u64 now, alarm, late;
 
 	clock = clockevent_to_clock(evt);
-	clock_state = this_cpu_ptr(&msm_clocks_percpu)[clock->index];
+	clock_state = raw_cpu_ptr(&msm_clocks_percpu)[clock->index];
 	now = msm_read_timer_count(clock, LOCAL_TIMER);
 	alarm = now + (cycles << clock->shift);
 	if (clock->flags & MSM_CLOCK_FLAGS_ODD_MATCH_WRITE)
@@ -332,8 +332,8 @@ static int msm_timer_shutdown(struct clock_event_device *evt)
 	struct irq_chip *chip;
 
 	clock = clockevent_to_clock(evt);
-	clock_state = this_cpu_ptr(&msm_clocks_percpu)[clock->index];
-	gpt_state = this_cpu_ptr(&msm_clocks_percpu)[MSM_CLOCK_GPT];
+	clock_state = raw_cpu_ptr(&msm_clocks_percpu)[clock->index];
+	gpt_state = raw_cpu_ptr(&msm_clocks_percpu)[MSM_CLOCK_GPT];
 
 	local_irq_save(irq_flags);
 
@@ -377,8 +377,8 @@ static int msm_timer_oneshot(struct clock_event_device *evt)
 	struct irq_chip *chip;
 
 	clock = clockevent_to_clock(evt);
-	clock_state = this_cpu_ptr(&msm_clocks_percpu)[clock->index];
-	gpt_state = this_cpu_ptr(&msm_clocks_percpu)[MSM_CLOCK_GPT];
+	clock_state = raw_cpu_ptr(&msm_clocks_percpu)[clock->index];
+	gpt_state = raw_cpu_ptr(&msm_clocks_percpu)[MSM_CLOCK_GPT];
 
 	local_irq_save(irq_flags);
 	clock_state->stopped = 0;
@@ -587,7 +587,7 @@ static void msm_timer_sync_update(struct msm_timer_sync_data_t *data,
 {
 	struct msm_clock *dst_clk = data->clock;
 	struct msm_clock_percpu_data *dst_clk_state =
-		this_cpu_ptr(&msm_clocks_percpu)[dst_clk->index];
+		raw_cpu_ptr(&msm_clocks_percpu)[dst_clk->index];
 	uint32_t dst_clk_val = msm_read_timer_count(dst_clk, LOCAL_TIMER);
 	uint32_t new_offset;
 
@@ -623,7 +623,7 @@ static void msm_timer_sync_gpt_to_sclk(int exit_sleep)
 {
 	struct msm_clock *gpt_clk = &msm_clocks[MSM_CLOCK_GPT];
 	struct msm_clock_percpu_data *gpt_clk_state =
-		this_cpu_ptr(&msm_clocks_percpu)[MSM_CLOCK_GPT];
+		raw_cpu_ptr(&msm_clocks_percpu)[MSM_CLOCK_GPT];
 	struct msm_timer_sync_data_t data;
 	uint32_t ret;
 
@@ -651,9 +651,9 @@ static void msm_timer_sync_to_gpt(struct msm_clock *clock, int exit_sleep)
 {
 	struct msm_clock *gpt_clk = &msm_clocks[MSM_CLOCK_GPT];
 	struct msm_clock_percpu_data *gpt_clk_state =
-		this_cpu_ptr(&msm_clocks_percpu)[MSM_CLOCK_GPT];
+		raw_cpu_ptr(&msm_clocks_percpu)[MSM_CLOCK_GPT];
 	struct msm_clock_percpu_data *clock_state =
-		this_cpu_ptr(&msm_clocks_percpu)[clock->index];
+		raw_cpu_ptr(&msm_clocks_percpu)[clock->index];
 	struct msm_timer_sync_data_t data;
 	uint32_t gpt_clk_val;
 	u64 gpt_period = (1ULL << 32) * HZ;
@@ -687,7 +687,7 @@ static void msm_timer_sync_to_gpt(struct msm_clock *clock, int exit_sleep)
 static void msm_timer_reactivate_alarm(struct msm_clock *clock)
 {
 	struct msm_clock_percpu_data *clock_state =
-		this_cpu_ptr(&msm_clocks_percpu)[clock->index];
+		raw_cpu_ptr(&msm_clocks_percpu)[clock->index];
 	long alarm_delta = clock_state->alarm_vtime -
 		clock_state->sleep_offset -
 		msm_read_timer_count(clock, LOCAL_TIMER);
@@ -701,9 +701,9 @@ static void msm_timer_reactivate_alarm(struct msm_clock *clock)
 int64_t msm_timer_enter_idle(void)
 {
 	struct msm_clock *gpt_clk = &msm_clocks[MSM_CLOCK_GPT];
-	struct msm_clock *clock = *this_cpu_ptr(&msm_active_clock);
+	struct msm_clock *clock = *raw_cpu_ptr(&msm_active_clock);
 	struct msm_clock_percpu_data *clock_state =
-		this_cpu_ptr(&msm_clocks_percpu)[clock->index];
+		raw_cpu_ptr(&msm_clocks_percpu)[clock->index];
 	u64 alarm, count, delta;
 
 	BUG_ON(clock != &msm_clocks[MSM_CLOCK_GPT] &&
@@ -734,9 +734,9 @@ void msm_timer_exit_idle(int low_power)
 	struct msm_clock *gpt_clk = &msm_clocks[MSM_CLOCK_GPT];
 	struct msm_clock *clock = __get_cpu_var(msm_active_clock);
 	struct msm_clock_percpu_data *gpt_clk_state =
-		this_cpu_ptr(&msm_clocks_percpu)[MSM_CLOCK_GPT];
+		raw_cpu_ptr(&msm_clocks_percpu)[MSM_CLOCK_GPT];
 	struct msm_clock_percpu_data *clock_state =
-		this_cpu_ptr(&msm_clocks_percpu)[clock->index];
+		raw_cpu_ptr(&msm_clocks_percpu)[clock->index];
 	uint32_t enabled;
 
 	BUG_ON(clock != &msm_clocks[MSM_CLOCK_GPT] &&
