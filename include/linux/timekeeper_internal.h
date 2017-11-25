@@ -11,40 +11,33 @@
 #include <linux/jiffies.h>
 #include <linux/time.h>
 
-extern ktime_t ntp_get_next_leap(void);
-
-/*
- * Structure holding internal timekeeping values.
+/**
+ * struct tk_read_base - base structure for timekeeping readout
+ * @clock:	Current clocksource used for timekeeping.
+ * @mask:	Bitmask for two's complement subtraction of non 64bit clocks
+ * @cycle_last: @clock cycle value at last update
+ * @mult:	(NTP adjusted) multiplier for scaled math conversion
+ * @shift:	Shift value for scaled math conversion
+ * @xtime_nsec: Shifted (fractional) nano seconds offset for readout
+ * @base:	ktime_t (nanoseconds) base time for readout
+ * @base_real:	Nanoseconds base value for clock REALTIME readout
  *
- * Note: wall_to_monotonic is what we need to add to xtime (or xtime
- * corrected for sub jiffie times) to get to monotonic time.
- * Monotonic is pegged at zero at system boot time, so
- * wall_to_monotonic will be negative, however, we will ALWAYS keep
- * the tv_nsec part positive so we can use the usual normalization.
+ * This struct has size 56 byte on 64 bit. Together with a seqcount it
+ * occupies a single 64byte cache line.
  *
- * wall_to_monotonic is moved after resume from suspend for the
- * monotonic time not to jump. We need to add total_sleep_time to
- * wall_to_monotonic to get the real boot based time offset.
+ * The struct is separate from struct timekeeper as it is also used
+ * for a fast NMI safe accessors.
  *
- * - wall_to_monotonic is no longer the boot time, getboottime must be
- * used instead.
+ * @base_real is for the fast NMI safe accessor to allow reading clock
+ * realtime from any context.
  */
 struct tk_read_base {
-	/* Current clocksource used for timekeeping. */
 	struct clocksource	*clock;
-	/* Read function of @clock */
-	/* Bitmask for two's complement subtraction of non 64bit counters */
 	u64			mask;
-	/* Last cycle value */
 	u64			cycle_last;
-	/* NTP adjusted clock multiplier */
 	u32			mult;
-	/* The shift value of the current clocksource. */
 	u32			shift;
-	/* Clock shifted nano seconds */
 	u64			xtime_nsec;
-
-	/* Monotonic base time */
 	ktime_t			base;
 	u64			base_real;
 };
@@ -107,10 +100,21 @@ struct timekeeper {
 	u8			cs_was_changed_seq;
 	ktime_t			next_leap_ktime;
 	u64			raw_sec;
+
+	/* The following members are for timekeeping internal use */
 	u64			cycle_interval;
 	u64			xtime_interval;
 	s64			xtime_remainder;
 	u64			raw_interval;
+	/* The ntp_tick_length() value currently being used.
+	 * This cached copy ensures we consistently apply the tick
+	 * length for an entire tick, as ntp_tick_length may change
+	 * mid-tick, and we don't want to apply that new value to
+	 * the tick in progress.
+	 */
+	u64			ntp_tick;
+	/* Difference between accumulated time and NTP time in ntp
+	 * shifted nano seconds. */
 	s64			ntp_error;
 	u32			ntp_error_shift;
 	u32			ntp_err_mult;
@@ -127,7 +131,6 @@ struct timekeeper {
 	int			overflow_seen;
 #endif
 	struct timespec xtime;
-	u64			ntp_tick;
 };
 
 #ifdef CONFIG_GENERIC_TIME_VSYSCALL
@@ -138,9 +141,8 @@ extern void update_vsyscall_tz(void);
 #elif defined(CONFIG_GENERIC_TIME_VSYSCALL_OLD)
 
 extern void update_vsyscall_old(struct timespec *ts, struct timespec *wtm,
-						struct clocksource *c, u32 mult,
-						u64 cycle_last);
-
+				struct clocksource *c, u32 mult,
+				u64 cycle_last);
 extern void update_vsyscall_tz(void);
 
 #else

@@ -17,6 +17,7 @@
 #include <linux/interrupt.h>
 #include <linux/kernel_stat.h>
 #include <linux/percpu.h>
+#include <linux/nmi.h>
 #include <linux/profile.h>
 #include <linux/sched.h>
 #include <linux/timer.h>
@@ -25,6 +26,7 @@
 #include <linux/irq_work.h>
 #include <linux/posix-timers.h>
 #include <linux/context_tracking.h>
+#include <linux/mm.h>
 
 #include <asm/irq_regs.h>
 

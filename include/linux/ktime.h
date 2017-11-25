@@ -32,7 +32,7 @@ typedef s64	ktime_t;
  * @secs:	seconds to set
  * @nsecs:	nanoseconds to set
  *
- * Return the ktime_t representation of the value
+ * Return: The ktime_t representation of the value.
  */
 static inline ktime_t ktime_set(const s64 secs, const unsigned long nsecs)
 {
@@ -113,7 +113,7 @@ static inline int ktime_equal(const ktime_t cmp1, const ktime_t cmp2)
  * @cmp1:	comparable1
  * @cmp2:	comparable2
  *
- * Returns ...
+ * Return: ...
  *   cmp1  < cmp2: return <0
  *   cmp1 == cmp2: return 0
  *   cmp1  > cmp2: return >0
@@ -125,6 +125,30 @@ static inline int ktime_compare(const ktime_t cmp1, const ktime_t cmp2)
 	if (cmp1 > cmp2)
 		return 1;
 	return 0;
+}
+
+/**
+ * ktime_after - Compare if a ktime_t value is bigger than another one.
+ * @cmp1:	comparable1
+ * @cmp2:	comparable2
+ *
+ * Return: true if cmp1 happened after cmp2.
+ */
+static inline bool ktime_after(const ktime_t cmp1, const ktime_t cmp2)
+{
+	return ktime_compare(cmp1, cmp2) > 0;
+}
+
+/**
+ * ktime_before - Compare if a ktime_t value is smaller than another one.
+ * @cmp1:	comparable1
+ * @cmp2:	comparable2
+ *
+ * Return: true if cmp1 happened before cmp2.
+ */
+static inline bool ktime_before(const ktime_t cmp1, const ktime_t cmp2)
+{
+	return ktime_compare(cmp1, cmp2) < 0;
 }
 
 #if BITS_PER_LONG < 64
@@ -158,30 +182,6 @@ static inline s64 ktime_divns(const ktime_t kt, s64 div)
 }
 #endif
 
-/**
- * ktime_after - Compare if a ktime_t value is bigger than another one.
- * @cmp1:	comparable1
- * @cmp2:	comparable2
- *
- * Return: true if cmp1 happened after cmp2.
- */
-static inline bool ktime_after(const ktime_t cmp1, const ktime_t cmp2)
-{
-	return ktime_compare(cmp1, cmp2) > 0;
-}
-
-/**
- * ktime_before - Compare if a ktime_t value is smaller than another one.
- * @cmp1:	comparable1
- * @cmp2:	comparable2
- *
- * Return: true if cmp1 happened before cmp2.
- */
-static inline bool ktime_before(const ktime_t cmp1, const ktime_t cmp2)
-{
-	return ktime_compare(cmp1, cmp2) < 0;
-}
-
 static inline s64 ktime_to_us(const ktime_t kt)
 {
 	return ktime_divns(kt, NSEC_PER_USEC);
@@ -197,14 +197,29 @@ static inline s64 ktime_us_delta(const ktime_t later, const ktime_t earlier)
        return ktime_to_us(ktime_sub(later, earlier));
 }
 
+static inline s64 ktime_ms_delta(const ktime_t later, const ktime_t earlier)
+{
+	return ktime_to_ms(ktime_sub(later, earlier));
+}
+
 static inline ktime_t ktime_add_us(const ktime_t kt, const u64 usec)
 {
 	return ktime_add_ns(kt, usec * NSEC_PER_USEC);
 }
 
+static inline ktime_t ktime_add_ms(const ktime_t kt, const u64 msec)
+{
+	return ktime_add_ns(kt, msec * NSEC_PER_MSEC);
+}
+
 static inline ktime_t ktime_sub_us(const ktime_t kt, const u64 usec)
 {
 	return ktime_sub_ns(kt, usec * NSEC_PER_USEC);
+}
+
+static inline ktime_t ktime_sub_ms(const ktime_t kt, const u64 msec)
+{
+	return ktime_sub_ns(kt, msec * NSEC_PER_MSEC);
 }
 
 extern ktime_t ktime_add_safe(const ktime_t lhs, const ktime_t rhs);
@@ -215,7 +230,7 @@ extern ktime_t ktime_add_safe(const ktime_t lhs, const ktime_t rhs);
  * @kt:		the ktime_t variable to convert
  * @ts:		the timespec variable to store the result in
  *
- * Returns true if there was a successful conversion, false if kt was 0.
+ * Return: %true if there was a successful conversion, %false if kt was 0.
  */
 static inline __must_check bool ktime_to_timespec_cond(const ktime_t kt,
 						       struct timespec *ts)
@@ -266,6 +281,7 @@ static inline ktime_t ms_to_ktime(u64 ms)
 	return ms * NSEC_PER_MSEC;
 }
 
-#include <linux/timekeeping.h>
+# include <linux/timekeeping.h>
+# include <linux/timekeeping32.h>
 
 #endif

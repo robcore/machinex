@@ -13,6 +13,7 @@
 #include <linux/cpufreq.h>
 #include <linux/module.h>
 #include <linux/slab.h>
+#include <linux/suspend.h>
 
 static DEFINE_SPINLOCK(cpufreq_stats_lock);
 
@@ -214,13 +215,37 @@ free_stat:
 	kfree(stats);
 }
 
+static bool stats_suspended;
+static int cpufreq_stats_pm_notifier(struct notifier_block *this,
+				unsigned long event, void *ptr)
+{
+	unsigned int cpu;
+
+	switch (event) {
+	case PM_SUSPEND_PREPARE:
+		stats_suspended = true;
+		break;
+	case PM_POST_SUSPEND:
+		stats_suspended = false;
+		break;
+	default:
+		break;
+	}
+	return NOTIFY_DONE;
+}
+
+static struct notifier_block stats_pm_notifier = {
+	.notifier_call = cpufreq_stats_pm_notifier,
+};
+
 void cpufreq_stats_record_transition(struct cpufreq_policy *policy,
 				     unsigned int new_freq)
 {
-	struct cpufreq_stats *stats = policy->stats;
+	struct cpufreq_stats *stats;
 	int old_index, new_index;
 
-	if (!stats) {
+	stats = policy->stats;
+	if (!stats || stats_suspended || !cpu_online(policy->cpu)) {
 		pr_debug("%s: No stats found\n", __func__);
 		return;
 	}
@@ -238,3 +263,9 @@ void cpufreq_stats_record_transition(struct cpufreq_policy *policy,
 	stats->trans_table[old_index * stats->max_state + new_index]++;
 	stats->total_trans++;
 }
+static int stats_init(void)
+{
+	register_pm_notifier(&stats_pm_notifier);
+	return 0;
+}
+late_initcall(stats_init);
