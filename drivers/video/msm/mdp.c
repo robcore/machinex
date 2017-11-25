@@ -716,6 +716,7 @@ static void mdp_lut_enable(void)
 				(mdp_lut_push_i << 10) | 0x7 | out);
 		spin_unlock_irqrestore(&mdp_lut_push_lock, flags);
 	}
+	pr_info("%s:+\n", __func__);
 }
 
 #define MDP_REV42_HIST_MAX_BIN 128
@@ -2450,8 +2451,7 @@ static int mdp_on(struct platform_device *pdev)
 	struct msm_fb_data_type *mfd;
 	mfd = platform_get_drvdata(pdev);
 
-	pr_debug("%s:+\n", __func__);
-
+	pr_info("%s:+\n", __func__);
 
 	if(mfd->index == 0)
 		mdp_iommu_max_map_size = mfd->max_map_size;
@@ -2859,7 +2859,7 @@ static void mdp_shutdown(struct platform_device *pdev)
 
 	if (!mfd)
 		return;
-
+	pr_info("%s:+\n", __func__);
 #if defined(CONFIG_MIPI_SAMSUNG_ESD_REFRESH) || defined(CONFIG_ESD_ERR_FG_RECOVERY)
 	mdp_shutdown_check = true;
 	mutex_lock(&power_state_change);
