@@ -466,6 +466,35 @@ u64 ktime_get_raw_fast_ns(void)
 }
 EXPORT_SYMBOL_GPL(ktime_get_raw_fast_ns);
 
+/**
+ * ktime_get_boot_fast_ns - NMI safe and fast access to boot clock.
+ *
+ * To keep it NMI safe since we're accessing from tracing, we're not using a
+ * separate timekeeper with updates to monotonic clock and boot offset
+ * protected with seqlocks. This has the following minor side effects:
+ *
+ * (1) Its possible that a timestamp be taken after the boot offset is updated
+ * but before the timekeeper is updated. If this happens, the new boot offset
+ * is added to the old timekeeping making the clock appear to update slightly
+ * earlier:
+ *    CPU 0                                        CPU 1
+ *    timekeeping_inject_sleeptime64()
+ *    __timekeeping_inject_sleeptime(tk, delta);
+ *                                                 timestamp();
+ *    timekeeping_update(tk, TK_CLEAR_NTP...);
+ *
+ * (2) On 32-bit systems, the 64-bit boot offset (tk->offs_boot) may be
+ * partially updated.  Since the tk->offs_boot update is a rare event, this
+ * should be a rare occurrence which postprocessing should be able to handle.
+ */
+u64 notrace ktime_get_boot_fast_ns(void)
+{
+	struct timekeeper *tk = &tk_core.timekeeper;
+
+	return (ktime_get_mono_fast_ns() + ktime_to_ns(tk->offs_boot));
+}
+EXPORT_SYMBOL_GPL(ktime_get_boot_fast_ns);
+
 
 /*
  * See comment for __ktime_get_fast_ns() vs. timestamp ordering
@@ -498,6 +527,7 @@ u64 ktime_get_real_fast_ns(void)
 {
 	return __ktime_get_real_fast_ns(&tk_fast_mono);
 }
+EXPORT_SYMBOL_GPL(ktime_get_real_fast_ns);
 
 /**
  * halt_fast_timekeeper - Prevent fast timekeeper from accessing clocksource.
@@ -530,12 +560,11 @@ static void halt_fast_timekeeper(struct timekeeper *tk)
 
 static inline void update_vsyscall(struct timekeeper *tk)
 {
- 	struct timespec xt, wm;
+	struct timespec xt, wm;
 	xt = timespec64_to_timespec(tk_xtime(tk));
 	wm = timespec64_to_timespec(tk->wall_to_monotonic);
-
 	update_vsyscall_old(&xt, &wm, tk->tkr_mono.clock, tk->tkr_mono.mult,
-			   tk->tkr_mono.cycle_last);
+			    tk->tkr_mono.cycle_last);
 }
 
 static inline void old_vsyscall_fixup(struct timekeeper *tk)
@@ -601,8 +630,6 @@ int pvclock_gtod_unregister_notifier(struct notifier_block *nb)
 	raw_spin_lock_irqsave(&timekeeper_lock, flags);
 	ret = raw_notifier_chain_unregister(&pvclock_gtod_chain, nb);
 	raw_spin_unlock_irqrestore(&timekeeper_lock, flags);
-
-	ntp_notify_cmos_timer();
 
 	return ret;
 }
@@ -1349,20 +1376,6 @@ void timekeeping_warp_clock(void)
 	}
 }
 
-s32 timekeeping_get_tai_offset(void)
-{
-	struct timekeeper *tk = &tk_core.timekeeper;
-	unsigned int seq;
-	s32 ret;
-
-	do {
-		seq = read_seqcount_begin(&tk_core.seq);
-		ret = tk->tai_offset;
-	} while (read_seqcount_retry(&tk_core.seq, seq));
-
-	return ret;
-}
-
 /**
  * __timekeeping_set_tai_offset - Sets the TAI offset from UTC and monotonic
  *
@@ -1371,23 +1384,6 @@ static void __timekeeping_set_tai_offset(struct timekeeper *tk, s32 tai_offset)
 {
 	tk->tai_offset = tai_offset;
 	tk->offs_tai = ktime_add(tk->offs_real, ktime_set(tai_offset, 0));
-}
-
-/**
- * timekeeping_set_tai_offset - Sets the current TAI offset from UTC
- *
- */
-void timekeeping_set_tai_offset(s32 tai_offset)
-{
-	struct timekeeper *tk = &tk_core.timekeeper;
-	unsigned long flags;
-
-	raw_spin_lock_irqsave(&timekeeper_lock, flags);
-	write_seqcount_begin(&tk_core.seq);
-	__timekeeping_set_tai_offset(tk, tai_offset);
-	write_seqcount_end(&tk_core.seq);
-	raw_spin_unlock_irqrestore(&timekeeper_lock, flags);
-	clock_was_set();
 }
 
 /**
@@ -2492,7 +2488,6 @@ int do_adjtimex(struct timex *txc)
 	if (tai != orig_tai) {
 		__timekeeping_set_tai_offset(tk, tai);
 		timekeeping_update(tk, TK_MIRROR | TK_CLOCK_WAS_SET);
-		update_pvclock_gtod(tk, true);
 	}
 	tk_update_leap_state(tk);
 
@@ -2501,6 +2496,8 @@ int do_adjtimex(struct timex *txc)
 
 	if (tai != orig_tai)
 		clock_was_set();
+
+	ntp_notify_cmos_timer();
 
 	return ret;
 }

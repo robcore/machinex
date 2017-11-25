@@ -309,7 +309,6 @@ extern bool kernel_sec_set_debug_level(int level);
 extern int kernel_sec_get_debug_level(void);
 extern int ssr_panic_handler_for_sec_dbg(void);
 __weak void dump_all_task_info(void);
-__weak void dump_cpu_stat(void);
 extern void emerg_pet_watchdog(void);
 extern void msm_restart(enum reboot_mode reboot_mode, const char *cmd);
 #define LOCAL_CONFIG_PRINT_EXTRA_INFO

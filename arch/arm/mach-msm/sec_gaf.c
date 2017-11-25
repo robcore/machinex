@@ -18,9 +18,11 @@
 #ifndef arch_irq_stat
 #define arch_irq_stat() 0
 #endif
+/*
 #ifndef arch_idle_time
 #define arch_idle_time(cpu) 0
 #endif
+*/
 
 #define cputime64_add(__a, __b)		((__a) + (__b))
 #define cputime64_sub(__a, __b) 	((__a) - (__b))
@@ -297,6 +299,7 @@ void dump_all_task_info(void)
 	printk(KERN_INFO " ---------------------------------------------------"
 	"--------------------------------\n");
 }
+#if 0
 void dump_cpu_stat(void)
 {
 	int i, j;
@@ -403,3 +406,4 @@ void dump_cpu_stat(void)
 	"-------------------------------------\n");
 	return;
 }
+#endif

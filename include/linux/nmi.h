@@ -8,6 +8,19 @@
 #include <linux/sched.h>
 #include <asm/irq.h>
 
+#ifdef CONFIG_SOFTLOCKUP_DETECTOR
+extern void touch_softlockup_watchdog_sched(void);
+extern void touch_softlockup_watchdog(void);
+extern void touch_softlockup_watchdog_sync(void);
+extern void touch_all_softlockup_watchdogs(void);
+extern unsigned int  softlockup_panic;
+#else
+static inline void touch_softlockup_watchdog_sched(void) { }
+static inline void touch_softlockup_watchdog(void) { }
+static inline void touch_softlockup_watchdog_sync(void) { }
+static inline void touch_all_softlockup_watchdogs(void) { }
+#endif
+
 /**
  * touch_nmi_watchdog - restart NMI watchdog timeout.
  * 

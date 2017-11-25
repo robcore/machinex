@@ -49,7 +49,7 @@
 #include <linux/debugfs.h>
 #include <asm/system_info.h>
 #include <linux/seq_file.h>
-
+#define dump_cpu_stat() dump_cpu_stat{};
 /* onlyjazz.ed26 : make the restart_reason global to enable it early
    in sec_debug_init and share with restart functions */
 

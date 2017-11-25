@@ -397,7 +397,6 @@ void tick_shutdown(unsigned int cpu)
 		 * the set mode function!
 		 */
 		clockevent_set_state(dev, CLOCK_EVT_STATE_DETACHED);
-		dev->mode = CLOCK_EVT_MODE_UNUSED;
 		clockevents_exchange_device(dev, NULL);
 		dev->event_handler = clockevents_handle_noop;
 		td->evtdev = NULL;
@@ -469,6 +468,7 @@ void tick_resume(void)
 	tick_resume_local();
 }
 
+#ifdef CONFIG_SUSPEND
 static DEFINE_RAW_SPINLOCK(tick_freeze_lock);
 static unsigned int tick_freeze_depth;
 
@@ -516,6 +516,7 @@ void tick_unfreeze(void)
 
 	raw_spin_unlock(&tick_freeze_lock);
 }
+#endif /* CONFIG_SUSPEND */
 
 /**
  * tick_init - initialize the tick control
