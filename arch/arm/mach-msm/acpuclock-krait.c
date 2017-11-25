@@ -1347,27 +1347,20 @@ static struct cpufreq_frequency_table freq_table[] = {
 	{ .frequency = CPUFREQ_TABLE_END }
 };
 
-static int msm_cpufreq_init(struct cpufreq_policy *policy)
+static inline int msm_cpufreq_init(struct cpufreq_policy *policy)
 {
 	int ret = 0;
 
-	if (cpu_out_of_range(policy->cpu)) {
-		ret = -EINVAL;
-		goto out;
-	}
-
-	if (!cpu_online(policy->cpu)) {
-		ret = -ENODEV;
-		goto out;
-	}
+	if (cpu_out_of_range(policy->cpu) ||
+		!cpu_online(policy->cpu))
+		return -ENODEV;
 
 	ret = cpufreq_table_validate_and_show(policy, freq_table);
 	if (ret) {
-		pr_err("%s: invalid frequency table: %d\n", __func__, ret);
-		goto out;
+		pr_err("%s: WARNING! Invalid frequency table!", __func__);
+		return ret;
 	}
-out:
-	return ret;
+	return 0;
 }
 
 static int msm_cpufreq_resume(void)
