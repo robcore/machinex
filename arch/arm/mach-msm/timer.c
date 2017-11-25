@@ -44,8 +44,6 @@
 enum {
 	MSM_TIMER_DEBUG_SYNC = 1U << 0,
 };
-static int msm_timer_debug_mask;
-module_param_named(debug_mask, msm_timer_debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 #ifdef CONFIG_MSM7X00A_USE_GP_TIMER
 	#define DG_TIMER_RATING 100
@@ -545,11 +543,6 @@ static uint32_t msm_timer_do_sync_to_sclk(
 	if (smem_clock_val) {
 		if (update != NULL)
 			update(data, smem_clock_val, sclk_hz);
-
-		if (msm_timer_debug_mask & MSM_TIMER_DEBUG_SYNC)
-			printk(KERN_INFO
-				"get_smem_clock: state %x clock %u\n",
-				state, smem_clock_val);
 	} else {
 		printk(KERN_EMERG
 			"get_smem_clock: timeout state %x clock %u\n",
@@ -988,10 +981,13 @@ static void broadcast_timer_setup(void)
 	BUG_ON(res);
 
 	evt = per_cpu_ptr(msm_evt, cpu);
-	evt->name	= "dummy_timer";
+	evt->name	= "msm_timer";
 	evt->features	= CLOCK_EVT_FEAT_ONESHOT |
 			  CLOCK_EVT_FEAT_PERIODIC |
 			  CLOCK_EVT_FEAT_DUMMY;
+ 	evt->set_state_shutdown = msm_timer_shutdown;
+	evt->set_state_oneshot = msm_timer_shutdown;
+	evt->tick_resume = msm_timer_shutdown;
 	evt->rating	= 100;
 	evt->mult	= 1;
 	evt->cpumask = cpumask_of(smp_processor_id());
