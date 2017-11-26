@@ -459,13 +459,6 @@ void vtime_account_irq_enter(struct task_struct *tsk)
 EXPORT_SYMBOL_GPL(vtime_account_irq_enter);
 #endif /* __ARCH_HAS_VTIME_ACCOUNT */
 
-void cputime_adjust(struct task_cputime *curr, struct prev_cputime *prev,
-		    u64 *ut, u64 *st)
-{
-	*ut = curr->utime;
-	*st = curr->stime;
-}
-
 void task_cputime_adjusted(struct task_struct *p, u64 *ut, u64 *st)
 {
 	*ut = p->utime;
@@ -604,8 +597,9 @@ drop_precision:
  *
  * Assuming that rtime_i+1 >= rtime_i.
  */
-void cputime_adjust(struct task_cputime *curr, struct prev_cputime *prev,
-		    u64 *ut, u64 *st)
+static void cputime_adjust(struct task_cputime *curr,
+			   struct prev_cputime *prev,
+			   u64 *ut, u64 *st)
 {
 	u64 rtime, stime, utime;
 	unsigned long flags;
