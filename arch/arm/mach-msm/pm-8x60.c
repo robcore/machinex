@@ -66,7 +66,6 @@
 #include <linux/regulator/consumer.h>
 #include <mach/gpiomux.h>
 #include <linux/mfd/pm8xxx/pm8921.h>
-#include <linux/powersuspend.h>
 
 #ifdef CONFIG_SEC_GPIO_DVS
 #include <linux/secgpio_dvs.h>
@@ -162,26 +161,6 @@ static struct msm_pm_sleep_status_data *msm_pm_slp_sts;
 static bool msm_pm_ldo_retention_enabled = false;
 module_param_named(ldo_retention_enabled,
 	msm_pm_ldo_retention_enabled, bool, 0664);
-
-static bool msm_pm_use_sync_timer = false;
-module_param_named(use_sync_timer,
-	msm_pm_use_sync_timer, bool, 0444);
-
-static void msmpm_suspend(struct power_suspend *h)
-{
-	msm_pm_use_sync_timer = true;
-}
-
-static void msmpm_resume(struct power_suspend *h)
-{
-	msm_pm_use_sync_timer = false;
-}
-
-static struct power_suspend msmpm_suspend_data =
-{
-	.suspend = msmpm_suspend,
-	.resume = msmpm_resume,
-};
 
 static int msm_pm_retention_tz_call;
 static void *msm_pm_idle_rs_limits;
@@ -643,18 +622,7 @@ static void msm_pm_target_init(void)
 
 static int64_t msm_pm_timer_enter_idle(void)
 {
-	if (msm_pm_use_sync_timer)
-		return ktime_to_ns(tick_nohz_get_sleep_length());
-
-	return msm_timer_enter_idle();
-}
-
-static void msm_pm_timer_exit_idle(bool timer_halted)
-{
-	if (msm_pm_use_sync_timer)
-		return;
-
-	msm_timer_exit_idle((int) timer_halted);
+	return ktime_to_ns(tick_nohz_get_sleep_length());
 }
 
 static int64_t msm_pm_timer_enter_suspend(int64_t *period)
@@ -874,7 +842,6 @@ int msm_pm_idle_enter(enum msm_pm_sleep_mode sleep_mode)
 				pm_sleep_ops.exit_sleep(msm_pm_idle_rs_limits,
 						true, notify_rpm, collapsed);
 		}
-		msm_pm_timer_exit_idle(timer_halted);
 		if (collapsed)
 			exit_stat = MSM_PM_STAT_IDLE_POWER_COLLAPSE;
 		else
@@ -1322,8 +1289,6 @@ static int __init msm_pm_init(void)
 				msm_cpu_status_driver.driver.name);
 		return rc;
 	}
-
-	register_power_suspend(&msmpm_suspend_data);
 
 	return 0;
 }
