@@ -66,6 +66,7 @@
 #include <linux/regulator/consumer.h>
 #include <mach/gpiomux.h>
 #include <linux/mfd/pm8xxx/pm8921.h>
+#include <linux/powersuspend.h>
 
 #ifdef CONFIG_SEC_GPIO_DVS
 #include <linux/secgpio_dvs.h>
@@ -164,7 +165,23 @@ module_param_named(ldo_retention_enabled,
 
 static bool msm_pm_use_sync_timer = false;
 module_param_named(use_sync_timer,
-	msm_pm_use_sync_timer, bool, 0664);
+	msm_pm_use_sync_timer, bool, 0444);
+
+static void msmpm_suspend(struct power_suspend *h)
+{
+	msm_pm_use_sync_timer = true;
+}
+
+static void msmpm_resume(struct power_suspend *h)
+{
+	msm_pm_use_sync_timer = false;
+}
+
+static struct power_suspend msmpm_suspend_data =
+{
+	.suspend = msmpm_suspend,
+	.resume = msmpm_resume,
+};
 
 static int msm_pm_retention_tz_call;
 static void *msm_pm_idle_rs_limits;
@@ -1306,6 +1323,7 @@ static int __init msm_pm_init(void)
 		return rc;
 	}
 
+	register_power_suspend(&msmpm_suspend_data);
 
 	return 0;
 }
