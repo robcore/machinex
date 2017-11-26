@@ -53,14 +53,6 @@
 #include "mipi_samsung_oled-8930.h"
 #endif
 
-struct wake_lock prometheus_rising;
-
-static bool display_on = true;
-bool is_display_on()
-{
-	return READ_ONCE(display_on);
-}
-
 u32 dsi_irq;
 u32 esc_byte_ratio;
 
@@ -107,7 +99,7 @@ static int mipi_dsi_off(struct platform_device *pdev)
 	struct msm_panel_info *pinfo;
 	uint32 dsi_ctrl;
 
-	pr_debug("%s+:\n", __func__);
+	pr_info("%s+:\n", __func__);
 
 	mfd = platform_get_drvdata(pdev);
 	pinfo = &mfd->panel_info;
@@ -188,21 +180,6 @@ static int mipi_dsi_off(struct platform_device *pdev)
 	else
 		up(&mfd->dma->mutex);
 
-	printk("The answer is beneath us\n");
-
-#if 0
-	state_suspend();
-#endif
-	WRITE_ONCE(display_on, false);
-#ifdef CONFIG_PROMETHEUS
-	 /*Yank555.lu : hook to handle powersuspend tasks (sleep)*/
-	prometheus_panel_beacon(POWER_SUSPEND_ACTIVE);
-#endif
-
-#ifdef CONFIG_LCD_NOTIFY
-	lcd_notifier_call_chain(LCD_EVENT_OFF_END, NULL);
-#endif
-
 	return ret;
 }
 
@@ -220,12 +197,11 @@ static int mipi_dsi_on(struct platform_device *pdev)
 	u32 dummy_xres, dummy_yres;
 	int target_type = 0;
 	u32 tmp;
-	static unsigned int mx_is_booting = 1;
 #if defined(CONFIG_FB_MSM_MIPI_RENESAS_TFT_VIDEO_FULL_HD_PT_PANEL)
 	static int is_booting = 1;
 #endif
 
-	pr_debug("%s+:\n", __func__);
+	pr_info("%s+:\n", __func__);
 
 #if defined(CONFIG_MIPI_SAMSUNG_ESD_REFRESH) || defined(CONFIG_ESD_ERR_FG_RECOVERY)
 	pdev_for_esd = pdev;
@@ -471,25 +447,6 @@ static int mipi_dsi_on(struct platform_device *pdev)
 		mutex_unlock(&mfd->dma->ov_mutex);
 	else
 		up(&mfd->dma->mutex);
-
-	if (mx_is_booting) {
-		mx_is_booting = 0;
-		pr_info("Hello? I'm different.\n");
-	} else {
-		wake_lock_timeout(&prometheus_rising, msecs_to_jiffies(100));
-		pr_info("Take me with you\n");
-	}
-
-	WRITE_ONCE(display_on, true);
-	pr_info("Rob's DSI ON HOOK\n");
-#ifdef CONFIG_PROMETHEUS
-		/* Yank555.lu : hook to handle powersuspend tasks (wakeup) */
-	prometheus_panel_beacon(POWER_SUSPEND_INACTIVE);
-#endif
-
-#ifdef CONFIG_LCD_NOTIFY
-	lcd_notifier_call_chain(LCD_EVENT_ON_END, NULL);
-#endif
 
 	return ret;
 }
@@ -826,9 +783,6 @@ static int mipi_dsi_probe(struct platform_device *pdev)
 #endif
 
 	esc_byte_ratio = pinfo->mipi.esc_byte_ratio;
-
-	wake_lock_init(&prometheus_rising, WAKE_LOCK_SUSPEND, "prometheus_rsm");
-
 
 	return 0;
 

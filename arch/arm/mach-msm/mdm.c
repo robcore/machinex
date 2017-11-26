@@ -85,7 +85,7 @@ static int charm_subsys_powerup(const struct subsys_desc *crashed_subsys)
 	complete(&charm_needs_reload);
 	wait_for_completion(&charm_boot);
 	pr_info("%s: charm modem has been restarted\n", __func__);
-	INIT_COMPLETION(charm_boot);
+	reinit_completion(&charm_boot);
 	return charm_boot_status;
 }
 
@@ -97,7 +97,7 @@ static int charm_subsys_ramdumps(int want_dumps,
 		boot_type = CHARM_RAM_DUMPS;
 		complete(&charm_needs_reload);
 		wait_for_completion(&charm_ram_dumps);
-		INIT_COMPLETION(charm_ram_dumps);
+		reinit_completion(&charm_ram_dumps);
 		power_down_charm();
 	}
 	return charm_ram_dump_status;
@@ -195,7 +195,7 @@ static long charm_modem_ioctl(struct file *filp, unsigned int cmd,
 		ret = wait_for_completion_interruptible(&charm_needs_reload);
 		if (!ret)
 			put_user(boot_type, (unsigned long __user *) arg);
-		INIT_COMPLETION(charm_needs_reload);
+		reinit_completion(&charm_needs_reload);
 		break;
 	default:
 		pr_err("%s: invalid ioctl cmd = %d\n", __func__, _IOC_NR(cmd));

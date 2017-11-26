@@ -2745,7 +2745,7 @@ adreno_dump_and_exec_ft(struct kgsl_device *device)
 			result = 0;
 	} else {
 		kgsl_pwrctrl_set_state(device, KGSL_STATE_DUMP_AND_FT);
-		INIT_COMPLETION(device->ft_gate);
+		reinit_completion(&device->ft_gate);
 		/* Detected a hang */
 
 		/* Run fault tolerance at max power level */

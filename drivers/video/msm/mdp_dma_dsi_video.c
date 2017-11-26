@@ -40,7 +40,7 @@ ssize_t mdp_dma_video_show_event(struct device *dev,
 {
 	ssize_t ret = 0;
 
-	INIT_COMPLETION(vsync_cntrl.vsync_wait);
+	reinit_completion(&vsync_cntrl.vsync_wait);
 
 	if (atomic_read(&vsync_cntrl.suspend) > 0 ||
 		atomic_read(&vsync_cntrl.vsync_resume) == 0)
@@ -282,7 +282,7 @@ void mdp_dma_video_vsync_ctrl(int enable)
 
 	spin_lock_irqsave(&mdp_spin_lock, flag);
 	if (!enable)
-		INIT_COMPLETION(vsync_cntrl.vsync_wait);
+		reinit_completion(&vsync_cntrl.vsync_wait);
 
 	vsync_cntrl.vsync_irq_enabled = enable;
 	if (!enable)
@@ -328,7 +328,7 @@ void mdp_dsi_video_update(struct msm_fb_data_type *mfd)
 	/* enable  irq */
 	spin_lock_irqsave(&mdp_spin_lock, flag);
 	mdp_enable_irq(irq_block);
-	INIT_COMPLETION(mfd->dma->comp);
+	reinit_completion(&mfd->dma->comp);
 	mfd->dma->waiting = TRUE;
 
 	outp32(MDP_INTR_CLEAR, LCDC_FRAME_START);

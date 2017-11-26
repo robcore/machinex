@@ -497,7 +497,7 @@ void mdp4_mddi_blt_dmap_busy_wait(struct msm_fb_data_type *mfd)
 
 	spin_lock_irqsave(&mdp_spin_lock, flag);
 	if (mfd->dma->dmap_busy == TRUE) {
-		INIT_COMPLETION(mfd->dma->dmap_comp);
+		reinit_completion(&mfd->dma->dmap_comp);
 		need_wait++;
 	}
 	spin_unlock_irqrestore(&mdp_spin_lock, flag);
@@ -523,7 +523,7 @@ void mdp4_mddi_dma_busy_wait(struct msm_fb_data_type *mfd)
 	spin_lock_irqsave(&mdp_spin_lock, flag);
 	if (mfd->dma->busy == TRUE) {
 		if (busy_wait_cnt == 0)
-			INIT_COMPLETION(mfd->dma->comp);
+			reinit_completion(&mfd->dma->comp);
 		busy_wait_cnt++;
 		need_wait++;
 	}

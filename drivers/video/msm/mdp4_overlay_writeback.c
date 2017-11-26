@@ -433,7 +433,7 @@ int mdp4_wfd_pipe_commit(struct msm_fb_data_type *mfd,
 	}
 	spin_lock_irqsave(&vctrl->spin_lock, flags);
 	vctrl->ov_koff++;
-	INIT_COMPLETION(vctrl->ov_comp);
+	reinit_completion(&vctrl->ov_comp);
 	vsync_irq_enable(INTR_OVERLAY2_DONE, MDP_OVERLAY2_TERM);
 	pr_debug("%s: kickoff\n", __func__);
 	/* kickoff overlay engine */

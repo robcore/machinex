@@ -218,7 +218,7 @@ void esd_execute(void)
 		else {
 			pr_info("%s start", __func__);
 
-			INIT_COMPLETION(esd_completion);
+			reinit_completion(&esd_completion);
 
 			schedule_work(&esd_enable->det_work);
 

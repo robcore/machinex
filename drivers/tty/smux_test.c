@@ -243,7 +243,7 @@ static void mock_cb_data_init(struct smux_mock_callback *cb)
 static void mock_cb_data_reset(struct smux_mock_callback *cb)
 {
 	cb->cb_count = 0;
-	INIT_COMPLETION(cb->cb_completion);
+	reinit_completion(&cb->cb_completion);
 	cb->event_connected = 0;
 	cb->event_disconnected = 0;
 	cb->event_disconnected_ssr = 0;
@@ -567,7 +567,7 @@ static int smux_ut_basic_core(char *buf, int max,
 					&cb_data.cb_completion, HZ), >, 0);
 
 			/* wait for write and echo'd read to complete */
-			INIT_COMPLETION(cb_data.cb_completion);
+			reinit_completion(&cb_data.cb_completion);
 			if (cb_data.cb_count < 2)
 				UT_ASSERT_INT(
 					(int)wait_for_completion_timeout(
@@ -638,7 +638,7 @@ static int smux_ut_basic_core(char *buf, int max,
 				(int)wait_for_completion_timeout(
 					&cb_data.cb_completion, HZ),
 				>, 0);
-			INIT_COMPLETION(cb_data.cb_completion);
+			reinit_completion(&cb_data.cb_completion);
 		}
 		UT_ASSERT_INT(cb_data.cb_count, ==, 3);
 		UT_ASSERT_INT(cb_data.event_disconnected, ==, 1);
@@ -817,7 +817,7 @@ static int smux_ut_ssr_remote_open(char *buf, int max)
 				(int)wait_for_completion_timeout(
 					&cb_data.cb_completion, 10*HZ),
 				>, 0);
-			INIT_COMPLETION(cb_data.cb_completion);
+			reinit_completion(&cb_data.cb_completion);
 		}
 		UT_ASSERT_INT(cb_data.cb_count, ==, 3);
 		UT_ASSERT_INT(cb_data.event_disconnected, ==, 1);
@@ -906,7 +906,7 @@ static int smux_ut_ssr_remote_rx_buff_retry(char *buf, int max)
 				(int)wait_for_completion_timeout(
 					&cb_data.cb_completion, HZ),
 				>, 0);
-			INIT_COMPLETION(cb_data.cb_completion);
+			reinit_completion(&cb_data.cb_completion);
 		}
 		if (failed)
 			break;
@@ -920,7 +920,7 @@ static int smux_ut_ssr_remote_rx_buff_retry(char *buf, int max)
 		while (cb_data.event_disconnected_ssr == 0) {
 			(void)wait_for_completion_timeout(
 				&cb_data.cb_completion, HZ);
-			INIT_COMPLETION(cb_data.cb_completion);
+			reinit_completion(&cb_data.cb_completion);
 			++retry_count;
 			UT_ASSERT_INT(retry_count, <, 10);
 		}
@@ -1313,7 +1313,7 @@ static int smux_ut_tiocm(char *buf, int max, const char *name)
 				(int)wait_for_completion_timeout(
 					&cb_data.cb_completion, HZ),
 				>, 0);
-			INIT_COMPLETION(cb_data.cb_completion);
+			reinit_completion(&cb_data.cb_completion);
 		}
 		UT_ASSERT_INT(cb_data.cb_count, ==, 3);
 		UT_ASSERT_INT(cb_data.event_disconnected, ==, 1);
@@ -1470,7 +1470,7 @@ static int smux_ut_local_wm(char *buf, int max)
 				(int)wait_for_completion_timeout(
 					&cb_data.cb_completion, HZ),
 				>, 0);
-			INIT_COMPLETION(cb_data.cb_completion);
+			reinit_completion(&cb_data.cb_completion);
 		}
 		if (failed)
 			break;
@@ -1488,7 +1488,7 @@ static int smux_ut_local_wm(char *buf, int max)
 				(int)wait_for_completion_timeout(
 					&cb_data.cb_completion, HZ),
 				>, 0);
-			INIT_COMPLETION(cb_data.cb_completion);
+			reinit_completion(&cb_data.cb_completion);
 		}
 		UT_ASSERT_INT(cb_data.cb_count, ==, 3);
 		UT_ASSERT_INT(cb_data.event_disconnected, ==, 1);
@@ -1571,7 +1571,7 @@ static int smux_ut_local_smuxld_receive_buf(char *buf, int max)
 			UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
 					&cb_data.cb_completion, HZ), >, 0);
-			INIT_COMPLETION(cb_data.cb_completion);
+			reinit_completion(&cb_data.cb_completion);
 		} while (cb_data.cb_count < 3);
 		UT_ASSERT_INT(cb_data.cb_count, ==, 3);
 		UT_ASSERT_INT(cb_data.event_read_done, ==, 3);
@@ -1603,7 +1603,7 @@ static int smux_ut_local_smuxld_receive_buf(char *buf, int max)
 				(int)wait_for_completion_timeout(
 					&cb_data.cb_completion, HZ),
 				>, 0);
-			INIT_COMPLETION(cb_data.cb_completion);
+			reinit_completion(&cb_data.cb_completion);
 		}
 		UT_ASSERT_INT(cb_data.cb_count, ==, 3);
 		UT_ASSERT_INT(cb_data.event_disconnected, ==, 1);
@@ -1759,7 +1759,7 @@ static int smux_ut_local_get_rx_buff_retry(char *buf, int max)
 				(int)wait_for_completion_timeout(
 					&cb_data.cb_completion, 2*HZ),
 				>, 0);
-			INIT_COMPLETION(cb_data.cb_completion);
+			reinit_completion(&cb_data.cb_completion);
 		}
 		if (failed)
 			break;
@@ -1876,7 +1876,7 @@ static int smux_ut_local_get_rx_buff_retry(char *buf, int max)
 
 		/* verify 2nd pending RX packet goes through */
 		get_rx_buffer_mock_fail = 0;
-		INIT_COMPLETION(cb_data.cb_completion);
+		reinit_completion(&cb_data.cb_completion);
 		if (cb_data.event_read_done == 0)
 			UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
@@ -1911,7 +1911,7 @@ static int smux_ut_local_get_rx_buff_retry(char *buf, int max)
 				(int)wait_for_completion_timeout(
 					&cb_data.cb_completion, 2*HZ),
 				>, 0);
-			INIT_COMPLETION(cb_data.cb_completion);
+			reinit_completion(&cb_data.cb_completion);
 		}
 		if (failed)
 			break;
@@ -1922,7 +1922,7 @@ static int smux_ut_local_get_rx_buff_retry(char *buf, int max)
 				(int)wait_for_completion_timeout(
 					&cb_data.cb_completion, 2*HZ),
 				>, 0);
-			INIT_COMPLETION(cb_data.cb_completion);
+			reinit_completion(&cb_data.cb_completion);
 		}
 		if (failed)
 			break;
@@ -1940,7 +1940,7 @@ static int smux_ut_local_get_rx_buff_retry(char *buf, int max)
 				(int)wait_for_completion_timeout(
 					&cb_data.cb_completion, HZ),
 				>, 0);
-			INIT_COMPLETION(cb_data.cb_completion);
+			reinit_completion(&cb_data.cb_completion);
 		}
 		UT_ASSERT_INT(cb_data.cb_count, ==, 3);
 		UT_ASSERT_INT(cb_data.event_disconnected, ==, 1);
@@ -2030,7 +2030,7 @@ static int smux_ut_local_get_rx_buff_retry_auto(char *buf, int max)
 					(int)wait_for_completion_timeout(
 						&cb_data.cb_completion, HZ),
 					>, 0);
-				INIT_COMPLETION(cb_data.cb_completion);
+				reinit_completion(&cb_data.cb_completion);
 			}
 			if (failed)
 				break;
@@ -2052,7 +2052,7 @@ static int smux_ut_local_get_rx_buff_retry_auto(char *buf, int max)
 				(int)wait_for_completion_timeout(
 					&cb_data.cb_completion, 2*HZ),
 				>, 0);
-			INIT_COMPLETION(cb_data.cb_completion);
+			reinit_completion(&cb_data.cb_completion);
 		}
 		if (failed)
 			break;
@@ -2071,7 +2071,7 @@ static int smux_ut_local_get_rx_buff_retry_auto(char *buf, int max)
 				(int)wait_for_completion_timeout(
 					&cb_data.cb_completion, HZ),
 				>, 0);
-			INIT_COMPLETION(cb_data.cb_completion);
+			reinit_completion(&cb_data.cb_completion);
 		}
 		UT_ASSERT_INT(cb_data.cb_count, ==, 3);
 		UT_ASSERT_INT(cb_data.event_disconnected, ==, 1);
@@ -2143,7 +2143,7 @@ static int smux_ut_remote_tx_stop(char *buf, int max)
 			>, 0);
 		UT_ASSERT_INT(cb_data.event_write_done, ==, 1);
 
-		INIT_COMPLETION(cb_data.cb_completion);
+		reinit_completion(&cb_data.cb_completion);
 		if (!cb_data.event_read_done) {
 			UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
@@ -2172,7 +2172,7 @@ static int smux_ut_remote_tx_stop(char *buf, int max)
 			(int)wait_for_completion_timeout(
 				&cb_data.cb_completion, HZ),
 				>, 0);
-		INIT_COMPLETION(cb_data.cb_completion);
+		reinit_completion(&cb_data.cb_completion);
 		UT_ASSERT_INT(cb_data.event_write_done, ==, 1);
 		UT_ASSERT_INT(cb_data.event_read_done, ==, 0);
 		UT_ASSERT_INT(cb_data.cb_count, ==, 1);
@@ -2205,7 +2205,7 @@ static int smux_ut_remote_tx_stop(char *buf, int max)
 				(int)wait_for_completion_timeout(
 					&cb_data.cb_completion, HZ),
 				>, 0);
-			INIT_COMPLETION(cb_data.cb_completion);
+			reinit_completion(&cb_data.cb_completion);
 		}
 		UT_ASSERT_INT(cb_data.cb_count, ==, 3);
 		UT_ASSERT_INT(cb_data.event_disconnected, ==, 1);
@@ -2294,7 +2294,7 @@ static int smux_ut_remote_initiated_wakeup(char *buf, int max)
 		/* verify remote wakeup and echo response */
 		smux_get_wakeup_counts(&lwakeups_start, &rwakeups_start);
 		start_j = jiffies;
-		INIT_COMPLETION(cb_data.cb_completion);
+		reinit_completion(&cb_data.cb_completion);
 		if (!cb_data.event_read_done)
 			UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(

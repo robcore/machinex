@@ -240,7 +240,7 @@ int mhl_device_discovery(const char *name, int *result)
 	msleep(50);
 	if (mhl_msm_state->cur_state == POWER_STATE_D3) {
 		/* give MHL driver chance to handle RGND interrupt */
-		INIT_COMPLETION(mhl_msm_state->rgnd_done);
+		reinit_completion(&mhl_msm_state->rgnd_done);
 		timeout = wait_for_completion_interruptible_timeout
 			(&mhl_msm_state->rgnd_done, HZ/2);
 		if (!timeout) {

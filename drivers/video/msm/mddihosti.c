@@ -1834,7 +1834,7 @@ uint32 mddi_get_client_id(void)
 			mddi_host_reg_out(CMD, MDDI_CMD_HIBERNATE);
 
 		mddi_rev_user.waiting = TRUE;
-		INIT_COMPLETION(mddi_rev_user.done_comp);
+		reinit_completion(&mddi_rev_user.done_comp);
 
 		spin_lock_irqsave(&mddi_host_spin_lock, flags);
 
@@ -1939,7 +1939,7 @@ uint16 mddi_get_next_free_llist_item(mddi_host_type host_idx, boolean wait)
 			ret_idx = UNASSIGNED_INDEX;
 		} else {
 			forced_wait = TRUE;
-			INIT_COMPLETION(pmhctl->mddi_llist_avail_comp);
+			reinit_completion(&pmhctl->mddi_llist_avail_comp);
 		}
 	}
 	spin_unlock_irqrestore(&mddi_host_spin_lock, flags);
@@ -2023,7 +2023,7 @@ void mddi_queue_forward_packets(uint16 first_llist_idx,
 
 	pmhctl->llist_notify[last_llist_idx].waiting = wait;
 	if (wait)
-		INIT_COMPLETION(pmhctl->llist_notify[last_llist_idx].done_comp);
+		reinit_completion(&pmhctl->llist_notify[last_llist_idx].done_comp);
 	pmhctl->llist_notify[last_llist_idx].done_cb = llist_done_cb;
 
 	spin_lock_irqsave(&mddi_host_spin_lock, flags);
@@ -2132,7 +2132,7 @@ void mddi_queue_reverse_encapsulation(boolean wait)
 	if (wait) {
 		if (!mddi_rev_user.waiting) {
 			mddi_rev_user.waiting = TRUE;
-			INIT_COMPLETION(mddi_rev_user.done_comp);
+			reinit_completion(&mddi_rev_user.done_comp);
 		} else
 			error = TRUE;
 	}

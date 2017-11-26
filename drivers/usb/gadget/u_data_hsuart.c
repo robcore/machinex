@@ -623,7 +623,7 @@ static void ghsuart_data_disconnect_w(struct work_struct *w)
 	if (!test_bit(CH_OPENED, &port->channel_sts))
 		return;
 
-	INIT_COMPLETION(port->close_complete);
+	reinit_completion(&port->close_complete);
 	msm_smux_close(port->ch_id);
 	clear_bit(CH_CONNECTED, &port->channel_sts);
 }

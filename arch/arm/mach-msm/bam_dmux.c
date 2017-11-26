@@ -1529,11 +1529,11 @@ static inline void ul_powerdown(void)
 
 	if (a2_pc_disabled) {
 		wait_for_dfab = 1;
-		INIT_COMPLETION(dfab_unvote_completion);
+		reinit_completion(&dfab_unvote_completion);
 		release_wakelock();
 	} else {
 		wait_for_ack = 1;
-		INIT_COMPLETION(ul_wakeup_ack_completion);
+		reinit_completion(&ul_wakeup_ack_completion);
 		power_vote(0);
 	}
 	bam_is_connected = 0;
@@ -1749,7 +1749,7 @@ static void ul_wakeup(void)
 			return;
 		}
 	}
-	INIT_COMPLETION(ul_wakeup_ack_completion);
+	reinit_completion(&ul_wakeup_ack_completion);
 	power_vote(1);
 	BAM_DMUX_LOG("%s waiting for wakeup ack\n", __func__);
 	ret = wait_for_completion_timeout(&ul_wakeup_ack_completion,
@@ -1833,7 +1833,7 @@ static void disconnect_to_bam(void)
 	ul_powerdown_finish();
 
 	/* tear down BAM connection */
-	INIT_COMPLETION(bam_connection_completion);
+	reinit_completion(&bam_connection_completion);
 
 	if (!power_management_only_mode) {
 		sps_disconnect(bam_tx_pipe);

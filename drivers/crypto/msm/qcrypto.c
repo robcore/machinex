@@ -2589,7 +2589,7 @@ static int _sha_hmac_setkey(struct crypto_ahash *tfm, const u8 *key,
 		ret =
 			wait_for_completion_interruptible(
 						&sha_ctx->ahash_req_complete);
-		INIT_COMPLETION(sha_ctx->ahash_req_complete);
+		reinit_completion(&sha_ctx->ahash_req_complete);
 	}
 
 	sha_ctx->authkey_in_len = len;
@@ -2774,7 +2774,7 @@ static int _sha_hmac_inner_hash(struct ahash_request *req,
 	if (ret == -EINPROGRESS || ret == -EBUSY) {
 		ret =
 		wait_for_completion_interruptible(&sha_ctx->ahash_req_complete);
-		INIT_COMPLETION(sha_ctx->ahash_req_complete);
+		reinit_completion(&sha_ctx->ahash_req_complete);
 	}
 
 	return ret;

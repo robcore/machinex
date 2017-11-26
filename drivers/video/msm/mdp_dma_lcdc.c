@@ -61,7 +61,7 @@ ssize_t mdp_dma_lcdc_show_event(struct device *dev,
 		atomic_read(&vsync_cntrl.vsync_resume) == 0)
 		return 0;
 
-	INIT_COMPLETION(vsync_cntrl.vsync_wait);
+	reinit_completion(&vsync_cntrl.vsync_wait);
 
 	wait_for_completion(&vsync_cntrl.vsync_wait);
 	ret = snprintf(buf, PAGE_SIZE, "VSYNC=%llu",
@@ -364,7 +364,7 @@ void mdp_dma_lcdc_vsync_ctrl(int enable)
 
 	spin_lock_irqsave(&mdp_spin_lock, flag);
 	if (!enable)
-		INIT_COMPLETION(vsync_cntrl.vsync_wait);
+		reinit_completion(&vsync_cntrl.vsync_wait);
 
 	vsync_cntrl.vsync_irq_enabled = enable;
 	if (!enable)
@@ -425,7 +425,7 @@ void mdp_lcdc_update(struct msm_fb_data_type *mfd)
 	/* enable LCDC irq */
 	spin_lock_irqsave(&mdp_spin_lock, flag);
 	mdp_enable_irq(irq_block);
-	INIT_COMPLETION(mfd->dma->comp);
+	reinit_completion(&mfd->dma->comp);
 	mfd->dma->waiting = TRUE;
 #ifdef CONFIG_FB_MSM_MDP40
 	outp32(MDP_INTR_CLEAR, intr);

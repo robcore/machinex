@@ -1081,7 +1081,7 @@ static void mipi_dsi_wait4video_done(void)
 	unsigned long flag;
 
 	spin_lock_irqsave(&dsi_mdp_lock, flag);
-	INIT_COMPLETION(dsi_video_comp);
+	reinit_completion(&dsi_video_comp);
 	mipi_dsi_enable_irq(DSI_VIDEO_TERM);
 	mipi_dsi_irq_set(DSI_INTR_VIDEO_DONE_MASK, DSI_INTR_VIDEO_DONE_MASK);
 	spin_unlock_irqrestore(&dsi_mdp_lock, flag);
@@ -1108,7 +1108,7 @@ void mipi_dsi_cmd_mdp_start(void)
 	spin_lock_irqsave(&dsi_mdp_lock, flag);
 	mipi_dsi_enable_irq(DSI_MDP_TERM);
 	dsi_mdp_busy = TRUE;
-	INIT_COMPLETION(dsi_mdp_comp);
+	reinit_completion(&dsi_mdp_comp);
 	spin_unlock_irqrestore(&dsi_mdp_lock, flag);
 }
 
@@ -1838,7 +1838,7 @@ int mipi_dsi_cmd_dma_tx(struct dsi_buf *tp)
 	if (dma_mapping_error(&dsi_dev, tp->dmap))
 		pr_err("%s: dmap mapp failed\n", __func__);
 
-	INIT_COMPLETION(dsi_dma_comp);
+	reinit_completion(&dsi_dma_comp);
 
 	MIPI_OUTP(MIPI_DSI_BASE + 0x044, tp->dmap);
 	MIPI_OUTP(MIPI_DSI_BASE + 0x048, tp->len);
@@ -2164,7 +2164,7 @@ int mipi_runtime_clk_change(int fps)
 	runtime_clk_change = 1;
 	goal_fps = fps;
 
-	INIT_COMPLETION(dsi_fps_comp);
+	reinit_completion(&dsi_fps_comp);
 	mipi_dsi_enable_irq(DSI_VIDEO_TERM);
 	mipi_dsi_irq_set(DSI_INTR_VIDEO_DONE_MASK,
 					DSI_INTR_VIDEO_DONE_MASK);
@@ -2200,7 +2200,7 @@ int mipi_runtime_csc_update(uint32_t reg[][2], int length)
 		csc_reg[loop][1] = reg[loop][1];
 	}
 
-	INIT_COMPLETION(dsi_fps_comp);
+	reinit_completion(&dsi_fps_comp);
 	mipi_dsi_enable_irq(DSI_VIDEO_TERM);
 	mipi_dsi_irq_set(DSI_INTR_VIDEO_DONE_MASK,
 					DSI_INTR_VIDEO_DONE_MASK);

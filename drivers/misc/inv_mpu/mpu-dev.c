@@ -367,7 +367,7 @@ static int mpu_early_notifier_callback(struct mpu_private_data *mpu,
 		mpu->timeout.expires = jiffies + mpu->response_timeout * HZ;
 		add_timer(&mpu->timeout);
 	}
-	INIT_COMPLETION(mpu->completion);
+	reinit_completion(&mpu->completion);
 	mutex_unlock(&mpu->mutex);
 
 	wake_up_interruptible(&mpu->mpu_event_wait);

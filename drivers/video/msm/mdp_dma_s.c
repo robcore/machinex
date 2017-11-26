@@ -144,7 +144,7 @@ void mdp_dma_s_update(struct msm_fb_data_type *mfd)
 		else
 			mdp_enable_irq(MDP_DMA_E_TERM);
 		mfd->dma->busy = TRUE;
-		INIT_COMPLETION(mfd->dma->comp);
+		reinit_completion(&mfd->dma->comp);
 		mfd->ibuf_flushed = TRUE;
 		mdp_dma_s_update_lcd(mfd);
 		up(&mfd->sem);

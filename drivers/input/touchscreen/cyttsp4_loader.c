@@ -283,7 +283,7 @@ static int _cyttsp4_send_cmd(struct cyttsp4_device *ttsp, const u8 *cmd_buf,
 #endif
 
 	if (timeout_ms > 0)
-		INIT_COMPLETION(data->int_running);
+		reinit_completion(&data->int_running);
 	retval = cyttsp4_write(ttsp, CY_MODE_BOOTLOADER,
 			       CY_REG_BASE, cmd_buf, cmd_size);
 	if (retval < 0) {
@@ -368,7 +368,7 @@ static int _cyttsp4_ldr_enter(struct cyttsp4_device *ttsp,
 	}
 #endif
 
-	INIT_COMPLETION(data->int_running);
+	reinit_completion(&data->int_running);
 
 	retval = cyttsp4_write(ttsp, CY_MODE_BOOTLOADER,
 		CY_REG_BASE, ldr_enter_cmd, cmd_size);

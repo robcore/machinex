@@ -240,7 +240,7 @@ static int32_t pm8xxx_adc_arb_cntrl(uint32_t arb_cntrl,
 
 	if (arb_cntrl) {
 		data_arb_cntrl |= PM8XXX_ADC_ARB_USRP_CNTRL1_REQ;
-		INIT_COMPLETION(adc_pmic->adc_rslt_completion);
+		reinit_completion(&adc_pmic->adc_rslt_completion);
 		rc = pm8xxx_writeb(adc_pmic->dev->parent,
 			PM8XXX_ADC_ARB_USRP_CNTRL1, data_arb_cntrl);
 	}

@@ -711,7 +711,7 @@ static int kgsl_suspend_device(struct kgsl_device *device, pm_message_t state)
 			kgsl_pwrctrl_enable(device);
 			kgsl_pwrctrl_irq(device, KGSL_PWRFLAGS_ON);
 			/* Get the completion ready to be waited upon. */
-			INIT_COMPLETION(device->hwaccess_gate);
+			reinit_completion(&device->hwaccess_gate);
 			device->ftbl->suspend_context(device);
 			device->ftbl->stop(device);
 			pm_qos_update_request(&device->pwrctrl.pm_qos_req_dma,
@@ -719,7 +719,7 @@ static int kgsl_suspend_device(struct kgsl_device *device, pm_message_t state)
 			kgsl_pwrctrl_set_state(device, KGSL_STATE_SUSPEND);
 			break;
 		case KGSL_STATE_SLUMBER:
-			INIT_COMPLETION(device->hwaccess_gate);
+			reinit_completion(&device->hwaccess_gate);
 			kgsl_pwrctrl_set_state(device, KGSL_STATE_SUSPEND);
 			break;
 		default:

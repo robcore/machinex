@@ -235,7 +235,7 @@ void hdmi_msm_cec_msg_send(struct hdmi_msm_cec_msg *msg)
 	msg_send_complete = FALSE;
 #endif
 
-	INIT_COMPLETION(hdmi_msm_state->cec_frame_wr_done);
+	reinit_completion(&hdmi_msm_state->cec_frame_wr_done);
 	hdmi_msm_state->cec_frame_wr_status = 0;
 
 	/* 0x0294 HDMI_MSM_CEC_RETRANSMIT */
@@ -1523,7 +1523,7 @@ again:
 	 *    TRANSACTION_CNT = 0x1 (execute transaction0 followed by
 	 *    transaction1)
 	 *    GO = 0x1 (kicks off hardware) */
-	INIT_COMPLETION(hdmi_msm_state->ddc_sw_done);
+	reinit_completion(&hdmi_msm_state->ddc_sw_done);
 	HDMI_OUTP_ND(0x020C, (1 << 0) | (1 << 20));
 
 	time_out_count = wait_for_completion_interruptible_timeout(
@@ -1719,7 +1719,7 @@ again:
 	 *    transaction1)
 	 *    SEND_RESET = Set to 1 to send reset sequence
 	 *    GO = 0x1 (kicks off hardware) */
-	INIT_COMPLETION(hdmi_msm_state->ddc_sw_done);
+	reinit_completion(&hdmi_msm_state->ddc_sw_done);
 	HDMI_OUTP_ND(0x020C, (1 << 0) | (1 << 20));
 
 	time_out_count = wait_for_completion_interruptible_timeout(
@@ -1980,7 +1980,7 @@ again:
 	 *    TRANSACTION_CNT = 0x2 (execute transaction0 followed by
 	 *    transaction1)
 	 *    GO = 0x1 (kicks off hardware) */
-	INIT_COMPLETION(hdmi_msm_state->ddc_sw_done);
+	reinit_completion(&hdmi_msm_state->ddc_sw_done);
 	HDMI_OUTP_ND(0x020C, (1 << 0) | (2 << 20));
 
 	time_out_count = wait_for_completion_interruptible_timeout(
@@ -2656,7 +2656,7 @@ static int hdcp_authentication_part1(void)
 		}
 
 		DEV_DBG("HDCP: R0'=%02x%02x\n", buf[1], buf[0]);
-		INIT_COMPLETION(hdmi_msm_state->hdcp_success_done);
+		reinit_completion(&hdmi_msm_state->hdcp_success_done);
 		/* 0x013C HDCP_RCVPORT_DATA2_0
 		[15:0] LINK0_RI */
 		HDMI_OUTP(0x013C, (((uint32)buf[1]) << 8) | buf[0]);
@@ -4932,7 +4932,7 @@ static int hdmi_msm_hpd_feature(int on)
 			hdmi_msm_send_event(HPD_EVENT_OFFLINE);
 
 			/* Wait for HDMI and FD to close */
-			INIT_COMPLETION(hdmi_msm_state->hpd_event_processed);
+			reinit_completion(&hdmi_msm_state->hpd_event_processed);
 			wait_for_completion_interruptible_timeout(
 				&hdmi_msm_state->hpd_event_processed, HZ);
 

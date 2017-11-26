@@ -717,7 +717,7 @@ int hmac_sha256(u8 *key, u8 ksize, char *plaintext, u8 psize,
 	case -EBUSY:
 		ret = wait_for_completion_interruptible(&tresult.completion);
 		if (!ret && !tresult.err) {
-			INIT_COMPLETION(tresult.completion);
+			reinit_completion(&tresult.completion);
 			break;
 		} else {
 			BT_DBG("wait_for_completion_interruptible failed");

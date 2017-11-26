@@ -310,7 +310,7 @@ void	mdp3_dsi_cmd_dma_busy_wait(struct msm_fb_data_type *mfd)
 
 	if (mfd->dma->busy == TRUE) {
 		if (busy_wait_cnt == 0)
-			INIT_COMPLETION(mfd->dma->comp);
+			reinit_completion(&mfd->dma->comp);
 		busy_wait_cnt++;
 		need_wait++;
 	}
@@ -504,8 +504,8 @@ void mdp_dma2_update(struct msm_fb_data_type *mfd)
 		spin_lock_irqsave(&mdp_spin_lock, flag);
 		mdp_enable_irq(MDP_DMA2_TERM);
 		mfd->dma->busy = TRUE;
-		INIT_COMPLETION(mfd->dma->comp);
-		INIT_COMPLETION(vsync_cntrl.vsync_comp);
+		reinit_completion(&mfd->dma->comp);
+		reinit_completion(&vsync_cntrl.vsync_comp);
 		if (!vsync_cntrl.vsync_irq_enabled &&
 				vsync_cntrl.disabled_clocks) {
 			MDP_OUTP(MDP_BASE + 0x021c, 0x10); /* read pointer */
@@ -549,7 +549,7 @@ void mdp_dma_vsync_ctrl(int enable)
 
 	spin_lock_irqsave(&mdp_spin_lock, flag);
 	if (!enable)
-		INIT_COMPLETION(vsync_cntrl.vsync_wait);
+		reinit_completion(&vsync_cntrl.vsync_wait);
 
 	vsync_cntrl.vsync_irq_enabled = enable;
 	disabled_clocks = vsync_cntrl.disabled_clocks;

@@ -77,7 +77,7 @@ static int msm_vfb_comp_sig_wait(struct fb_info *info, int opt)
 
 	pr_info("%s enter : %d\n", __func__, opt);
 	if (opt == 1) {
-		INIT_COMPLETION(hwc_done_comp);
+		reinit_completion(&hwc_done_comp);
 		ret = wait_for_completion_killable(&hwc_done_comp);
 		if (ret < 0)
 			ret = -ERESTARTSYS;
@@ -687,7 +687,7 @@ static int msm_vfb_wait_update(struct fb_info *info)
 	int ret = 0;
 
 	pr_info("%s enter\n", __func__);
-	INIT_COMPLETION(pan_disp_comp);
+	reinit_completion(&pan_disp_comp);
 	ret = wait_for_completion_killable(&pan_disp_comp);
 	if (ret < 0)
 		ret = -ERESTARTSYS;

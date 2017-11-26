@@ -222,8 +222,8 @@ int mdp4_lcdc_pipe_commit(int cndx, int wait)
 	if (vctrl->blt_change) {
 		pipe = vctrl->base_pipe;
 		spin_lock_irqsave(&vctrl->spin_lock, flags);
-		INIT_COMPLETION(vctrl->dmap_comp);
-		INIT_COMPLETION(vctrl->ov_comp);
+		reinit_completion(&vctrl->dmap_comp);
+		reinit_completion(&vctrl->ov_comp);
 		vsync_irq_enable(INTR_DMA_P_DONE, MDP_DMAP_TERM);
 		spin_unlock_irqrestore(&vctrl->spin_lock, flags);
 		mdp4_lcdc_wait4dmap(0);
@@ -280,7 +280,7 @@ int mdp4_lcdc_pipe_commit(int cndx, int wait)
 	if (pipe->ov_blt_addr) {
 		mdp4_lcdc_blt_ov_update(pipe);
 		pipe->ov_cnt++;
-		INIT_COMPLETION(vctrl->ov_comp);
+		reinit_completion(&vctrl->ov_comp);
 		vsync_irq_enable(INTR_OVERLAY0_DONE, MDP_OVERLAY0_TERM);
 		mb();
 		vctrl->ov_koff++;
@@ -289,7 +289,7 @@ int mdp4_lcdc_pipe_commit(int cndx, int wait)
 		outpdw(MDP_BASE + 0x0004, 0);
 	} else {
 		/* schedule second phase update  at dmap */
-		INIT_COMPLETION(vctrl->dmap_comp);
+		reinit_completion(&vctrl->dmap_comp);
 		vsync_irq_enable(INTR_DMA_P_DONE, MDP_DMAP_TERM);
 	}
 	spin_unlock_irqrestore(&vctrl->spin_lock, flags);
@@ -377,7 +377,7 @@ void mdp4_lcdc_wait4vsync(int cndx)
 	spin_lock_irqsave(&vctrl->spin_lock, flags);
 
 	if (vctrl->wait_vsync_cnt == 0)
-		INIT_COMPLETION(vctrl->vsync_comp);
+		reinit_completion(&vctrl->vsync_comp);
 	vctrl->wait_vsync_cnt++;
 	spin_unlock_irqrestore(&vctrl->spin_lock, flags);
 
@@ -444,7 +444,7 @@ ssize_t mdp4_lcdc_show_event(struct device *dev,
 	 * at wait_for_completion(&vctrl->vsync_comp)
 	 *
 	 * if show_event thread waked up first then it will come back
-	 * and call INIT_COMPLETION(vctrl->vsync_comp) which set x.done = 0
+	 * and call reinit_completion(&vctrl->vsync_comp) which set x.done = 0
 	 * then second thread wakeed up which set x.done = 0x7ffffffd
 	 * after that wait_for_completion will never wait.
 	 * To avoid this, force show_event thread to sleep 5 ms here
@@ -463,7 +463,7 @@ ssize_t mdp4_lcdc_show_event(struct device *dev,
 
 	spin_lock_irqsave(&vctrl->spin_lock, flags);
 	if (vctrl->wait_vsync_cnt == 0)
-		INIT_COMPLETION(vctrl->vsync_comp);
+		reinit_completion(&vctrl->vsync_comp);
 	vctrl->wait_vsync_cnt++;
 	spin_unlock_irqrestore(&vctrl->spin_lock, flags);
 	ret = wait_for_completion_interruptible_timeout(&vctrl->vsync_comp,

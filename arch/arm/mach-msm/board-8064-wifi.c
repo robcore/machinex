@@ -498,7 +498,7 @@ static bool bcm_wifi_process_partial_resume(int action)
 		complete(&bcm_comp);
 		break;
 	case WIFI_PR_NOTIFY_RESUME:
-		INIT_COMPLETION(bcm_comp);
+		reinit_completion(&bcm_comp);
 		bcm_suspend = PR_IN_RESUME_STATE;
 		break;
 	case WIFI_PR_INIT:

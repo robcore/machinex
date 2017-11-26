@@ -2084,8 +2084,8 @@ static int msm_fb_pan_display_ex(struct fb_info *info,
 	memcpy(&fb_backup->disp_commit, disp_commit,
 		sizeof(struct mdp_display_commit));
 	mfd->is_committing = 1;
-	INIT_COMPLETION(mfd->commit_comp);
-	schedule_hipri_work(&mfd->commit_work);
+	reinit_completion(&mfd->commit_comp);
+	schedule_work(&mfd->commit_work);
 	mutex_unlock(&mfd->sync_mutex);
 	if (wait_for_finish)
 		msm_fb_pan_idle(mfd);
@@ -3722,11 +3722,11 @@ static int msmfb_notify_update(struct fb_info *info, void __user *argp)
 		return -EINVAL;
 
 	if (notify == NOTIFY_UPDATE_START) {
-		INIT_COMPLETION(mfd->msmfb_update_notify);
+		reinit_completion(&mfd->msmfb_update_notify);
 		ret = wait_for_completion_interruptible_timeout(
 		&mfd->msmfb_update_notify, 4*HZ);
 	} else {
-		INIT_COMPLETION(mfd->msmfb_no_update_notify);
+		reinit_completion(&mfd->msmfb_no_update_notify);
 		ret = wait_for_completion_interruptible_timeout(
 		&mfd->msmfb_no_update_notify, 4*HZ);
 	}

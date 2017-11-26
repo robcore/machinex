@@ -199,7 +199,7 @@ void mdp4_atv_overlay(struct msm_fb_data_type *mfd)
 	/* enable irq */
 	spin_lock_irqsave(&mdp_spin_lock, flag);
 	mdp_enable_irq(MDP_OVERLAY1_TERM);
-	INIT_COMPLETION(atv_pipe->comp);
+	reinit_completion(&atv_pipe->comp);
 	mfd->dma->waiting = TRUE;
 	outp32(MDP_INTR_CLEAR, INTR_OVERLAY1_DONE);
 	mdp_intr_mask |= INTR_OVERLAY1_DONE;
