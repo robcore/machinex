@@ -625,36 +625,14 @@ static int64_t msm_pm_timer_enter_idle(void)
 	return ktime_to_ns(tick_nohz_get_sleep_length());
 }
 
-static int64_t msm_pm_timer_enter_suspend(int64_t *period)
+static int64_t msm_pm_timer_enter_suspend(void)
 {
-	int64_t time = 0;
-
-	if (msm_pm_use_sync_timer)
-		return sched_clock();
-
-	time = msm_timer_get_sclk_time(period);
-	if (!time)
-		pr_err("%s: Unable to read sclk.\n", __func__);
-
-	return time;
+	return sched_clock();
 }
 
 static int64_t msm_pm_timer_exit_suspend(int64_t time, int64_t period)
 {
-	if (msm_pm_use_sync_timer)
-		return sched_clock() - time;
-
-	if (time != 0) {
-		int64_t end_time = msm_timer_get_sclk_time(NULL);
-		if (end_time != 0) {
-			time = end_time - time;
-			if (time < 0)
-				time += period;
-		} else
-			time = 0;
-	}
-
-	return time;
+	return sched_clock() - time;
 }
 
 /**
@@ -960,7 +938,7 @@ static int msm_pm_enter(suspend_state_t state)
 	bool allow[MSM_PM_SLEEP_MODE_NR];
 	int i;
 	int64_t period = 0;
-	int64_t time = msm_pm_timer_enter_suspend(&period);
+	int64_t time = msm_pm_timer_enter_suspend();
 	struct msm_pm_time_params time_param;
 
 	time_param.latency_us = -1;
