@@ -2473,7 +2473,7 @@ static int mdp_on(struct platform_device *pdev)
 		mx_is_booting = 0;
 		pr_info("Hello? I'm different.\n");
 	} else {
-		wake_lock(&main_wake_lock);
+		wake_trylock(&main_wake_lock);
 		pr_info("Take me with you\n");
 	}
 
