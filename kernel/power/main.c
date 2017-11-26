@@ -31,7 +31,6 @@
 #define MAX_BUF 100
 
 DEFINE_MUTEX(pm_mutex);
-struct wake_lock main_wake_lock;
 #ifdef CONFIG_PM_SLEEP
 
 /* Routines for PM-transition notifications */
@@ -636,13 +635,11 @@ static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
 
 	state = decode_state(buf, n);
 	if (state == PM_SUSPEND_ON) {
-		wake_lock_timeout(&main_wake_lock, 1000);
 		error = 0;
 		pr_info("Suspend Sysfs Entry: On");
 		goto out;
 	}
 
-	pm_wake_unlock("main");
 	if (state < PM_SUSPEND_MAX) {
 		if (state == PM_SUSPEND_MEM)
 			state = mem_sleep_default;
@@ -1283,7 +1280,6 @@ static int __init pm_init(void)
 	if (error)
 		return error;
 	pm_print_times_init();
-	wake_lock_init(&main_wake_lock, WAKE_LOCK_SUSPEND, "main");
 	return pm_autosleep_init();
 }
 

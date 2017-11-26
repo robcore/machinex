@@ -352,26 +352,6 @@ static bool platform_suspend_again(suspend_state_t state)
 		suspend_ops->suspend_again() : false;
 }
 
-#ifdef CONFIG_PM_DEBUG
-static unsigned int pm_test_delay = 5;
-module_param(pm_test_delay, uint, 0644);
-MODULE_PARM_DESC(pm_test_delay,
-		 "Number of seconds to wait before resuming from suspend test");
-#endif
-
-static int suspend_test(int level)
-{
-#ifdef CONFIG_PM_DEBUG
-	if (pm_test_level == level) {
-		pr_info("suspend debug: Waiting for %d second(s).\n",
-				pm_test_delay);
-		mdelay(pm_test_delay * 1000);
-		return 1;
-	}
-#endif /* !CONFIG_PM_DEBUG */
-	return 0;
-}
-
 /**
  * suspend_prepare - Prepare for entering system sleep state.
  *
@@ -442,11 +422,6 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 	if (error)
 		goto Devices_early_resume;
 
-	if (unlikely(state == PM_SUSPEND_TO_IDLE)) {
-		s2idle_loop();
-		goto Platform_early_resume;
-	}
-
 	error = dpm_suspend_noirq(PMSG_SUSPEND);
 	if (error) {
 		pr_err("noirq suspend of devices failed\n");
@@ -455,45 +430,21 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 	error = platform_suspend_prepare_noirq(state);
 	if (error)
 		goto Platform_wake;
-#ifdef CONFIG_PM_DEBUG
-	if (suspend_test(TEST_PLATFORM))
-		goto Platform_wake;
-
-	error = disable_nonboot_cpus();
-	if (error || suspend_test(TEST_CPUS))
-		goto Enable_cpus;
-#else
 	error = disable_nonboot_cpus();
 	if (error)
 		goto Enable_cpus;
-#endif
 	arch_suspend_disable_irqs();
 	BUG_ON(!irqs_disabled());
-#ifdef CONFIG_PM_DEBUG
-	error = syscore_suspend();
-	if (!error) {
-		*wakeup = pm_wakeup_pending();
-		if (!(suspend_test(TEST_CORE) || *wakeup)) {
-			error = suspend_ops->enter(state);
-			events_check_enabled = false;
-		} else if (*wakeup) {
-			error = -EBUSY;
-		}
-		syscore_resume();
-	}
-#else
 	error = syscore_suspend();
 	if (!error) {
 		*wakeup = pm_wakeup_pending();
 		if (!(*wakeup)) {
 			error = suspend_ops->enter(state);
-			events_check_enabled = false;
 		} else if (*wakeup) {
 			error = -EBUSY;
 		}
 		syscore_resume();
 	}
-#endif
 
 	arch_suspend_enable_irqs();
 	BUG_ON(irqs_disabled());
@@ -535,31 +486,18 @@ int suspend_devices_and_enter(suspend_state_t state)
 		goto Close;
 
 	suspend_console();
-#ifdef CONFIG_PM_DEBUG
-	suspend_test_start();
-#endif
 	error = dpm_suspend_start(PMSG_SUSPEND);
 	if (error) {
 		pr_err("Some devices failed to suspend, or early wake event detected\n");
 		goto Recover_platform;
 	}
-#ifdef CONFIG_PM_DEBUG
-	suspend_test_finish("suspend devices");
-	if (suspend_test(TEST_DEVICES))
-		goto Recover_platform;
-#endif
+
 	do {
 		error = suspend_enter(state, &wakeup);
 	} while (!error && !wakeup && platform_suspend_again(state));
 
  Resume_devices:
-#ifdef CONFIG_PM_DEBUG
-	suspend_test_start();
-#endif
 	dpm_resume_end(PMSG_RESUME);
-#ifdef CONFIG_PM_DEBUG
-	suspend_test_finish("resume devices");
-#endif
 	resume_console();
  Close:
 	platform_resume_end(state);
@@ -599,9 +537,6 @@ static int enter_state(suspend_state_t state)
 	if (unlikely(!mutex_trylock(&pm_mutex)))
 		return -EBUSY;
 
-	if (unlikely(state == PM_SUSPEND_TO_IDLE))
-		s2idle_begin();
-
 	if (unlikely(suspendsync)) {
 		pr_info("Syncing filesystems ... ");
 		sys_sync();
@@ -618,10 +553,6 @@ static int enter_state(suspend_state_t state)
 	error = suspend_prepare(state);
 	if (error)
 		goto Profin;
-#ifdef CONFIG_PM_DEBUG
-	if (suspend_test(TEST_FREEZER))
-		goto Finish;
-#endif
 	pr_info("Suspending system (%s)\n", mem_sleep_labels[state]);
 	pm_restrict_gfp_mask();
 	error = suspend_devices_and_enter(state);
