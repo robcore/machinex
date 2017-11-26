@@ -113,7 +113,7 @@ struct vsync vsync_cntrl;
  */
 uint32 mdp_in_processing = FALSE;
 
-struct wake_lock main;
+struct wake_lock main_wake_lock;
 
 static bool display_on = true;
 bool is_display_on()
@@ -2400,7 +2400,7 @@ static int mdp_off(struct platform_device *pdev)
 	if (screen_wake_lock)
 		return -EBUSY;
 
-	wake_unlock(&main);
+	wake_unlock(&main_wake_lock);
 	mfd = platform_get_drvdata(pdev);
 	if (!mfd)
 		return -ENOMEM;
@@ -2470,11 +2470,11 @@ static int mdp_on(struct platform_device *pdev)
 
 	pr_info("%s:+\n", __func__);
 	if (unlikely(mx_is_booting)) {
-		wake_lock_init(&main, WAKE_LOCK_SUSPEND, "main_wake_lock");
+		wake_lock_init(&main_wake_lock, WAKE_LOCK_SUSPEND, "main");
 		mx_is_booting = 0;
 		pr_info("Hello? I'm different.\n");
 	} else {
-		wake_lock(&main);
+		wake_lock(&main_wake_lock);
 		pr_info("Take me with you\n");
 	}
 
