@@ -2399,8 +2399,7 @@ static int mdp_off(struct platform_device *pdev)
 
 	if (screen_wake_lock)
 		return -EBUSY;
-
-	wake_unlock(&main_wake_lock);
+	wake_try_unlock(&main_wake_lock);
 	mfd = platform_get_drvdata(pdev);
 	if (!mfd)
 		return -ENOMEM;
