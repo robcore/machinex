@@ -119,8 +119,15 @@ int block_dump;
 int laptop_mode;
 
 EXPORT_SYMBOL(laptop_mode);
-
 /* End of sysctl-exported parameters */
+
+struct wb_domain {
+	struct timer_list period_timer;	/* timer for aging of completions */
+	unsigned long period_time;
+
+};
+
+struct wb_domain global_wb_domain;
 
 unsigned long global_dirty_limit;
 
@@ -141,12 +148,6 @@ unsigned long global_dirty_limit;
  *
  */
 static struct fprop_global writeout_completions;
-
-static void writeout_period(unsigned long t);
-/* Timer for aging of writeout_completions */
-static struct timer_list writeout_period_timer =
-		TIMER_DEFERRED_INITIALIZER(writeout_period, 0);
-static unsigned long writeout_period_time = 0;
 
 /*
  * Length of period for aging writeout fractions of bdis. This is an
@@ -397,19 +398,20 @@ static unsigned long wp_next_time(unsigned long cur_time)
  */
 static inline void __bdi_writeout_inc(struct backing_dev_info *bdi)
 {
+	struct wb_domain *dom = from_timer(dom, bdi, period_timer);
 	__inc_bdi_stat(bdi, BDI_WRITTEN);
 	__fprop_inc_percpu_max(&writeout_completions, &bdi->completions,
 			       bdi->max_prop_frac);
 	/* First event after period switching was turned off? */
-	if (!unlikely(writeout_period_time)) {
+	if (unlikely(!dom->period_time)) {
 		/*
 		 * We can race with other __bdi_writeout_inc calls here but
 		 * it does not cause any harm since the resulting time when
 		 * timer will fire and what is in writeout_period_time will be
 		 * roughly the same.
 		 */
-		writeout_period_time = wp_next_time(jiffies);
-		mod_timer(&writeout_period_timer, writeout_period_time);
+		dom->period_time = wp_next_time(jiffies);
+		mod_timer(&dom->period_timer, dom->period_time);
 	}
 }
 
@@ -437,23 +439,36 @@ static void bdi_writeout_fraction(struct backing_dev_info *bdi,
  * On idle system, we can be called long after we scheduled because we use
  * deferred timers so count with missed periods.
  */
-static void writeout_period(unsigned long t)
+static void writeout_period(struct timer_list *t)
 {
-	int miss_periods = (jiffies - writeout_period_time) /
+	struct wb_domain *dom = from_timer(dom, t, period_timer);
+	int miss_periods = (jiffies - dom->period_time) /
 						 VM_COMPLETIONS_PERIOD_LEN;
 
 	if (fprop_new_period(&writeout_completions, miss_periods + 1)) {
-		writeout_period_time = wp_next_time(writeout_period_time +
+		dom->period_time = wp_next_time(dom->period_time +
 				miss_periods * VM_COMPLETIONS_PERIOD_LEN);
-		mod_timer(&writeout_period_timer, writeout_period_time);
+		mod_timer(&dom->period_timer, dom->period_time);
 	} else {
 		/*
 		 * Aging has zeroed all fractions. Stop wasting CPU on period
 		 * updates.
 		 */
-		writeout_period_time = 0;
+		dom->period_time = 0;
 	}
 }
+
+int period_timer_init(void)
+{
+	struct wb_domain *dom;
+	dom = kzalloc(sizeof(struct wb_domain), GFP_KERNEL);
+
+	timer_setup(&dom->period_timer, writeout_period, TIMER_DEFERRABLE);
+
+	return 0
+}
+
+core_initcall(period_timer_init);
 
 /*
  * bdi_min_ratio keeps the sum of the minimum dirty shares of all
