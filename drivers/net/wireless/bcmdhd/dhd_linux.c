@@ -2496,7 +2496,7 @@ dhd_watchdog_thread(void *data)
 	complete_and_exit(&tsk->completed, 0);
 }
 
-static void dhd_watchdog(struct timer_list *t
+static void dhd_watchdog(struct timer_list *t)
 {
 	dhd_info_t *dhd = from_timer(dhd, t, timer);
 	unsigned long flags;
