@@ -7,7 +7,7 @@
 #include <linux/aio_abi.h>
 #include <linux/uio.h>
 #include <linux/rcupdate.h>
-
+#include <linux/sched.h>
 #include <linux/atomic.h>
 
 struct kioctx;
