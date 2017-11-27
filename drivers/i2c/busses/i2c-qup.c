@@ -390,9 +390,9 @@ qup_i2c_pwr_mgmt(struct qup_i2c_dev *dev, unsigned int state)
 }
 
 static void
-qup_i2c_pwr_timer(unsigned long data)
+qup_i2c_pwr_timer(struct timer_list *t)
 {
-	struct qup_i2c_dev *dev = (struct qup_i2c_dev *) data;
+	struct qup_i2c_dev *dev = from_timer(dev, t, pwr_timer);
 	dev_dbg(dev->dev, "QUP_Power: Inactivity based power management\n");
 	if (dev->clk_state == 1)
 		qup_i2c_pwr_mgmt(dev, 0);
@@ -1419,7 +1419,7 @@ blsp_core_init:
 	 */
 	if (dev->pdata->keep_ahb_clk_on)
 		clk_enable(dev->pclk);
-	setup_timer(&dev->pwr_timer, qup_i2c_pwr_timer, (unsigned long) dev);
+	timer_setup(&dev->pwr_timer, qup_i2c_pwr_timer, 0);
 
 	pm_runtime_set_active(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);
