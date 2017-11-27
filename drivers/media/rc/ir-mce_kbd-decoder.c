@@ -388,7 +388,7 @@ static int ir_mce_kbd_register(struct rc_dev *dev)
 	set_bit(EV_MSC, idev->evbit);
 	set_bit(MSC_SCAN, idev->mscbit);
 
-	setup_timer(&mce_kbd->rx_timeout, mce_kbd_rx_timeout, 0);
+	timer_setup(&mce_kbd->rx_timeout, mce_kbd_rx_timeout, 0);
 
 	input_set_drvdata(idev, mce_kbd);
 
