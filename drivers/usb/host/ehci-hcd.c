@@ -393,9 +393,9 @@ static void ehci_work(struct ehci_hcd *ehci);
 
 /*-------------------------------------------------------------------------*/
 
-static void ehci_iaa_watchdog(unsigned long param)
+static void ehci_iaa_watchdog(struct timer_list *t)
 {
-	struct ehci_hcd		*ehci = (struct ehci_hcd *) param;
+	struct ehci_hcd		*ehci = from_timer(ehci, t, iaa_watchdog);
 	unsigned long		flags;
 
 	spin_lock_irqsave (&ehci->lock, flags);
@@ -441,9 +441,9 @@ static void ehci_iaa_watchdog(unsigned long param)
 	spin_unlock_irqrestore(&ehci->lock, flags);
 }
 
-static void ehci_watchdog(unsigned long param)
+static void ehci_watchdog(struct timer_list *t)
 {
-	struct ehci_hcd		*ehci = (struct ehci_hcd *) param;
+	struct ehci_hcd		*ehci = from_timer(ehci, t, ehci_watchdog);
 	unsigned long		flags;
 
 	spin_lock_irqsave(&ehci->lock, flags);
@@ -627,13 +627,9 @@ static int ehci_init(struct usb_hcd *hcd)
 	 * keep io watchdog by default, those good HCDs could turn off it later
 	 */
 	ehci->need_io_watchdog = 1;
-	init_timer(&ehci->watchdog);
-	ehci->watchdog.function = ehci_watchdog;
-	ehci->watchdog.data = (unsigned long) ehci;
+	timer_setup(&ehci->watchdog, ehci_watchdog, 0);
 
-	init_timer(&ehci->iaa_watchdog);
-	ehci->iaa_watchdog.function = ehci_iaa_watchdog;
-	ehci->iaa_watchdog.data = (unsigned long) ehci;
+	timer_setup(&ehci->iaa_watchdog, ehci_iaa_watchdog, 0);
 
 	hcc_params = ehci_readl(ehci, &ehci->caps->hcc_params);
 
