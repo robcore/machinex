@@ -1965,9 +1965,9 @@ static bool msm_chg_check_aca_intr(struct msm_otg *motg)
 	return ret;
 }
 
-static void msm_otg_id_timer_func(unsigned long data)
+static void msm_otg_id_timer_func(struct timer_list *t)
 {
-	struct msm_otg *motg = (struct msm_otg *) data;
+	struct msm_otg *motg = from_timer(motg, t, id_timer);
 
 	if (!aca_enabled())
 		return;
@@ -4057,8 +4057,7 @@ static int __init msm_otg_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&motg->chg_work, msm_chg_detect_work);
 	INIT_DELAYED_WORK(&motg->pmic_id_status_work, msm_pmic_id_status_w);
 	INIT_DELAYED_WORK(&motg->check_ta_work, msm_ta_detect_work);
-	setup_timer(&motg->id_timer, msm_otg_id_timer_func,
-				(unsigned long) motg);
+	timer_setup(&motg->id_timer, msm_otg_id_timer_func, 0);
 	ret = request_irq(motg->irq, msm_otg_irq, IRQF_SHARED,
 					"msm_otg", motg);
 	if (ret) {

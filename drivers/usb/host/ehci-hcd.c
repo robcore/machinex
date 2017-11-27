@@ -443,7 +443,7 @@ static void ehci_iaa_watchdog(struct timer_list *t)
 
 static void ehci_watchdog(struct timer_list *t)
 {
-	struct ehci_hcd		*ehci = from_timer(ehci, t, ehci_watchdog);
+	struct ehci_hcd	*ehci = from_timer(ehci, t, watchdog);
 	unsigned long		flags;
 
 	spin_lock_irqsave(&ehci->lock, flags);
