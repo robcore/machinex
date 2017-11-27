@@ -145,7 +145,7 @@ static unsigned long flags;
 static struct tasklet_struct hostwake_task;
 
 /** Transmission timer */
-static void bluesleep_tx_timer_expire(unsigned long data);
+static void bluesleep_tx_timer_expire(struct timer_list *t);
 static DEFINE_TIMER(tx_timer, bluesleep_tx_timer_expire);
 
 /** Lock for state transitions */
@@ -590,7 +590,7 @@ static int bluesleep_hci_event(struct notifier_block *this,
  * Handles transmission timer expiration.
  * @param data Not used.
  */
-static void bluesleep_tx_timer_expire(unsigned long data)
+static void bluesleep_tx_timer_expire(struct timer_list *t)
 {
 	/* were we silent during the last timeout? */
 	if (!test_bit(BT_TXDATA, &flags)) {
@@ -1108,9 +1108,7 @@ static int __init bluesleep_init(void)
 	mutex_init(&bluesleep_mutex);
 
 	/* Initialize timer */
-	init_timer(&tx_timer);
-	tx_timer.function = bluesleep_tx_timer_expire;
-	tx_timer.data = 0;
+	timer_setup(&tx_timer, bluesleep_tx_timer_expire, 0);
 
 	/* initialize host wake tasklet */
 	tasklet_init(&hostwake_task, bluesleep_hostwake_task, 0);
