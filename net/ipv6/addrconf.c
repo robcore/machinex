@@ -415,7 +415,7 @@ static struct inet6_dev * ipv6_add_dev(struct net_device *dev)
 
 #ifdef CONFIG_IPV6_PRIVACY
 	INIT_LIST_HEAD(&ndev->tempaddr_list);
-	timer_setup(&ndev->regen_timer, ipv6_regen_rndid, 0;
+	timer_setup(&ndev->regen_timer, ipv6_regen_rndid, 0);
 	if ((dev->flags&IFF_LOOPBACK) ||
 	    dev->type == ARPHRD_TUNNEL ||
 	    dev->type == ARPHRD_TUNNEL6 ||
