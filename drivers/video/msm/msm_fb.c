@@ -153,9 +153,9 @@ DEFINE_MUTEX(msm_fb_notify_update_sem);
 DEFINE_MUTEX(power_state_change);
 #endif
 
-void msmfb_no_update_notify_timer_cb(unsigned long data)
+void msmfb_no_update_notify_timer_cb(struct timer_list *t)
 {
-	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)data;
+	struct msm_fb_data_type *mfd = from_timer(mfd, t, msmfb_no_update_notify_timer);
 	if (!mfd)
 		pr_err("%s mfd NULL\n", __func__);
 	complete(&mfd->msmfb_no_update_notify);
@@ -1571,10 +1571,7 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 	init_completion(&mfd->refresher_comp);
 	sema_init(&mfd->sem, 1);
 
-	init_timer(&mfd->msmfb_no_update_notify_timer);
-	mfd->msmfb_no_update_notify_timer.function =
-			msmfb_no_update_notify_timer_cb;
-	mfd->msmfb_no_update_notify_timer.data = (unsigned long)mfd;
+	timer_setup(&mfd->msmfb_no_update_notify_timer, msmfb_no_update_notify_timer_cb, 0);
 	init_completion(&mfd->msmfb_update_notify);
 	init_completion(&mfd->msmfb_no_update_notify);
 	init_completion(&mfd->commit_comp);
