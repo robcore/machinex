@@ -154,11 +154,11 @@ enum inet_csk_ack_state_t {
 	ICSK_ACK_PUSHED2 = 8
 };
 
-extern void inet_csk_init_xmit_timers(struct sock *sk,
-				      void (*retransmit_handler)(unsigned long),
-				      void (*delack_handler)(unsigned long),
-				      void (*keepalive_handler)(unsigned long));
-extern void inet_csk_clear_xmit_timers(struct sock *sk);
+void inet_csk_init_xmit_timers(struct sock *sk,
+			       void (*retransmit_handler)(struct timer_list *),
+			       void (*delack_handler)(struct timer_list *),
+			       void (*keepalive_handler)(struct timer_list *));
+void inet_csk_clear_xmit_timers(struct sock *sk);
 
 static inline void inet_csk_schedule_ack(struct sock *sk)
 {
