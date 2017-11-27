@@ -153,7 +153,7 @@ static int set_vesa_blanking(char __user *p);
 static void set_cursor(struct vc_data *vc);
 static void hide_cursor(struct vc_data *vc);
 static void console_callback(struct work_struct *ignored);
-static void blank_screen_t(unsigned long dummy);
+static void blank_screen_t(struct timer_list *unused);
 static void set_palette(struct vc_data *vc);
 
 static int printable;		/* Is console ready for printing? */
