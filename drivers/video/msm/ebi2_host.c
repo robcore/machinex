@@ -100,6 +100,7 @@ void mdp_refresh_screen(unsigned long data)
 static int ebi2_host_off(struct platform_device *pdev)
 {
 	int ret;
+	prfunction();
 	ret = panel_next_off(pdev);
 	return ret;
 }
@@ -107,6 +108,7 @@ static int ebi2_host_off(struct platform_device *pdev)
 static int ebi2_host_on(struct platform_device *pdev)
 {
 	int ret;
+	prfunction();
 	ret = panel_next_on(pdev);
 	return ret;
 }

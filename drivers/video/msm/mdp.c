@@ -2398,7 +2398,7 @@ static int mdp_off(struct platform_device *pdev)
 	if (!mfd)
 		return -ENOMEM;
 	wake_try_unlock(&main_wake_lock);
-	pr_info("%s:+\n", __func__);
+	prfunction();
 	mdp_histogram_ctrl_all(FALSE);
 	atomic_set(&vsync_cntrl.suspend, 1);
 	atomic_set(&vsync_cntrl.vsync_resume, 0);
@@ -2463,7 +2463,7 @@ static int mdp_on(struct platform_device *pdev)
 	mfd = platform_get_drvdata(pdev);
 	if (!mfd)
 		return -ENOMEM;
-	pr_info("%s:+\n", __func__);
+	prfunction();
 	if (unlikely(mx_is_booting)) {
 		wake_lock_init(&main_wake_lock, WAKE_LOCK_SUSPEND, "main");
 		mx_is_booting = 0;
