@@ -1025,9 +1025,9 @@ static void hci_power_off(struct work_struct *work)
 	hci_dev_close(hdev->id);
 }
 
-static void hci_auto_off(unsigned long data)
+static void hci_auto_off(struct timer_list *t)
 {
-	struct hci_dev *hdev = (struct hci_dev *) data;
+	struct hci_dev *hdev = from_timer(hdev, t, off_timer);
 
 	BT_DBG("%s", hdev->name);
 
@@ -1517,7 +1517,7 @@ int hci_register_dev(struct hci_dev *hdev)
 
 	INIT_WORK(&hdev->power_on, hci_power_on);
 	INIT_WORK(&hdev->power_off, hci_power_off);
-	setup_timer(&hdev->off_timer, hci_auto_off, (unsigned long) hdev);
+	timer_setup(&hdev->off_timer, hci_auto_off, 0);
 
 	memset(&hdev->stat, 0, sizeof(struct hci_dev_stats));
 
