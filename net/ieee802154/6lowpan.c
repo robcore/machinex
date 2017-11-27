@@ -718,7 +718,7 @@ lowpan_process_data(struct sk_buff *skb)
 			skb_reserve(frame->skb, sizeof(struct ipv6hdr));
 			skb_put(frame->skb, frame->length);
 
-			timer_setup(&frame->timer, lowpan_fragment_timer_expired 0);
+			timer_setup(&frame->timer, lowpan_fragment_timer_expired, 0);
 			/* time out is the same as for ipv6 - 60 sec */
 			frame->timer.expires = jiffies + LOWPAN_FRAG_TIMEOUT;
 

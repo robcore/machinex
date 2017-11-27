@@ -415,7 +415,7 @@ static struct inet6_dev * ipv6_add_dev(struct net_device *dev)
 
 #ifdef CONFIG_IPV6_PRIVACY
 	INIT_LIST_HEAD(&ndev->tempaddr_list);
-	setup_timer(&ndev->regen_timer, ipv6_regen_rndid, (unsigned long)ndev);
+	timer_setup(&ndev->regen_timer, ipv6_regen_rndid, 0;
 	if ((dev->flags&IFF_LOOPBACK) ||
 	    dev->type == ARPHRD_TUNNEL ||
 	    dev->type == ARPHRD_TUNNEL6 ||
@@ -424,7 +424,7 @@ static struct inet6_dev * ipv6_add_dev(struct net_device *dev)
 		ndev->cnf.use_tempaddr = -1;
 	} else {
 		in6_dev_hold(ndev);
-		ipv6_regen_rndid((unsigned long) ndev);
+		ipv6_regen_rndid(&ndef->regen_timer);
 	}
 #endif
 
@@ -1659,9 +1659,9 @@ regen:
 	return 0;
 }
 
-static void ipv6_regen_rndid(unsigned long data)
+static void ipv6_regen_rndid(struct timer_list *t)
 {
-	struct inet6_dev *idev = (struct inet6_dev *) data;
+	struct inet6_dev *idev = from_timer(idev, t, regen_timer);
 	unsigned long expires;
 
 	rcu_read_lock_bh();
