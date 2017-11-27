@@ -573,7 +573,7 @@ static int gpio_keys_setup_key(struct platform_device *pdev,
 
 		bdata->release_delay = button->debounce_interval;
 		timer_setup(&bdata->release_timer,
-			    gpio_keys_irq_timer, 0;
+			    gpio_keys_irq_timer, 0);
 
 		isr = gpio_keys_irq_isr;
 		irqflags = 0;

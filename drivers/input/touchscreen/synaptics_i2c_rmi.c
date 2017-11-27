@@ -3053,7 +3053,7 @@ static int synaptics_rmi4_set_input_device
 			EDGE_SWIPE_PALM_MAX, 0, 0);
 #endif
 	timer_setup(&rmi4_data->f51_finger_timer,
-			synaptics_rmi4_f51_finger_timer);
+			synaptics_rmi4_f51_finger_timer, 0);
 #endif
 
 #ifdef TYPE_B_PROTOCOL
