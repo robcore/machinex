@@ -1080,7 +1080,8 @@ int smp_link_encrypt_cmplt(struct l2cap_conn *conn, u8 status, u8 encrypt)
 
 void smp_timeout(struct timer_list *t)
 {
-	struct l2cap_conn *conn = from_timer(conn->hcon, t, smp_timer);
+	struct hci_conn *hcon = from_timer(hcon, t, smp_timer);
+	struct l2cap_conn *conn = hcon->smp_conn;
 	u8 reason = SMP_UNSPECIFIED;
 
 	BT_DBG("%p", conn);
