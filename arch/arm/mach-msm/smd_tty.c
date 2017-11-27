@@ -119,9 +119,9 @@ static void pm_qos_set_worker(struct work_struct *work)
 			0, jiffies_to_usecs(HZ / 2));
 }
 
-static void buf_req_retry(unsigned long param)
+static void buf_req_retry(struct timer_list *t)
 {
-	struct smd_tty_info *info = (struct smd_tty_info *)param;
+	struct smd_tty_info *info = from_timer(info, t, buf_req_timer);
 	unsigned long flags;
 
 	spin_lock_irqsave(&info->reset_lock, flags);
@@ -626,8 +626,7 @@ static int __init smd_tty_init(void)
 		spin_lock_init(&smd_tty[idx].reset_lock);
 		spin_lock_init(&smd_tty[idx].ra_lock);
 		smd_tty[idx].is_open = 0;
-		setup_timer(&smd_tty[idx].buf_req_timer, buf_req_retry,
-				(unsigned long)&smd_tty[idx]);
+		timer_setup(&smd_tty[idx].buf_req_timer, buf_req_retry, 0);
 		init_waitqueue_head(&smd_tty[idx].ch_opened_wait_queue);
 		ret = platform_driver_register(&smd_tty[idx].driver);
 
