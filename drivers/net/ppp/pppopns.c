@@ -449,7 +449,7 @@ static int pppopns_create(struct net *net, struct socket *sock)
 	po = pppox_sk(sk);
 	opt = &po->proto.pns;
 	opt->ppp_flags = SC_GRE_SEQ_CHK;
-	init_timer(&po->recv_queue_timer);
+	timer_setup(&po->recv_queue_timer, recv_queue_timer_callback, 0);
 	spin_lock_init(&po->recv_queue_lock);
 
 	return 0;
