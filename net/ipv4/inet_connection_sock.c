@@ -312,9 +312,8 @@ EXPORT_SYMBOL(inet_csk_accept);
  * to optimize.
  */
 void inet_csk_init_xmit_timers(struct sock *sk,
-			       void (*retransmit_handler)(struct timer_list *t),
-			       void (*delack_handler)(struct timer_list *t),
-			       void (*keepalive_handler)(struct timer_list *t))
+			       struct timer_list *t, struct timer_list *t, 
+				   struct timer_list *t)
 {
 	struct inet_connection_sock *icsk = inet_csk(sk);
 
