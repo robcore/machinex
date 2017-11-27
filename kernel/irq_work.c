@@ -19,7 +19,7 @@
 #include <linux/smp.h>
 #include <asm/processor.h>
 /*hack!*/
-#include "../arch/arm/include/asm/irq_work.h"
+#include <asm/irq_work.h>
 
 static DEFINE_PER_CPU(struct llist_head, raised_list);
 static DEFINE_PER_CPU(struct llist_head, lazy_list);
@@ -57,7 +57,6 @@ void __weak arch_irq_work_raise(void)
 	 */
 }
 
-#ifdef CONFIG_SMP
 /*
  * Enqueue the irq_work @work on @cpu unless it's already pending
  * somewhere.
@@ -69,6 +68,8 @@ bool irq_work_queue_on(struct irq_work *work, int cpu)
 	/* All work should have been flushed before going offline */
 	WARN_ON_ONCE(cpu_is_offline(cpu));
 
+#ifdef CONFIG_SMP
+
 	/* Arch remote IPI send/receive backend aren't NMI safe */
 	WARN_ON_ONCE(in_nmi());
 
@@ -79,10 +80,12 @@ bool irq_work_queue_on(struct irq_work *work, int cpu)
 	if (llist_add(&work->llnode, &per_cpu(raised_list, cpu)))
 		arch_send_call_function_single_ipi(cpu);
 
+#else /* #ifdef CONFIG_SMP */
+	irq_work_queue(work);
+#endif /* #else #ifdef CONFIG_SMP */
+
 	return true;
 }
-EXPORT_SYMBOL_GPL(irq_work_queue_on);
-#endif
 
 /* Enqueue the irq work @work on the current CPU */
 bool irq_work_queue(struct irq_work *work)
@@ -129,9 +132,9 @@ bool irq_work_needs_cpu(void)
 
 static void irq_work_run_list(struct llist_head *list)
 {
-	unsigned long flags;
-	struct irq_work *work;
+	struct irq_work *work, *tmp;
 	struct llist_node *llnode;
+	unsigned long flags;
 
 	BUG_ON(!irqs_disabled());
 
@@ -139,11 +142,7 @@ static void irq_work_run_list(struct llist_head *list)
 		return;
 
 	llnode = llist_del_all(list);
-	while (llnode != NULL) {
-		work = llist_entry(llnode, struct irq_work, llnode);
-
-		llnode = llist_next(llnode);
-
+	llist_for_each_entry_safe(work, tmp, llnode, llnode) {
 		/*
 		 * Clear the PENDING bit, after this point the @work
 		 * can be re-used.
@@ -189,7 +188,7 @@ void irq_work_tick(void)
  */
 void irq_work_sync(struct irq_work *work)
 {
-	WARN_ON_ONCE(irqs_disabled());
+	lockdep_assert_irqs_enabled();
 
 	while (work->flags & IRQ_WORK_BUSY)
 		cpu_relax();
