@@ -38,7 +38,7 @@
 #include <linux/sched/rt.h>
 #include <linux/mm_inline.h>
 #include <trace/events/writeback.h>
-
+#include <linux/timer.h>
 #include "internal.h"
 
 /*
@@ -142,10 +142,14 @@ unsigned long global_dirty_limit;
  */
 static struct fprop_global writeout_completions;
 
-static void writeout_period(unsigned long t);
+#define DEFINE_DEFERRED_TIMER(_name, _function)	\
+	struct timer_list _name =	\
+		__TIMER_INITIALIZER(_function, TIMER_DEFERRABLE)
+
+static void writeout_period(struct timer_list *t);
 /* Timer for aging of writeout_completions */
-static struct timer_list writeout_period_timer =
-		TIMER_DEFERRED_INITIALIZER(writeout_period, 0);
+static DEFINE_DEFERRED_TIMER(writeout_period_timer, writeout_period);
+
 static unsigned long writeout_period_time = 0;
 
 /*
@@ -437,7 +441,7 @@ static void bdi_writeout_fraction(struct backing_dev_info *bdi,
  * On idle system, we can be called long after we scheduled because we use
  * deferred timers so count with missed periods.
  */
-static void writeout_period(unsigned long t)
+static void writeout_period(struct timer_list *t)
 {
 	int miss_periods = (jiffies - writeout_period_time) /
 						 VM_COMPLETIONS_PERIOD_LEN;
