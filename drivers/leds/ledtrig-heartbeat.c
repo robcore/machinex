@@ -82,7 +82,6 @@ static void heartbeat_trig_activate(struct led_classdev *led_cdev)
 	timer_setup(&heartbeat_data->timer,
 		    led_heartbeat_function, 0);
 	heartbeat_data->phase = 0;
-	led_heartbeat_function(heartbeat_data->timer.data);
 }
 
 static void heartbeat_trig_deactivate(struct led_classdev *led_cdev)
