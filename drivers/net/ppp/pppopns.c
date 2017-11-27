@@ -65,7 +65,7 @@ static inline struct meta *skb_meta(struct sk_buff *skb)
 	return (struct meta *)skb->cb;
 }
 
-static void recv_queue_timer_callback(unsigned long data);
+static void recv_queue_timer_callback(struct timer_list *t);
 static void traverse_receive_queue(struct sock *sk)
 {
 	struct pppox_sock *po = pppox_sk(sk);
@@ -102,18 +102,16 @@ static void traverse_receive_queue(struct sock *sk)
 	  	if (timer_pending(&po->recv_queue_timer)) {
 	        	/* Something is wrong. Recv timer is already active. However, Ignoring...*/
 		} else {	  
-			init_timer(&po->recv_queue_timer);
-			po->recv_queue_timer.data = (unsigned long)sk;
-			po->recv_queue_timer.function = recv_queue_timer_callback;
+			timer_setup(&po->recv_queue_timer, recv_queue_timer_callback, 0);
 			po->recv_queue_timer.expires = now + HZ;
 			add_timer(&po->recv_queue_timer);
 		}
 	}
 }
 
-static void recv_queue_timer_callback(unsigned long data)
+static void recv_queue_timer_callback(struct timer_list *t)
 {
-  struct sock *sk = (struct sock *)data;
+  struct sock *sk = from_timer(sk, t, recv_queue_timer);
 
   spin_lock(&pppox_sk(sk)->recv_queue_lock);
   traverse_receive_queue(sk);

@@ -1372,7 +1372,7 @@ module_exit(slip_exit);
  * added by Stanislav Voronyi. All changes before marked VSV
  */
 
-static void sl_outfill(struct timer_struct *t)
+static void sl_outfill(struct timer_list *t)
 {
 	struct slip *sl = from_timer(sl, t, outfill_timer);
 
@@ -1403,7 +1403,7 @@ out:
 	spin_unlock(&sl->lock);
 }
 
-static void sl_keepalive(struct timer_struct *t)
+static void sl_keepalive(struct timer_list *t)
 {
 	struct slip *sl = from_timer(sl, t, keepalive_timer);
 
