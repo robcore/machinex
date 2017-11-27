@@ -2457,6 +2457,7 @@ static int msm_fb_stop_sw_refresher(struct msm_fb_data_type *mfd)
 
 int msm_fb_resume_sw_refresher(struct msm_fb_data_type *mfd)
 {
+	struct timer_list *t;
 	boolean do_refresh;
 
 	if (mfd->hw_refresh)
@@ -2471,9 +2472,10 @@ int msm_fb_resume_sw_refresher(struct msm_fb_data_type *mfd)
 	}
 	up(&mfd->sem);
 
-	if (do_refresh)
-		mdp_refresh_screen((unsigned long)mfd);
-
+	if (do_refresh) {
+		t = &mfd->refresh_timer;
+		mdp_refresh_screen(t);
+	}
 	return 0;
 }
 

@@ -110,13 +110,13 @@ void mdp_hw_vsync_clk_disable(struct msm_fb_data_type *mfd)
 	mutex_unlock(&vsync_clk_lock);
 }
 
-static void mdp_set_vsync(unsigned long data);
+static void mdp_set_vsync(struct timer_list *t);
 void mdp_vsync_clk_enable(void)
 {
 	if (vsync_mfd) {
 		mdp_hw_vsync_clk_enable(vsync_mfd);
 		if (!vsync_mfd->vsync_resync_timer.function)
-			mdp_set_vsync((unsigned long) vsync_mfd);
+			mdp_set_vsync(&vsync_mfd->vsync_resync_timer);
 	}
 }
 
@@ -139,15 +139,15 @@ void mdp_vsync_clk_disable(void)
 }
 #endif
 
-static void mdp_set_vsync(unsigned long data)
+static void mdp_set_vsync(struct timer_list *t)
 {
-	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)data;
+	struct msm_fb_data_type *mfd = from_timer(mfd, t, vsync_resync_timer);
 	struct msm_fb_panel_data *pdata = NULL;
 
 	pdata = (struct msm_fb_panel_data *)mfd->pdev->dev.platform_data;
 
 	vsync_mfd = mfd;
-	init_timer(&mfd->vsync_resync_timer);
+	timer_setup(&mfd->vsync_resync_timer, mdp_set_vsync, 0);
 
 	if ((pdata) && (pdata->set_vsync_notifier == NULL))
 		return;
@@ -168,8 +168,6 @@ static void mdp_set_vsync(unsigned long data)
 
 	spin_lock(&vsync_timer_lock);
 	if (!timer_shutdown_flag) {
-		mfd->vsync_resync_timer.function = mdp_set_vsync;
-		mfd->vsync_resync_timer.data = data;
 		mfd->vsync_resync_timer.expires =
 			jiffies + mfd->panel_info.lcd.vsync_notifier_period;
 		add_timer(&mfd->vsync_resync_timer);
@@ -418,7 +416,7 @@ void mdp_config_vsync(struct platform_device *pdev,
 		}
 #endif
 		mdp_hw_vsync_clk_enable(mfd);
-		mdp_set_vsync((unsigned long)mfd);
+		mdp_set_vsync(&mfd->vsync_resync_timer);
 	}
 
 	return;

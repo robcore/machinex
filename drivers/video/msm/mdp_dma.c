@@ -648,14 +648,12 @@ void mdp_dma_pan_update(struct fb_info *info)
 		mfd->dma_fnc(mfd);
 }
 
-void mdp_refresh_screen(unsigned long data)
+void mdp_refresh_screen(struct timer_list *t)
 {
-	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)data;
+	struct msm_fb_data_type *mfd = from_timer(mfd, t, refresh_timer);
 
 	if ((mfd->sw_currently_refreshing) && (mfd->sw_refreshing_enable)) {
-		init_timer(&mfd->refresh_timer);
-		mfd->refresh_timer.function = mdp_refresh_screen;
-		mfd->refresh_timer.data = data;
+		timer_setup(&mfd->refresh_timer, mdp_refresh_screen, 0);
 
 		if (mfd->dma->busy)
 			/* come back in 1 msec */

@@ -92,7 +92,7 @@ int mdp_stop_histogram(struct fb_info *info)
 {
 	return 0;
 }
-void mdp_refresh_screen(unsigned long data)
+void mdp_refresh_screen(struct timer_list *t)
 {
 	return;
 }
