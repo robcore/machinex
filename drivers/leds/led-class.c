@@ -155,9 +155,9 @@ static const struct attribute_group *led_groups[] = {
 #endif
 	NULL,
 };
-static void led_timer_function(unsigned long data)
+static void led_timer_function(struct timer_list *t)
 {
-	struct led_classdev *led_cdev = (void *)data;
+	struct led_classdev *led_cdev = from_timer(led_cdev, t, blink_timer);
 	unsigned long brightness;
 	unsigned long delay;
 
@@ -257,9 +257,7 @@ int led_classdev_register(struct device *parent, struct led_classdev *led_cdev)
 
 	led_update_brightness(led_cdev);
 
-	init_timer(&led_cdev->blink_timer);
-	led_cdev->blink_timer.function = led_timer_function;
-	led_cdev->blink_timer.data = (unsigned long)led_cdev;
+	timer_setup(&led_cdev->blink_timer, led_timer_function, 0);
 
 #ifdef CONFIG_LEDS_TRIGGERS
 	led_trigger_set_default(led_cdev);
