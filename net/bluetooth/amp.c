@@ -39,7 +39,7 @@ DEFINE_RWLOCK(amp_mgr_list_lock);
 
 static int send_a2mp(struct socket *sock, u8 *data, int len);
 
-static void ctx_timeout(unsigned long data);
+static void ctx_timeout(struct timer_list *t);
 
 static void launch_ctx(struct amp_mgr *mgr);
 static int execute_ctx(struct amp_ctx *ctx, u8 evt_type, void *data);
@@ -162,9 +162,7 @@ static struct amp_ctx *create_ctx(u8 type, u8 state)
 	if (ctx) {
 		ctx->type = type;
 		ctx->state = state;
-		init_timer(&(ctx->timer));
-		ctx->timer.function = ctx_timeout;
-		ctx->timer.data = (unsigned long) ctx;
+		timer_setup(&(ctx->timer), ctx_timeout, 0);
 	}
 	BT_DBG("ctx %p, type %d", ctx, type);
 	return ctx;
@@ -1499,9 +1497,9 @@ static void ctx_timeout_worker(struct work_struct *w)
 	kfree(work);
 }
 
-static void ctx_timeout(unsigned long data)
+static void ctx_timeout(struct timer_list *t)
 {
-	struct amp_ctx *ctx = (struct amp_ctx *) data;
+	struct amp_ctx *ctx = from_timer(ctx, t, timer);
 	struct amp_work_ctx_timeout *work;
 
 	BT_DBG("ctx %p", ctx);
