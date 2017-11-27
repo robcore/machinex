@@ -57,7 +57,7 @@
 
 #define PNEIGH_HASHMASK		0xF
 
-static void neigh_timer_handler(unsigned long arg);
+static void neigh_timer_handler(struct timer_list *t);
 static void __neigh_notify(struct neighbour *n, int type, int flags);
 static void neigh_update_notify(struct neighbour *neigh);
 static int pneigh_ifdown(struct neigh_table *tbl, struct net_device *dev);
@@ -312,7 +312,7 @@ static struct neighbour *neigh_alloc(struct neigh_table *tbl, struct net_device 
 	n->output	  = neigh_blackhole;
 	seqlock_init(&n->hh.hh_lock);
 	n->parms	  = neigh_parms_clone(&tbl->parms);
-	setup_timer(&n->timer, neigh_timer_handler, (unsigned long)n);
+	timer_setup(&n->timer, neigh_timer_handler, 0);
 
 	NEIGH_CACHE_STAT_INC(tbl, allocs);
 	n->tbl		  = tbl;
@@ -892,10 +892,10 @@ static void neigh_probe(struct neighbour *neigh)
 
 /* Called when a timer expires for a neighbour entry. */
 
-static void neigh_timer_handler(unsigned long arg)
+static void neigh_timer_handler(struct timer_list *t)
 {
 	unsigned long now, next;
-	struct neighbour *neigh = (struct neighbour *)arg;
+	struct neighbour *neigh = from_timer(neigh, t, timer);
 	unsigned int state;
 	int notify = 0;
 

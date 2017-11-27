@@ -127,7 +127,7 @@ static inline void addrconf_sysctl_unregister(struct inet6_dev *idev)
 #ifdef CONFIG_IPV6_PRIVACY
 static int __ipv6_regen_rndid(struct inet6_dev *idev);
 static int __ipv6_try_regen_rndid(struct inet6_dev *idev, struct in6_addr *tmpaddr);
-static void ipv6_regen_rndid(unsigned long data);
+static void ipv6_regen_rndid(struct timer_list *t);
 #endif
 
 static int ipv6_generate_eui64(u8 *eui, struct net_device *dev);
