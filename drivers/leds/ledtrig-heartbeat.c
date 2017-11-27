@@ -26,9 +26,9 @@ struct heartbeat_trig_data {
 	struct timer_list timer;
 };
 
-static void led_heartbeat_function(unsigned long data)
+static void led_heartbeat_function(struct timer_list *t)
 {
-	struct led_classdev *led_cdev = (struct led_classdev *) data;
+	struct led_classdev *led_cdev = (struct led_classdev *)t;
 	struct heartbeat_trig_data *heartbeat_data = led_cdev->trigger_data;
 	unsigned long brightness = LED_OFF;
 	unsigned long delay = 0;
@@ -79,8 +79,8 @@ static void heartbeat_trig_activate(struct led_classdev *led_cdev)
 		return;
 
 	led_cdev->trigger_data = heartbeat_data;
-	setup_timer(&heartbeat_data->timer,
-		    led_heartbeat_function, (unsigned long) led_cdev);
+	timer_setup(&heartbeat_data->timer,
+		    led_heartbeat_function, 0);
 	heartbeat_data->phase = 0;
 	led_heartbeat_function(heartbeat_data->timer.data);
 }
