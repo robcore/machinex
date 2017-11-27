@@ -105,8 +105,8 @@ static int slip_esc6(unsigned char *p, unsigned char *d, int len);
 static void slip_unesc6(struct slip *sl, unsigned char c);
 #endif
 #ifdef CONFIG_SLIP_SMART
-static void sl_keepalive(unsigned long sls);
-static void sl_outfill(unsigned long sls);
+static void sl_keepalive(struct timer_list *t);
+static void sl_outfill(struct timer_list *t);
 static int sl_ioctl(struct net_device *dev, struct ifreq *rq, int cmd);
 #endif
 
