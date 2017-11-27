@@ -351,9 +351,9 @@ static void snd_usbmidi_out_tasklet(unsigned long data)
 }
 
 /* called after transfers had been interrupted due to some USB error */
-static void snd_usbmidi_error_timer(unsigned long data)
+static void snd_usbmidi_error_timer(struct timer_list *t)
 {
-	struct snd_usb_midi *umidi = (struct snd_usb_midi *)data;
+	struct snd_usb_midi *umidi = from_timer(umidi, t, error_timer);
 	unsigned int i, j;
 
 	spin_lock(&umidi->disc_lock);
@@ -2175,14 +2175,12 @@ int snd_usbmidi_create(struct snd_card *card,
 	umidi->iface = iface;
 	umidi->quirk = quirk;
 	umidi->usb_protocol_ops = &snd_usbmidi_standard_ops;
-	init_timer(&umidi->error_timer);
 	spin_lock_init(&umidi->disc_lock);
 	init_rwsem(&umidi->disc_rwsem);
 	mutex_init(&umidi->mutex);
 	umidi->usb_id = USB_ID(le16_to_cpu(umidi->dev->descriptor.idVendor),
 			       le16_to_cpu(umidi->dev->descriptor.idProduct));
-	umidi->error_timer.function = snd_usbmidi_error_timer;
-	umidi->error_timer.data = (unsigned long)umidi;
+	timer_setup(&umidi->error_timer, snd_usbmidi_error_timer, 0);
 
 	/* detect the endpoint(s) to use */
 	memset(endpoints, 0, sizeof(endpoints));
