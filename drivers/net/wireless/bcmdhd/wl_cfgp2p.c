@@ -1669,7 +1669,7 @@ void
 wl_cfgp2p_listen_expired(struct timer_list *t)
 {
 	wl_event_msg_t msg;
-	struct bcm_cfg80211 *cfg = from_timer(cfg, t, _timer);
+	struct bcm_cfg80211 *cfg = (struct bcm_cfg80211 *)t;
 	CFGP2P_DBG((" Enter\n"));
 	bzero(&msg, sizeof(wl_event_msg_t));
 	msg.event_type =  hton32(WLC_E_P2P_DISC_LISTEN_COMPLETE);
