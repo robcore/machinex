@@ -424,7 +424,7 @@ static struct inet6_dev * ipv6_add_dev(struct net_device *dev)
 		ndev->cnf.use_tempaddr = -1;
 	} else {
 		in6_dev_hold(ndev);
-		ipv6_regen_rndid(&ndef->regen_timer);
+		ipv6_regen_rndid(&ndev->regen_timer);
 	}
 #endif
 

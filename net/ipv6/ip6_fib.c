@@ -88,7 +88,7 @@ static int fib6_walk_continue(struct fib6_walker_t *w);
 
 static __u32 rt_sernum;
 
-static void fib6_gc_timer_cb(unsigned long arg);
+static void fib6_gc_timer_cb(struct timer_list *t);
 
 static LIST_HEAD(fib6_walkers);
 #define FOR_WALKERS(w) list_for_each_entry(w, &fib6_walkers, lh)
@@ -1636,16 +1636,18 @@ void fib6_run_gc(unsigned long expires, struct net *net, bool force)
 	spin_unlock_bh(&fib6_gc_lock);
 }
 
-static void fib6_gc_timer_cb(unsigned long arg)
+static void fib6_gc_timer_cb(struct timer_list *t)
 {
-	fib6_run_gc(0, (struct net *)arg, true);
+	struct net *arg = from_timer(arg, t, ipv6.ip6_fib_timer);
+
+	fib6_run_gc(0, arg, true);
 }
 
 static int __net_init fib6_net_init(struct net *net)
 {
 	size_t size = sizeof(struct hlist_head) * FIB6_TABLE_HASHSZ;
 
-	setup_timer(&net->ipv6.ip6_fib_timer, fib6_gc_timer_cb, (unsigned long)net);
+	timer_setup(&net->ipv6.ip6_fib_timer, fib6_gc_timer_cb, 0);
 
 	net->ipv6.rt6_stats = kzalloc(sizeof(*net->ipv6.rt6_stats), GFP_KERNEL);
 	if (!net->ipv6.rt6_stats)
