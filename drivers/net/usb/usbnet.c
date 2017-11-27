@@ -1221,9 +1221,9 @@ EXPORT_SYMBOL_GPL(usbnet_start_xmit);
 
 // tasklet (work deferred from completions, in_irq) or timer
 
-static void usbnet_bh (unsigned long param)
+static void usbnet_bh(struct timer_list *t)
 {
-	struct usbnet		*dev = (struct usbnet *) param;
+	struct usbnet		*dev = (struct usbnet *)t;
 	struct sk_buff		*skb;
 	struct skb_data		*entry;
 
@@ -1287,9 +1287,9 @@ static void usbnet_bh_w(struct work_struct *work)
 {
 	struct usbnet		*dev =
 		container_of(work, struct usbnet, bh_w);
-	unsigned long param = (unsigned long)dev;
+	struct timer_list *t = dev;
 
-	usbnet_bh(param);
+	usbnet_bh(t);
 }
 
 /*-------------------------------------------------------------------------
