@@ -720,9 +720,9 @@ static int br_ip6_multicast_add_group(struct net_bridge *br,
 }
 #endif
 
-static void br_multicast_router_expired(unsigned long data)
+static void br_multicast_router_expired(struct timer_list *t)
 {
-	struct net_bridge_port *port = (void *)data;
+	struct net_bridge_port *port = from_timer(port, t, multicast_router_timer);
 	struct net_bridge *br = port->br;
 
 	spin_lock(&br->multicast_lock);
@@ -788,9 +788,9 @@ static void br_multicast_send_query(struct net_bridge *br,
 			 &br->multicast_query_timer, time);
 }
 
-static void br_multicast_port_query_expired(unsigned long data)
+static void br_multicast_port_query_expired(struct timer_list *t)
 {
-	struct net_bridge_port *port = (void *)data;
+	struct net_bridge_port *port = from_timer(port, t, multicast_query_timer);
 	struct net_bridge *br = port->br;
 
 	spin_lock(&br->multicast_lock);
@@ -813,10 +813,10 @@ void br_multicast_add_port(struct net_bridge_port *port)
 {
 	port->multicast_router = 1;
 
-	setup_timer(&port->multicast_router_timer, br_multicast_router_expired,
-		    (unsigned long)port);
-	setup_timer(&port->multicast_query_timer,
-		    br_multicast_port_query_expired, (unsigned long)port);
+	timer_setup(&port->multicast_router_timer, br_multicast_router_expired,
+		    0);
+	timer_setup(&port->multicast_query_timer,
+		    br_multicast_port_query_expired, 0);
 }
 
 void br_multicast_del_port(struct net_bridge_port *port)
