@@ -619,8 +619,7 @@ rehash:
 
 	mp->br = br;
 	mp->addr = *group;
-	timer_setup(&mp->timer, br_multicast_group_expired,
-		    0);
+	timer_setup(&mp->timer, br_multicast_group_expired, 0);
 
 	hlist_add_head_rcu(&mp->hlist[mdb->ver], &mdb->mhash[hash]);
 	mdb->size++;
@@ -737,7 +736,7 @@ out:
 	spin_unlock(&br->multicast_lock);
 }
 
-static void br_multicast_local_router_expired(unsigned long data)
+static void br_multicast_local_router_expired(struct timer_list *unused)
 {
 }
 
@@ -1538,9 +1537,9 @@ int br_multicast_rcv(struct net_bridge *br, struct net_bridge_port *port,
 	return 0;
 }
 
-static void br_multicast_query_expired(unsigned long data)
+static void br_multicast_query_expired(struct timer_list *t)
 {
-	struct net_bridge *br = (void *)data;
+	struct net_bridge *br = from_timer(br, t, multicast_query_timer);
 
 	spin_lock(&br->multicast_lock);
 	if (br->multicast_startup_queries_sent <
@@ -1569,12 +1568,12 @@ void br_multicast_init(struct net_bridge *br)
 	br->multicast_membership_interval = 260 * HZ;
 
 	spin_lock_init(&br->multicast_lock);
-	setup_timer(&br->multicast_router_timer,
+	timer_setup(&br->multicast_router_timer,
 		    br_multicast_local_router_expired, 0);
-	setup_timer(&br->multicast_querier_timer,
+	timer_setup(&br->multicast_querier_timer,
 		    br_multicast_local_router_expired, 0);
-	setup_timer(&br->multicast_query_timer, br_multicast_query_expired,
-		    (unsigned long)br);
+	timer_setup(&br->multicast_query_timer, br_multicast_query_expired,
+		    0);
 }
 
 void br_multicast_open(struct net_bridge *br)
