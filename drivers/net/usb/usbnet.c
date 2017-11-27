@@ -1287,7 +1287,7 @@ static void usbnet_bh_w(struct work_struct *work)
 {
 	struct usbnet		*dev =
 		container_of(work, struct usbnet, bh_w);
-	struct timer_list *t = dev;
+	struct timer_list *t = &dev->delay;
 
 	usbnet_bh(t);
 }
@@ -1414,9 +1414,7 @@ usbnet_probe (struct usb_interface *udev, const struct usb_device_id *prod)
 	INIT_WORK(&dev->bh_w, usbnet_bh_w);
 	INIT_WORK (&dev->kevent, kevent);
 	init_usb_anchor(&dev->deferred);
-	dev->delay.function = usbnet_bh;
-	dev->delay.data = (unsigned long) dev;
-	init_timer (&dev->delay);
+	timer_setup(&dev->delay, usbnet_bh, 0);
 	mutex_init (&dev->phy_mutex);
 
 	dev->net = net;
