@@ -113,8 +113,6 @@ struct vsync vsync_cntrl;
  */
 uint32 mdp_in_processing = FALSE;
 
-struct wake_lock main_wake_lock;
-
 static bool display_on = true;
 bool is_display_on()
 {
@@ -2397,8 +2395,6 @@ static int mdp_off(struct platform_device *pdev)
 	mfd = platform_get_drvdata(pdev);
 	if (!mfd)
 		return -ENOMEM;
-	wake_try_unlock(&main_wake_lock);
-	prfunction();
 	mdp_histogram_ctrl_all(FALSE);
 	atomic_set(&vsync_cntrl.suspend, 1);
 	atomic_set(&vsync_cntrl.vsync_resume, 0);
@@ -2429,7 +2425,7 @@ static int mdp_off(struct platform_device *pdev)
 #endif
 	mdp_bus_scale_update_request(0, 0, 0, 0);
 #endif
-	pr_debug("%s:-\n", __func__);
+	prfunction();
 	printk("The answer is beneath us\n");
 	WRITE_ONCE(display_on, false);
 #ifdef CONFIG_PROMETHEUS
@@ -2465,11 +2461,9 @@ static int mdp_on(struct platform_device *pdev)
 		return -ENOMEM;
 	prfunction();
 	if (unlikely(mx_is_booting)) {
-		wake_lock_init(&main_wake_lock, WAKE_LOCK_SUSPEND, "main");
 		mx_is_booting = 0;
 		pr_info("Hello? I'm different.\n");
 	} else {
-		wake_trylock(&main_wake_lock);
 		pr_info("Take me with you\n");
 	}
 
@@ -2527,7 +2521,6 @@ static int mdp_on(struct platform_device *pdev)
 #if defined(CONFIG_MDNIE_LITE_TUNING)
 	is_negative_on();
 #endif
-	pr_debug("%s:-\n", __func__);
 	WRITE_ONCE(display_on, true);
 	pr_info("Rob's DSI ON HOOK\n");
 #ifdef CONFIG_PROMETHEUS
