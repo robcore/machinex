@@ -1,0 +1,109 @@
+arch/arm/mach-msm/board-8064-display.c
+arch/arm/mach-msm/board-8930-display.c
+arch/arm/mach-msm/board-8960-display.c
+arch/arm/mach-msm/board-msm7627a-display.c
+arch/arm/mach-msm/board-msm7x27.c
+arch/arm/mach-msm/board-msm7x30.c
+arch/arm/mach-msm/board-msm8x60.c
+arch/arm/mach-msm/board-qsd8x50.c
+arch/arm/mach-msm/include/mach/board.h
+arch/arm/mach-msm/lge/mako/board-mako-display.c
+drivers/video/msm/ebi2_epson_s1d_qvga.c
+drivers/video/msm/ebi2_host.c
+drivers/video/msm/lcdc_auo_wvga.c
+drivers/video/msm/lcdc_chimei_wxga.c
+drivers/video/msm/lcdc_gordon.c
+drivers/video/msm/lcdc_nt35582_wvga.c
+drivers/video/msm/lcdc_samsung_oled_pt.c
+drivers/video/msm/lcdc_samsung_wsvga.c
+drivers/video/msm/lcdc_sharp_wvga_pt.c
+drivers/video/msm/lcdc_toshiba_fwvga_pt.c
+drivers/video/msm/lcdc_toshiba_wvga_pt.c
+drivers/video/msm/lcdc_truly_ips3p2335.c
+drivers/video/msm/mddi_sharp.c
+drivers/video/msm/mddi_toshiba.c
+drivers/video/msm/mdp.c
+drivers/video/msm/mdss/mdss_mdp.c
+drivers/video/msm/mipi_himax_tft.h
+drivers/video/msm/mipi_hx8389b.c
+drivers/video/msm/mipi_hx8389b.h
+drivers/video/msm/mipi_hx8389b_tft.h
+drivers/video/msm/mipi_lgit.c
+drivers/video/msm/mipi_novatek_NT35596.h
+drivers/video/msm/mipi_NT35510.c
+drivers/video/msm/mipi_ql_dsi2lvds.h
+drivers/video/msm/mipi_renesas.c
+drivers/video/msm/mipi_samsung_octa.h
+drivers/video/msm/mipi_samsung_oled-8930.h
+drivers/video/msm/mipi_samsung_oled-8960.h
+drivers/video/msm/mipi_samsung_oled.h
+drivers/video/msm/mipi_samsung_tft.h
+drivers/video/msm/mipi_simulator.c
+drivers/video/msm/mipi_tc358764_dsi2lvds.c
+drivers/video/msm/mipi_truly.c
+drivers/video/msm/mipi_truly_tft540960_1_e.c
+arch/arm/mach-msm/board-8064-display.c:static struct msm_panel_common_pdata mdp_pdata = {
+arch/arm/mach-msm/board-8064-display.c:static struct msm_panel_common_pdata mipi_dsi2lvds_pdata = {
+arch/arm/mach-msm/board-8930-display.c:static struct msm_panel_common_pdata mdp_pdata = {
+arch/arm/mach-msm/board-8960-display.c:static struct msm_panel_common_pdata mdp_pdata = {
+arch/arm/mach-msm/board-8960-display.c:static struct msm_panel_common_pdata mipi_dsi2lvds_pdata = {
+arch/arm/mach-msm/board-msm7627a-display.c:static struct msm_panel_common_pdata lcdc_toshiba_panel_data = {
+arch/arm/mach-msm/board-msm7627a-display.c:static struct msm_panel_common_pdata lcdc_truly_panel_data = {
+arch/arm/mach-msm/board-msm7627a-display.c:static struct msm_panel_common_pdata mdp_pdata = {
+arch/arm/mach-msm/board-msm7627a-display.c:static struct msm_panel_common_pdata mipi_NT35510_pdata = {
+arch/arm/mach-msm/board-msm7627a-display.c:static struct msm_panel_common_pdata mipi_NT35516_pdata = {
+arch/arm/mach-msm/board-msm7627a-display.c:static struct msm_panel_common_pdata mipi_renesas_pdata = {
+arch/arm/mach-msm/board-msm7627a-display.c:static struct msm_panel_common_pdata mipi_truly_pdata = {
+arch/arm/mach-msm/board-msm7x27.c:static struct msm_panel_common_pdata lcdc_gordon_panel_data = {
+arch/arm/mach-msm/board-msm7x27.c:static struct msm_panel_common_pdata mdp_pdata = {
+arch/arm/mach-msm/board-msm7x30.c:static struct msm_panel_common_pdata lcdc_sharp_panel_data = {
+arch/arm/mach-msm/board-msm7x30.c:static struct msm_panel_common_pdata lcdc_toshiba_panel_data = {
+arch/arm/mach-msm/board-msm7x30.c:static struct msm_panel_common_pdata mddi_toshiba_pdata = {
+arch/arm/mach-msm/board-msm7x30.c:static struct msm_panel_common_pdata mdp_pdata = {
+arch/arm/mach-msm/board-msm8x60.c:static struct msm_panel_common_pdata lcdc_auo_wvga_panel_data = {
+arch/arm/mach-msm/board-msm8x60.c:static struct msm_panel_common_pdata lcdc_nt35582_panel_data = {
+arch/arm/mach-msm/board-msm8x60.c:static struct msm_panel_common_pdata lcdc_samsung_oled_panel_data = {
+arch/arm/mach-msm/board-msm8x60.c:static struct msm_panel_common_pdata lcdc_samsung_panel_data = {
+arch/arm/mach-msm/board-msm8x60.c:static struct msm_panel_common_pdata mdp_pdata = {
+arch/arm/mach-msm/board-qsd8x50.c:static struct msm_panel_common_pdata mddi_toshiba_pdata = {
+arch/arm/mach-msm/board-qsd8x50.c:static struct msm_panel_common_pdata mdp_pdata = {
+arch/arm/mach-msm/include/mach/board.h:struct msm_panel_common_pdata {
+arch/arm/mach-msm/lge/mako/board-mako-display.c:static struct msm_panel_common_pdata mdp_pdata = {
+arch/arm/mach-msm/lge/mako/board-mako-display.c:static struct msm_panel_common_pdata mipi_lgit_pdata = {
+drivers/video/msm/ebi2_epson_s1d_qvga.c:static struct msm_panel_common_pdata *ebi2_epson_pdata;
+drivers/video/msm/ebi2_host.c:static struct msm_panel_common_pdata *ebi2_host_pdata;
+drivers/video/msm/lcdc_auo_wvga.c:static struct msm_panel_common_pdata *lcdc_auo_pdata;
+drivers/video/msm/lcdc_chimei_wxga.c:static struct msm_panel_common_pdata *cm_pdata;
+drivers/video/msm/lcdc_gordon.c:static struct msm_panel_common_pdata *lcdc_gordon_pdata;
+drivers/video/msm/lcdc_nt35582_wvga.c:static struct msm_panel_common_pdata *lcdc_nt35582_pdata;
+drivers/video/msm/lcdc_samsung_oled_pt.c:static struct msm_panel_common_pdata *lcdc_samsung_pdata;
+drivers/video/msm/lcdc_samsung_wsvga.c:	struct msm_panel_common_pdata *pdata;
+drivers/video/msm/lcdc_sharp_wvga_pt.c:static struct msm_panel_common_pdata *lcdc_sharp_pdata;
+drivers/video/msm/lcdc_toshiba_fwvga_pt.c:static struct msm_panel_common_pdata *lcdc_toshiba_pdata;
+drivers/video/msm/lcdc_toshiba_wvga_pt.c:static struct msm_panel_common_pdata *lcdc_toshiba_pdata;
+drivers/video/msm/lcdc_truly_ips3p2335.c:static struct msm_panel_common_pdata *lcdc_truly_pdata;
+drivers/video/msm/mddi_sharp.c:static struct msm_panel_common_pdata *mddi_sharp_pdata;
+drivers/video/msm/mddi_toshiba.c:static struct msm_panel_common_pdata *mddi_toshiba_pdata;
+drivers/video/msm/mdp.c:static struct msm_panel_common_pdata *mdp_pdata;
+drivers/video/msm/mdss/mdss_mdp.c:static struct msm_panel_common_pdata *mdp_pdata;
+drivers/video/msm/mdss/mdss_mdp.c:static struct msm_panel_common_pdata *mdss_mdp_populate_pdata(
+drivers/video/msm/mdss/mdss_mdp.c:	struct msm_panel_common_pdata *pdata;
+drivers/video/msm/mipi_himax_tft.h:	struct msm_panel_common_pdata *mipi_samsung_disp_pdata;
+drivers/video/msm/mipi_hx8389b.c://static struct msm_panel_common_pdata *mipi_hx8389b_pdata;
+drivers/video/msm/mipi_hx8389b.h:	struct msm_panel_common_pdata *mipi_samsung_disp_pdata;
+drivers/video/msm/mipi_hx8389b_tft.h:	struct msm_panel_common_pdata *mipi_samsung_disp_pdata;
+drivers/video/msm/mipi_lgit.c:static struct msm_panel_common_pdata *mipi_lgit_pdata;
+drivers/video/msm/mipi_novatek_NT35596.h:	struct msm_panel_common_pdata *mipi_novatek_disp_pdata;
+drivers/video/msm/mipi_NT35510.c:static struct msm_panel_common_pdata *mipi_nt35510_pdata;
+drivers/video/msm/mipi_ql_dsi2lvds.h:	struct msm_panel_common_pdata *mipi_dsi2lvds_disp_pdata;
+drivers/video/msm/mipi_renesas.c:static struct msm_panel_common_pdata *mipi_renesas_pdata;
+drivers/video/msm/mipi_samsung_octa.h:	struct msm_panel_common_pdata *mipi_samsung_disp_pdata;
+drivers/video/msm/mipi_samsung_oled-8930.h:	struct msm_panel_common_pdata *mipi_samsung_disp_pdata;
+drivers/video/msm/mipi_samsung_oled-8960.h:	struct msm_panel_common_pdata *mipi_samsung_disp_pdata;
+drivers/video/msm/mipi_samsung_oled.h:	struct msm_panel_common_pdata *mipi_samsung_disp_pdata;
+drivers/video/msm/mipi_samsung_tft.h:	struct msm_panel_common_pdata *mipi_samsung_disp_pdata;
+drivers/video/msm/mipi_simulator.c:static struct msm_panel_common_pdata *mipi_simulator_pdata;
+drivers/video/msm/mipi_tc358764_dsi2lvds.c:static struct msm_panel_common_pdata *d2l_common_pdata;
+drivers/video/msm/mipi_tc358764_dsi2lvds.c: * Target device should register first, passing msm_panel_common_pdata.
+drivers/video/msm/mipi_truly.c:static struct msm_panel_common_pdata *mipi_truly_pdata;
+drivers/video/msm/mipi_truly_tft540960_1_e.c:static struct msm_panel_common_pdata *mipi_truly_pdata;
