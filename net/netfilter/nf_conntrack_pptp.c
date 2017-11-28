@@ -157,7 +157,7 @@ static int destroy_sibling_or_exp(struct net *net, struct nf_conn *ct,
 		sibling->proto.gre.timeout	  = 0;
 		sibling->proto.gre.stream_timeout = 0;
 		if (del_timer(&sibling->timeout))
-			sibling->timeout.function(&sibling->timeout);
+			sibling->timeout.function((unsigned long)sibling);
 		nf_ct_put(sibling);
 		return 1;
 	} else {

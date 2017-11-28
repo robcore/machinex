@@ -2080,7 +2080,7 @@ void sock_init_data(struct socket *sock, struct sock *sk)
 
 	sk->sk_send_head	=	NULL;
 
-	timer_setup(&sk->sk_timer, NULL, 0);
+	init_timer(&sk->sk_timer);
 
 	sk->sk_allocation	=	GFP_KERNEL;
 	sk->sk_rcvbuf		=	sysctl_rmem_default;

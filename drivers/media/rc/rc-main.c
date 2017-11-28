@@ -564,9 +564,9 @@ EXPORT_SYMBOL_GPL(rc_keyup);
  * This routine will generate a keyup event some time after a keydown event
  * is generated when no further activity has been detected.
  */
-static void ir_timer_keyup(struct timer_list *t)
+static void ir_timer_keyup(unsigned long cookie)
 {
-	struct rc_dev *dev = from_timer(dev, t, timer_keyup);
+	struct rc_dev *dev = (struct rc_dev *)cookie;
 	unsigned long flags;
 
 	/*
@@ -1001,7 +1001,7 @@ struct rc_dev *rc_allocate_device(void)
 	spin_lock_init(&dev->rc_map.lock);
 	spin_lock_init(&dev->keylock);
 	mutex_init(&dev->lock);
-	timer_setup(&dev->timer_keyup, ir_timer_keyup, 0);
+	setup_timer(&dev->timer_keyup, ir_timer_keyup, (unsigned long)dev);
 
 	dev->dev.type = &rc_dev_type;
 	dev->dev.class = &ir_input_class;

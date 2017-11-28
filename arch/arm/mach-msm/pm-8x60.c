@@ -162,6 +162,10 @@ static bool msm_pm_ldo_retention_enabled = false;
 module_param_named(ldo_retention_enabled,
 	msm_pm_ldo_retention_enabled, bool, 0664);
 
+static bool msm_pm_use_sync_timer = false;
+module_param_named(use_sync_timer,
+	msm_pm_use_sync_timer, bool, 0664);
+
 static int msm_pm_retention_tz_call;
 static void *msm_pm_idle_rs_limits;
 int msm_pm_pc_hotplug(void);
@@ -622,17 +626,50 @@ static void msm_pm_target_init(void)
 
 static int64_t msm_pm_timer_enter_idle(void)
 {
-	return ktime_to_ns(tick_nohz_get_sleep_length());
+	if (msm_pm_use_sync_timer)
+		return ktime_to_ns(tick_nohz_get_sleep_length());
+
+	return msm_timer_enter_idle();
 }
 
-static int64_t msm_pm_timer_enter_suspend(void)
+static void msm_pm_timer_exit_idle(bool timer_halted)
 {
-	return sched_clock();
+	if (msm_pm_use_sync_timer)
+		return;
+
+	msm_timer_exit_idle((int) timer_halted);
+}
+
+static int64_t msm_pm_timer_enter_suspend(int64_t *period)
+{
+	int64_t time = 0;
+
+	if (msm_pm_use_sync_timer)
+		return sched_clock();
+
+	time = msm_timer_get_sclk_time(period);
+	if (!time)
+		pr_err("%s: Unable to read sclk.\n", __func__);
+
+	return time;
 }
 
 static int64_t msm_pm_timer_exit_suspend(int64_t time, int64_t period)
 {
-	return sched_clock() - time;
+	if (msm_pm_use_sync_timer)
+		return sched_clock() - time;
+
+	if (time != 0) {
+		int64_t end_time = msm_timer_get_sclk_time(NULL);
+		if (end_time != 0) {
+			time = end_time - time;
+			if (time < 0)
+				time += period;
+		} else
+			time = 0;
+	}
+
+	return time;
 }
 
 /**
@@ -820,6 +857,7 @@ int msm_pm_idle_enter(enum msm_pm_sleep_mode sleep_mode)
 				pm_sleep_ops.exit_sleep(msm_pm_idle_rs_limits,
 						true, notify_rpm, collapsed);
 		}
+		msm_pm_timer_exit_idle(timer_halted);
 		if (collapsed)
 			exit_stat = MSM_PM_STAT_IDLE_POWER_COLLAPSE;
 		else
@@ -938,7 +976,7 @@ static int msm_pm_enter(suspend_state_t state)
 	bool allow[MSM_PM_SLEEP_MODE_NR];
 	int i;
 	int64_t period = 0;
-	int64_t time = msm_pm_timer_enter_suspend();
+	int64_t time = msm_pm_timer_enter_suspend(&period);
 	struct msm_pm_time_params time_param;
 
 	time_param.latency_us = -1;
@@ -1267,6 +1305,7 @@ static int __init msm_pm_init(void)
 				msm_cpu_status_driver.driver.name);
 		return rc;
 	}
+
 
 	return 0;
 }

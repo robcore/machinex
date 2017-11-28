@@ -205,7 +205,7 @@ static int mhl_set_reg(struct i2c_client *client, unsigned int offset,
 }
 
 #ifdef SII8240_CHECK_MONITOR
-static void sii8240_link_monitor_timer(struct timer_list *unused)
+static void sii8240_link_monitor_timer(unsigned long data)
 {
 	struct sii8240_data *sii8240;
 
@@ -755,7 +755,7 @@ static int sii8240_hdcp_control(struct sii8240_data *sii8240, u8 hdcp_reg)
 #ifdef SII8240_CHECK_MONITOR
 				if ((g_monitor_cmd.a & 0x01) == 0x01) {
 					/*start checking link status*/
-					sii8240_link_monitor_timer(&sii8240->mhl_timer);
+					sii8240_link_monitor_timer((unsigned long) sii8240);
 					pr_info("%s():%d sii8240_link_monitor_timer\n",
 						__func__, __LINE__);
 				} else
@@ -777,7 +777,7 @@ static int sii8240_hdcp_control(struct sii8240_data *sii8240, u8 hdcp_reg)
 #ifdef SII8240_CHECK_MONITOR
 				if ((g_monitor_cmd.a & 0x01) == 0x01) {
 					/*start checking link status*/
-					sii8240_link_monitor_timer(&sii8240->mhl_timer);
+					sii8240_link_monitor_timer((unsigned long) sii8240);
 					pr_info("%s():%d sii8240_link_monitor_timer\n",
 						__func__, __LINE__);
 				} else
@@ -3571,9 +3571,9 @@ static int sii8240_cbus_irq(struct sii8240_data *sii8240)
 	return ret;
 }
 #ifdef SFEATURE_UNSTABLE_SOURCE_WA
-static void sii8240_avif_check_callback(struct timer_list *t)
+static void sii8240_avif_check_callback(unsigned long data)
 {
-	struct sii8240_data *sii8240 = from_timer(sii8240, t, avi_check_timer);
+	struct sii8240_data *sii8240 = (struct sii8240_data *) data;
 	struct i2c_client *tpi = sii8240->pdata->tpi_client;
 	int ret = 0;
 	u8 checksum = 0;
@@ -4278,7 +4278,7 @@ static int sii8240_tmds_i2c_probe(struct i2c_client *client,
 	INIT_WORK(&sii8240->avi_control_work, sii8240_avi_control_thread);
 #ifdef SII8240_CHECK_MONITOR
 	INIT_WORK(&sii8240->mhl_link_monitor_work, sii8240_link_monitor_work);
-	timer_setup(&sii8240->mhl_timer, sii8240_link_monitor_timer, 0);
+	setup_timer(&sii8240->mhl_timer, sii8240_link_monitor_timer, (unsigned long)sii8240);
 #endif
 
 	client->irq = sii8240->pdata->get_irq();
@@ -4300,8 +4300,8 @@ static int sii8240_tmds_i2c_probe(struct i2c_client *client,
 	sii8240_mhldev = &client->dev;
 	g_sii8240 = sii8240;
 #ifdef SFEATURE_UNSTABLE_SOURCE_WA
-	timer_setup(&sii8240->avi_check_timer, sii8240_avif_check_callback,
-				0);
+	setup_timer(&sii8240->avi_check_timer, sii8240_avif_check_callback,
+				(unsigned long)sii8240);
 #endif
 	/* mhl_event_switch is for home theater*/
 	sii8240->mhl_event_switch.name = "mhl_event_switch";

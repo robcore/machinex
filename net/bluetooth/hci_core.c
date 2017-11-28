@@ -1025,9 +1025,9 @@ static void hci_power_off(struct work_struct *work)
 	hci_dev_close(hdev->id);
 }
 
-static void hci_auto_off(struct timer_list *t)
+static void hci_auto_off(unsigned long data)
 {
-	struct hci_dev *hdev = from_timer(hdev, t, off_timer);
+	struct hci_dev *hdev = (struct hci_dev *) data;
 
 	BT_DBG("%s", hdev->name);
 
@@ -1249,9 +1249,9 @@ int hci_remove_link_key(struct hci_dev *hdev, bdaddr_t *bdaddr)
 }
 
 /* HCI command timer function */
-static void hci_cmd_timer(struct timer_list *t)
+static void hci_cmd_timer(unsigned long arg)
 {
-	struct hci_dev *hdev = from_timer(hdev, t, cmd_timer);
+	struct hci_dev *hdev = (void *) arg;
 
 	BT_ERR("%s command tx timeout", hdev->name);
 	atomic_set(&hdev->cmd_cnt, 1);
@@ -1299,9 +1299,9 @@ int hci_remote_oob_data_clear(struct hci_dev *hdev)
 	return 0;
 }
 
-static void hci_adv_clear(struct timer_list *t)
+static void hci_adv_clear(unsigned long arg)
 {
-	struct hci_dev *hdev = from_timer(hdev, t, adv_timer);
+	struct hci_dev *hdev = (void *) arg;
 
 	hci_adv_entries_clear(hdev);
 }
@@ -1486,11 +1486,11 @@ int hci_register_dev(struct hci_dev *hdev)
 	skb_queue_head_init(&hdev->cmd_q);
 	skb_queue_head_init(&hdev->raw_q);
 
-	timer_setup(&hdev->cmd_timer, hci_cmd_timer, 0);
-	timer_setup(&hdev->disco_timer, mgmt_disco_timeout,
-						0);
-	timer_setup(&hdev->disco_le_timer, mgmt_disco_le_timeout,
-						0);
+	setup_timer(&hdev->cmd_timer, hci_cmd_timer, (unsigned long) hdev);
+	setup_timer(&hdev->disco_timer, mgmt_disco_timeout,
+						(unsigned long) hdev);
+	setup_timer(&hdev->disco_le_timer, mgmt_disco_le_timeout,
+						(unsigned long) hdev);
 
 	for (i = 0; i < NUM_REASSEMBLY; i++)
 		hdev->reassembly[i] = NULL;
@@ -1513,11 +1513,11 @@ int hci_register_dev(struct hci_dev *hdev)
 
 	INIT_LIST_HEAD(&hdev->adv_entries);
 	rwlock_init(&hdev->adv_entries_lock);
-	timer_setup(&hdev->adv_timer, hci_adv_clear, 0);
+	setup_timer(&hdev->adv_timer, hci_adv_clear, (unsigned long) hdev);
 
 	INIT_WORK(&hdev->power_on, hci_power_on);
 	INIT_WORK(&hdev->power_off, hci_power_off);
-	timer_setup(&hdev->off_timer, hci_auto_off, 0);
+	setup_timer(&hdev->off_timer, hci_auto_off, (unsigned long) hdev);
 
 	memset(&hdev->stat, 0, sizeof(struct hci_dev_stats));
 

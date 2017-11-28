@@ -38,7 +38,7 @@
 #include <linux/sched/rt.h>
 #include <linux/mm_inline.h>
 #include <trace/events/writeback.h>
-#include <linux/timer.h>
+
 #include "internal.h"
 
 /*
@@ -142,14 +142,10 @@ unsigned long global_dirty_limit;
  */
 static struct fprop_global writeout_completions;
 
-#define DEFINE_DEFERRED_TIMER(_name, _function)	\
-	struct timer_list _name =	\
-		__TIMER_INITIALIZER(_function, TIMER_DEFERRABLE)
-
-static void writeout_period(struct timer_list *t);
+static void writeout_period(unsigned long t);
 /* Timer for aging of writeout_completions */
-static DEFINE_DEFERRED_TIMER(writeout_period_timer, writeout_period);
-
+static struct timer_list writeout_period_timer =
+		TIMER_DEFERRED_INITIALIZER(writeout_period, 0);
 static unsigned long writeout_period_time = 0;
 
 /*
@@ -441,7 +437,7 @@ static void bdi_writeout_fraction(struct backing_dev_info *bdi,
  * On idle system, we can be called long after we scheduled because we use
  * deferred timers so count with missed periods.
  */
-static void writeout_period(struct timer_list *t)
+static void writeout_period(unsigned long t)
 {
 	int miss_periods = (jiffies - writeout_period_time) /
 						 VM_COMPLETIONS_PERIOD_LEN;
@@ -1645,9 +1641,9 @@ int dirty_writeback_centisecs_handler(struct ctl_table *table, int write,
 }
 
 #ifdef CONFIG_BLOCK
-void laptop_mode_timer_fn(struct timer_list *t)
+void laptop_mode_timer_fn(unsigned long data)
 {
-	struct request_queue *q = from_timer(q, t, backing_dev_info.laptop_mode_wb_timer);
+	struct request_queue *q = (struct request_queue *)data;
 	int nr_pages = global_page_state(NR_FILE_DIRTY) +
 		global_page_state(NR_UNSTABLE_NFS);
 

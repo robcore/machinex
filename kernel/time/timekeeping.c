@@ -14,7 +14,6 @@
 #include <linux/percpu.h>
 #include <linux/init.h>
 #include <linux/mm.h>
-#include <linux/nmi.h>
 #include <linux/sched.h>
 #include <linux/syscore_ops.h>
 #include <linux/clocksource.h>

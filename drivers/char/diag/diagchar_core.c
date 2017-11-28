@@ -117,7 +117,7 @@ do {								\
 	ret += length;						\
 } while (0)
 
-static void drain_timer_func(struct timer_list *unused)
+static void drain_timer_func(unsigned long data)
 {
 	queue_work(driver->diag_wq , &(driver->diag_drain_work));
 }
@@ -2058,7 +2058,7 @@ static int __init diagchar_init(void)
 		timer_in_progress = 0;
 		driver->debug_flag = 1;
 		driver->dci_state = DIAG_DCI_NO_ERROR;
-		timer_setup(&drain_timer, drain_timer_func, 0);
+		setup_timer(&drain_timer, drain_timer_func, 1234);
 		driver->itemsize = itemsize;
 		driver->poolsize = poolsize;
 		driver->itemsize_hdlc = itemsize_hdlc;

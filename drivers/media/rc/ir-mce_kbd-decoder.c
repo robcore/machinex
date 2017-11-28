@@ -115,9 +115,9 @@ static unsigned char kbd_keycodes[256] = {
 	KEY_RESERVED
 };
 
-static void mce_kbd_rx_timeout(struct timer_list *t)
+static void mce_kbd_rx_timeout(unsigned long data)
 {
-	struct mce_kbd_dec *mce_kbd = from_timer(mce_kbd, t, rx_timeout);
+	struct mce_kbd_dec *mce_kbd = (struct mce_kbd_dec *)data;
 	int i;
 	unsigned char maskcode;
 
@@ -388,7 +388,8 @@ static int ir_mce_kbd_register(struct rc_dev *dev)
 	set_bit(EV_MSC, idev->evbit);
 	set_bit(MSC_SCAN, idev->mscbit);
 
-	timer_setup(&mce_kbd->rx_timeout, mce_kbd_rx_timeout, 0);
+	setup_timer(&mce_kbd->rx_timeout, mce_kbd_rx_timeout,
+		    (unsigned long)mce_kbd);
 
 	input_set_drvdata(idev, mce_kbd);
 

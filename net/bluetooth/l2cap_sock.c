@@ -36,9 +36,9 @@
 #include <net/bluetooth/amp.h>
 
 /* ---- L2CAP timers ---- */
-static void l2cap_sock_timeout(struct timer_list *t)
+static void l2cap_sock_timeout(unsigned long arg)
 {
-	struct sock *sk = from_timer(sk, t, sk_timer);
+	struct sock *sk = (struct sock *) arg;
 	int reason;
 
 	BT_DBG("sock %p state %d", sk, sk->sk_state);
@@ -1323,7 +1323,7 @@ struct sock *l2cap_sock_alloc(struct net *net, struct socket *sock, int proto, g
 	sk->sk_protocol = proto;
 	sk->sk_state = BT_OPEN;
 
-	timer_setup(&sk->sk_timer, l2cap_sock_timeout, 0);
+	setup_timer(&sk->sk_timer, l2cap_sock_timeout, (unsigned long) sk);
 
 	bt_sock_link(&l2cap_sk_list, sk);
 	return sk;

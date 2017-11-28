@@ -352,9 +352,9 @@ static int hidp_output_raw_report(struct hid_device *hid, unsigned char *data, s
 	return count;
 }
 
-static void hidp_idle_timeout(struct timer_list *t)
+static void hidp_idle_timeout(unsigned long arg)
 {
-	struct hidp_session *session = from_timer(session, t, timer);
+	struct hidp_session *session = (struct hidp_session *) arg;
 
 	atomic_inc(&session->terminate);
 	hidp_schedule(session);
@@ -883,7 +883,7 @@ int hidp_add_connection(struct hidp_connadd_req *req, struct socket *ctrl_sock, 
 		goto failed;
 	}
 
-	timer_setup(&session->timer, hidp_idle_timeout, 0);
+	setup_timer(&session->timer, hidp_idle_timeout, (unsigned long)session);
 
 	skb_queue_head_init(&session->ctrl_transmit);
 	skb_queue_head_init(&session->intr_transmit);

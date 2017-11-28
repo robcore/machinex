@@ -112,9 +112,9 @@ EXPORT_SYMBOL(__jbd_debug);
  * Helper function used to manage commit timeouts
  */
 
-static void commit_timeout(struct timer_list *t)
+static void commit_timeout(unsigned long __data)
 {
-	struct task_struct *p = (struct task_struct *)t;
+	struct task_struct * p = (struct task_struct *) __data;
 
 	wake_up_process(p);
 }
@@ -144,7 +144,8 @@ static int kjournald(void *arg)
 	 * Set up an interval timer which can be used to trigger a commit wakeup
 	 * after the commit interval expires
 	 */
-	timer_setup(&journal->j_commit_timer, commit_timeout, 0);
+	setup_timer(&journal->j_commit_timer, commit_timeout,
+			(unsigned long)current);
 
 	set_freezable();
 

@@ -92,7 +92,7 @@ int mdp_stop_histogram(struct fb_info *info)
 {
 	return 0;
 }
-void mdp_refresh_screen(struct timer_list *t)
+void mdp_refresh_screen(unsigned long data)
 {
 	return;
 }
@@ -100,7 +100,6 @@ void mdp_refresh_screen(struct timer_list *t)
 static int ebi2_host_off(struct platform_device *pdev)
 {
 	int ret;
-	prfunction();
 	ret = panel_next_off(pdev);
 	return ret;
 }
@@ -108,7 +107,6 @@ static int ebi2_host_off(struct platform_device *pdev)
 static int ebi2_host_on(struct platform_device *pdev)
 {
 	int ret;
-	prfunction();
 	ret = panel_next_on(pdev);
 	return ret;
 }

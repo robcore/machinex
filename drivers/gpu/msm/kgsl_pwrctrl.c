@@ -1260,9 +1260,9 @@ void kgsl_idle_check(struct work_struct *work)
 }
 EXPORT_SYMBOL(kgsl_idle_check);
 
-void kgsl_timer(struct timer_list *t)
+void kgsl_timer(unsigned long data)
 {
-	struct kgsl_device *device = from_timer(device, t, idle_timer);
+	struct kgsl_device *device = (struct kgsl_device *) data;
 
 	KGSL_PWR_INFO(device, "idle timer expired device %d From %s to %s \n", device->id,
 			kgsl_pwrstate_to_str( device->state),

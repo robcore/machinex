@@ -129,7 +129,7 @@ instance_put(struct nfulnl_instance *inst)
 		call_rcu_bh(&inst->rcu, nfulnl_instance_free_rcu);
 }
 
-static void nfulnl_timer(struct timer_list *t);
+static void nfulnl_timer(unsigned long data);
 
 static struct nfulnl_instance *
 instance_create(u_int16_t group_num, int pid)
@@ -160,7 +160,7 @@ instance_create(u_int16_t group_num, int pid)
 	/* needs to be two, since we _put() after creation */
 	atomic_set(&inst->use, 2);
 
-	timer_setup(&inst->timer, nfulnl_timer, 0);
+	setup_timer(&inst->timer, nfulnl_timer, (unsigned long)inst);
 
 	inst->peer_pid = pid;
 	inst->group_num = group_num;
@@ -352,9 +352,9 @@ __nfulnl_flush(struct nfulnl_instance *inst)
 }
 
 static void
-nfulnl_timer(struct timer_list *t)
+nfulnl_timer(unsigned long data)
 {
-	struct nfulnl_instance *inst = from_timer(inst, t, timer);
+	struct nfulnl_instance *inst = (struct nfulnl_instance *)data;
 
 	spin_lock_bh(&inst->lock);
 	if (inst->skb)

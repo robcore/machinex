@@ -484,7 +484,6 @@ extern enum system_states {
 	SYSTEM_RESTART,
 } system_state;
 extern unsigned int userspace_ready;
-#define prfunction() pr_info("%s\n", __func__)
 
 #define TAINT_PROPRIETARY_MODULE	0
 #define TAINT_FORCED_MODULE		1

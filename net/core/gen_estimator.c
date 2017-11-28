@@ -98,7 +98,6 @@ struct gen_estimator_head
 	struct timer_list	timer;
 	struct list_head	list;
 };
-int idx;
 
 static struct gen_estimator_head elist[EST_MAX_INTERVAL+1];
 
@@ -109,8 +108,9 @@ static DEFINE_RWLOCK(est_lock);
 static struct rb_root est_root = RB_ROOT;
 static DEFINE_SPINLOCK(est_tree_lock);
 
-static void est_timer(struct timer_list *unused)
+static void est_timer(unsigned long arg)
 {
+	int idx = (int)arg;
 	struct gen_estimator *e;
 
 	rcu_read_lock();
@@ -209,6 +209,7 @@ int gen_new_estimator(struct gnet_stats_basic_packed *bstats,
 {
 	struct gen_estimator *est;
 	struct gnet_estimator *parm = nla_data(opt);
+	int idx;
 
 	if (nla_len(opt) < sizeof(*parm))
 		return -EINVAL;
@@ -233,7 +234,7 @@ int gen_new_estimator(struct gnet_stats_basic_packed *bstats,
 	spin_lock_bh(&est_tree_lock);
 	if (!elist[idx].timer.function) {
 		INIT_LIST_HEAD(&elist[idx].list);
-		timer_setup(&elist[idx].timer, est_timer, 0);
+		setup_timer(&elist[idx].timer, est_timer, idx);
 	}
 
 	if (list_empty(&elist[idx].list))

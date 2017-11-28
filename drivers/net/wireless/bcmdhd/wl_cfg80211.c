@@ -9717,10 +9717,10 @@ static void wl_destroy_event_handler(struct bcm_cfg80211 *cfg)
 		PROC_STOP(&cfg->event_tsk);
 }
 
-static void wl_scan_timeout(struct timer_list *t)
+static void wl_scan_timeout(unsigned long data)
 {
 	wl_event_msg_t msg;
-	struct bcm_cfg80211 *cfg = from_timer(cfg, t, scan_timeout);
+	struct bcm_cfg80211 *cfg = (struct bcm_cfg80211 *)data;
 
 	if (!(cfg->scan_request)) {
 		WL_ERR(("timer expired but no scan request\n"));
@@ -10428,7 +10428,10 @@ static s32 wl_init_scan(struct bcm_cfg80211 *cfg)
 	wl_escan_init_sync_id(cfg);
 
 	/* Init scan_timeout timer */
-	timer_setup(&cfg->scan_timeout, wl_scan_timeout, 0);
+	init_timer(&cfg->scan_timeout);
+	cfg->scan_timeout.data = (unsigned long) cfg;
+	cfg->scan_timeout.function = wl_scan_timeout;
+
 	return err;
 }
 

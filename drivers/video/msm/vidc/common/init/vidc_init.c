@@ -81,13 +81,13 @@ void vidc_debugfs_file_create(struct dentry *root, const char *name,
 }
 #endif
 
-static void vidc_timer_fn(struct timer_list *t)
+static void vidc_timer_fn(unsigned long data)
 {
 	unsigned long flag;
 	struct vidc_timer *hw_timer = NULL;
 	ERR("%s() Timer expired\n", __func__);
 	spin_lock_irqsave(&vidc_spin_lock, flag);
-	hw_timer = from_timer(hw_timer, t, hw_timeout);
+	hw_timer = (struct vidc_timer *)data;
 	list_add_tail(&hw_timer->list, &vidc_device_p->vidc_timer_queue);
 	spin_unlock_irqrestore(&vidc_spin_lock, flag);
 	DBG("Queue the work for timer\n");
@@ -959,7 +959,9 @@ u32 vidc_timer_create(void (*timer_handler)(void *),
 		DBG("%s(): timer creation failed in allocation\n ", __func__);
 		return false;
 	}
-	timer_setup(&hw_timer->hw_timeout, vidc_timer_fn, 0);
+	init_timer(&hw_timer->hw_timeout);
+	hw_timer->hw_timeout.data = (unsigned long)hw_timer;
+	hw_timer->hw_timeout.function = vidc_timer_fn;
 	hw_timer->cb_func = timer_handler;
 	hw_timer->userdata = user_data;
 	*timer_handle = hw_timer;

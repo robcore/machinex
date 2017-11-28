@@ -612,11 +612,11 @@ static int msm_strobe_flash_xenon_charge(int32_t flash_charge,
 	return 0;
 }
 
-static void strobe_flash_xenon_recharge_handler(struct timer_list *t)
+static void strobe_flash_xenon_recharge_handler(unsigned long data)
 {
 	unsigned long flags;
 	struct msm_camera_sensor_strobe_flash_data *sfdata =
-		(struct msm_camera_sensor_strobe_flash_data *)t;
+		(struct msm_camera_sensor_strobe_flash_data *)data;
 
 	spin_lock_irqsave(&sfdata->timer_lock, flags);
 	msm_strobe_flash_xenon_charge(sfdata->flash_charge, 1,
@@ -660,7 +660,9 @@ static int msm_strobe_flash_xenon_init(
 
 		spin_lock_init(&sfdata->timer_lock);
 		/* setup timer */
-		timer_setup(&timer_flash, strobe_flash_xenon_recharge_handler, 0);
+		init_timer(&timer_flash);
+		timer_flash.function = strobe_flash_xenon_recharge_handler;
+		timer_flash.data = (unsigned long)sfdata;
 	}
 	sfdata->state++;
 go_out:

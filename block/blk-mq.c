@@ -646,9 +646,9 @@ static void blk_mq_check_expired(struct blk_mq_hw_ctx *hctx,
 	}
 }
 
-static void blk_mq_rq_timer(struct timer_list *t)
+static void blk_mq_rq_timer(unsigned long priv)
 {
-	struct request_queue *q = from_timer(q, t, timeout);
+	struct request_queue *q = (struct request_queue *)priv;
 	struct blk_mq_timeout_data data = {
 		.next		= 0,
 		.next_set	= 0,
@@ -1906,7 +1906,7 @@ struct request_queue *blk_mq_init_queue(struct blk_mq_tag_set *set)
 			    PERCPU_REF_INIT_ATOMIC, GFP_KERNEL))
 		goto err_map;
 
-	timer_setup(&q->timeout, blk_mq_rq_timer, 0);
+	setup_timer(&q->timeout, blk_mq_rq_timer, (unsigned long) q);
 	blk_queue_rq_timeout(q, 30000);
 
 	q->nr_queues = nr_cpu_ids;

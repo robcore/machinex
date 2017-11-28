@@ -3666,9 +3666,9 @@ static void bfq_kick_queue(struct work_struct *work)
  * Handler of the expiration of the timer running if the in-service queue
  * is idling inside its time slice.
  */
-static void bfq_idle_slice_timer(struct timer_list *t)
+static void bfq_idle_slice_timer(unsigned long data)
 {
-	struct bfq_data *bfqd = from_timer(bfqd, t, idle_slice_timer);
+	struct bfq_data *bfqd = (struct bfq_data *)data;
 	struct bfq_queue *bfqq;
 	unsigned long flags;
 	enum bfqq_expiration reason;
@@ -3833,7 +3833,9 @@ static int bfq_init_queue(struct request_queue *q, struct elevator_type *e)
 	bfqd->active_numerous_groups = 0;
 #endif
 
-	timer_setup(&bfqd->idle_slice_timer, bfq_idle_slice_timer, 0);
+	init_timer(&bfqd->idle_slice_timer);
+	bfqd->idle_slice_timer.function = bfq_idle_slice_timer;
+	bfqd->idle_slice_timer.data = (unsigned long)bfqd;
 
 	bfqd->rq_pos_tree = RB_ROOT;
 	bfqd->queue_weights_tree = RB_ROOT;

@@ -703,18 +703,18 @@ static int igmp_send_report(struct in_device *in_dev, struct ip_mc_list *pmc,
 	return ip_local_out(skb);
 }
 
-static void igmp_gq_timer_expire(struct timer_list *t)
+static void igmp_gq_timer_expire(unsigned long data)
 {
-	struct in_device *in_dev = from_timer(in_dev, t, mr_gq_timer);
+	struct in_device *in_dev = (struct in_device *)data;
 
 	in_dev->mr_gq_running = 0;
 	igmpv3_send_report(in_dev, NULL);
 	in_dev_put(in_dev);
 }
 
-static void igmp_ifc_timer_expire(struct timer_list *t)
+static void igmp_ifc_timer_expire(unsigned long data)
 {
-	struct in_device *in_dev = from_timer(in_dev, t, mr_ifc_timer);
+	struct in_device *in_dev = (struct in_device *)data;
 
 	igmpv3_send_cr(in_dev);
 	if (in_dev->mr_ifc_count) {
@@ -734,9 +734,9 @@ static void igmp_ifc_event(struct in_device *in_dev)
 }
 
 
-static void igmp_timer_expire(struct timer_list *t)
+static void igmp_timer_expire(unsigned long data)
 {
-	struct ip_mc_list *im = from_timer(im, t, timer);
+	struct ip_mc_list *im=(struct ip_mc_list *)data;
 	struct in_device *in_dev = im->interface;
 
 	spin_lock(&im->lock);
@@ -1257,7 +1257,7 @@ void ip_mc_inc_group(struct in_device *in_dev, __be32 addr)
 	atomic_set(&im->refcnt, 1);
 	spin_lock_init(&im->lock);
 #ifdef CONFIG_IP_MULTICAST
-	timer_setup(&im->timer, &igmp_timer_expire, 0);
+	setup_timer(&im->timer, &igmp_timer_expire, (unsigned long)im);
 	im->unsolicit_count = IGMP_Unsolicited_Report_Count;
 #endif
 
@@ -1419,12 +1419,12 @@ void ip_mc_init_dev(struct in_device *in_dev)
 	in_dev->mc_tomb = NULL;
 #ifdef CONFIG_IP_MULTICAST
 	in_dev->mr_gq_running = 0;
-	timer_setup(&in_dev->mr_gq_timer, igmp_gq_timer_expire,
-			0);
+	setup_timer(&in_dev->mr_gq_timer, igmp_gq_timer_expire,
+			(unsigned long)in_dev);
 	in_dev->mr_ifc_count = 0;
 	in_dev->mc_count     = 0;
-	timer_setup(&in_dev->mr_ifc_timer, igmp_ifc_timer_expire,
-			0);
+	setup_timer(&in_dev->mr_ifc_timer, igmp_ifc_timer_expire,
+			(unsigned long)in_dev);
 	in_dev->mr_qrv = IGMP_Unsolicited_Report_Count;
 #endif
 

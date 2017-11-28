@@ -152,9 +152,9 @@ static inline unsigned long make_jiffies(long secs)
 		return secs*HZ;
 }
 
-static void xfrm_policy_timer(struct timer_list *t)
+static void xfrm_policy_timer(unsigned long data)
 {
-	struct xfrm_policy *xp = from_timer(xp, t, timer);
+	struct xfrm_policy *xp = (struct xfrm_policy*)data;
 	unsigned long now = get_seconds();
 	long next = LONG_MAX;
 	int warn = 0;
@@ -269,8 +269,8 @@ struct xfrm_policy *xfrm_policy_alloc(struct net *net, gfp_t gfp)
 		INIT_HLIST_NODE(&policy->byidx);
 		rwlock_init(&policy->lock);
 		atomic_set(&policy->refcnt, 1);
-		timer_setup(&policy->timer, xfrm_policy_timer,
-				0);
+		setup_timer(&policy->timer, xfrm_policy_timer,
+				(unsigned long)policy);
 		policy->flo.ops = &xfrm_policy_fc_ops;
 	}
 	return policy;

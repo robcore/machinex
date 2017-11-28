@@ -1511,8 +1511,7 @@ static void __queue_delayed_work(int cpu, struct workqueue_struct *wq,
 	struct timer_list *timer = &dwork->timer;
 	struct work_struct *work = &dwork->work;
 
-	WARN_ON_ONCE(!wq);
-	WARN_ON_ONCE(timer->function != delayed_work_timer_fn);
+	WARN_ON_ONCE(timer->function != (TIMER_FUNC_TYPE)delayed_work_timer_fn);
 	WARN_ON_ONCE(timer_pending(timer));
 	WARN_ON_ONCE(!list_empty(&work->entry));
 
@@ -4995,10 +4994,9 @@ int workqueue_set_unbound_cpumask(cpumask_var_t cpumask)
  *
  * Unbound workqueues have the following extra attributes.
  *
- *  pool_ids	RO int	: the associated pool IDs for each node
+ *  id		RO int	: the associated pool ID
  *  nice	RW int	: nice value of the workers
  *  cpumask	RW mask	: bitmask of allowed CPUs for the workers
- *  numa	RW bool	: whether enable NUMA affinity
  */
 struct wq_device {
 	struct workqueue_struct		*wq;

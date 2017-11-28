@@ -240,9 +240,9 @@ drop_note:
 	return;
 }
 
-static void pcmidi_sustained_note_release(struct timer_list *t)
+static void pcmidi_sustained_note_release(unsigned long data)
 {
-	struct pcmidi_sustain *pms = from_timer(pms, t, timer);
+	struct pcmidi_sustain *pms = (struct pcmidi_sustain *)data;
 
 	pcmidi_send_note(pms->pm, pms->status, pms->note, pms->velocity);
 	pms->in_use = 0;
@@ -257,8 +257,8 @@ static void init_sustain_timers(struct pcmidi_snd *pm)
 		pms = &pm->sustained_notes[i];
 		pms->in_use = 0;
 		pms->pm = pm;
-		timer_setup(&pms->timer, pcmidi_sustained_note_release,
-			0);
+		setup_timer(&pms->timer, pcmidi_sustained_note_release,
+			(unsigned long)pms);
 	}
 }
 

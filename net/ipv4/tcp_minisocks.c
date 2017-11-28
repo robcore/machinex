@@ -37,11 +37,15 @@ struct inet_timewait_death_row tcp_death_row = {
 	.period		= TCP_TIMEWAIT_LEN / INET_TWDR_TWKILL_SLOTS,
 	.death_lock	= __SPIN_LOCK_UNLOCKED(tcp_death_row.death_lock),
 	.hashinfo	= &tcp_hashinfo,
+	.tw_timer	= TIMER_INITIALIZER(inet_twdr_hangman,
+					    (unsigned long)&tcp_death_row),
 	.twkill_work	= __WORK_INITIALIZER(tcp_death_row.twkill_work,
 					     inet_twdr_twkill_work),
 /* Short-time timewait calendar */
 
 	.twcal_hand	= -1,
+	.twcal_timer	= TIMER_INITIALIZER(inet_twdr_twcal_tick,
+					    (unsigned long)&tcp_death_row),
 };
 EXPORT_SYMBOL_GPL(tcp_death_row);
 
@@ -788,15 +792,3 @@ int tcp_child_process(struct sock *parent, struct sock *child,
 	return ret;
 }
 EXPORT_SYMBOL(tcp_child_process);
-void minisocks_init_hangman(void)
-{
-	timer_setup(&tcp_death_row.tw_timer, inet_twdr_hangman, 0);
-	mod_timer(&tcp_death_row.tw_timer, 0);
-}
-EXPORT_SYMBOL(minisocks_init_hangman);
-void minisocks_init_twcal(void)
-{
-	timer_setup(&tcp_death_row.twcal_timer, inet_twdr_twcal_tick, 0);
-	mod_timer(&tcp_death_row.twcal_timer, 0);
-}
-EXPORT_SYMBOL(minisocks_init_twcal);

@@ -257,11 +257,11 @@ static void prb_retire_current_block(struct tpacket_kbdq_core *,
 static int prb_queue_frozen(struct tpacket_kbdq_core *);
 static void prb_open_block(struct tpacket_kbdq_core *,
 		struct tpacket_block_desc *);
-static void prb_retire_rx_blk_timer_expired(struct timer_list *t);
+static void prb_retire_rx_blk_timer_expired(unsigned long);
 static void _prb_refresh_rx_retire_blk_timer(struct tpacket_kbdq_core *);
 static void prb_init_blk_timer(struct packet_sock *,
 		struct tpacket_kbdq_core *,
-		void func(struct timer_list *t));
+		void (*func) (unsigned long));
 static void prb_fill_rxhash(struct tpacket_kbdq_core *, struct tpacket3_hdr *);
 static void prb_clear_rxhash(struct tpacket_kbdq_core *,
 		struct tpacket3_hdr *);
@@ -513,9 +513,12 @@ static void prb_shutdown_retire_blk_timer(struct packet_sock *po,
 
 static void prb_init_blk_timer(struct packet_sock *po,
 		struct tpacket_kbdq_core *pkc,
-		void func(struct timer_list *t))
+		void (*func) (unsigned long))
 {
-	timer_setup(&pkc->retire_blk_timer, func, 0);
+	init_timer(&pkc->retire_blk_timer);
+	pkc->retire_blk_timer.data = (long)po;
+	pkc->retire_blk_timer.function = func;
+	pkc->retire_blk_timer.expires = jiffies;
 }
 
 static void prb_setup_retire_blk_timer(struct packet_sock *po, int tx_ring)
@@ -650,11 +653,10 @@ static void _prb_refresh_rx_retire_blk_timer(struct tpacket_kbdq_core *pkc)
  * prb_calc_retire_blk_tmo() calculates the tmo.
  *
  */
-static void prb_retire_rx_blk_timer_expired(struct timer_list *t)
+static void prb_retire_rx_blk_timer_expired(unsigned long data)
 {
-	struct tpacket_kbdq_core *pkc = from_timer(pkc, t, retire_blk_timer);
-	struct packet_sock *po = (struct packet_sock *)t;
-
+	struct packet_sock *po = (struct packet_sock *)data;
+	struct tpacket_kbdq_core *pkc = &po->rx_ring.prb_bdqc;
 	unsigned int frozen;
 	struct tpacket_block_desc *pbd;
 

@@ -4281,7 +4281,7 @@ static void hdmi_msm_turn_on(void)
 	DEV_INFO("HDMI Core: Initialized\n");
 }
 
-static void hdmi_msm_hdcp_timer(struct timer_list *unused)
+static void hdmi_msm_hdcp_timer(unsigned long data)
 {
 	if (!hdmi_msm_state->hdcp_enable) {
 		DEV_DBG("%s: HDCP not enabled\n", __func__);
@@ -4292,7 +4292,7 @@ static void hdmi_msm_hdcp_timer(struct timer_list *unused)
 }
 
 #ifdef CONFIG_FB_MSM_HDMI_MSM_PANEL_CEC_SUPPORT
-static void hdmi_msm_cec_read_timer_func(struct timer_list *unused)
+static void hdmi_msm_cec_read_timer_func(unsigned long data)
 {
 	queue_work(hdmi_work_queue, &hdmi_msm_state->cec_latch_detect_work);
 }
@@ -4643,7 +4643,9 @@ error:
 void hdmi_msm_config_hdcp_feature(void)
 {
 	if (hdcp_feature_on && hdmi_msm_has_hdcp()) {
-		timer_setup(&hdmi_msm_state->hdcp_timer, hdmi_msm_hdcp_timer, 0);
+		init_timer(&hdmi_msm_state->hdcp_timer);
+		hdmi_msm_state->hdcp_timer.function = hdmi_msm_hdcp_timer;
+		hdmi_msm_state->hdcp_timer.data = (uint32)NULL;
 		hdmi_msm_state->hdcp_timer.expires = 0xffffffffL;
 
 		init_completion(&hdmi_msm_state->hdcp_success_done);
@@ -4788,7 +4790,10 @@ static int hdmi_msm_probe(struct platform_device *pdev)
 	disable_irq(hdmi_msm_state->irq);
 
 #ifdef CONFIG_FB_MSM_HDMI_MSM_PANEL_CEC_SUPPORT
-	timer_setup(&hdmi_msm_state->cec_read_timer, hdmi_msm_cec_read_timer_func, 0);
+	init_timer(&hdmi_msm_state->cec_read_timer);
+	hdmi_msm_state->cec_read_timer.function =
+		hdmi_msm_cec_read_timer_func;
+	hdmi_msm_state->cec_read_timer.data = (uint32)NULL;
 
 	hdmi_msm_state->cec_read_timer.expires = 0xffffffffL;
  #endif /* CONFIG_FB_MSM_HDMI_MSM_PANEL_CEC_SUPPORT */

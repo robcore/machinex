@@ -127,9 +127,9 @@ static void blk_rq_check_expired(struct request *rq, unsigned long *next_timeout
 	}
 }
 
-void blk_rq_timed_out_timer(struct timer_list *t)
+void blk_rq_timed_out_timer(unsigned long data)
 {
-	struct request_queue *q = from_timer(q, t, timeout);
+	struct request_queue *q = (struct request_queue *) data;
 	unsigned long flags, next = 0;
 	struct request *rq, *tmp;
 	int next_set = 0;

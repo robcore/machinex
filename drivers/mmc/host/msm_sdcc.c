@@ -5413,9 +5413,9 @@ static void msmsdcc_dump_sdcc_state(struct msmsdcc_host *host)
 	msmsdcc_print_rpm_info(host);
 }
 
-static void msmsdcc_req_tout_timer_hdlr(struct timer_list *t)
+static void msmsdcc_req_tout_timer_hdlr(unsigned long data)
 {
-	struct msmsdcc_host *host = from_timer(host, t, req_tout_timer);
+	struct msmsdcc_host *host = (struct msmsdcc_host *)data;
 	struct mmc_request *mrq;
 	unsigned long flags;
 
@@ -6505,8 +6505,8 @@ msmsdcc_probe(struct platform_device *pdev)
 	}
 #endif
 	host->idle_tout = MSM_MMC_DEFAULT_IDLE_TIMEOUT;
-	timer_setup(&host->req_tout_timer, msmsdcc_req_tout_timer_hdlr,
-			0);
+	setup_timer(&host->req_tout_timer, msmsdcc_req_tout_timer_hdlr,
+			(unsigned long)host);
 
 	mmc_add_host(mmc);
 

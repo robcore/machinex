@@ -1068,8 +1068,8 @@ int mgmt_device_found(u16 index, bdaddr_t *bdaddr, u8 link_type, u8 addr_type,
 int mgmt_remote_name(u16 index, bdaddr_t *bdaddr, u8 status, u8 *name);
 void mgmt_inquiry_started(u16 index);
 void mgmt_inquiry_complete_evt(u16 index, u8 status);
-void mgmt_disco_timeout(struct timer_list *t);
-void mgmt_disco_le_timeout(struct timer_list *t);
+void mgmt_disco_timeout(unsigned long data);
+void mgmt_disco_le_timeout(unsigned long data);
 int mgmt_encrypt_change(u16 index, bdaddr_t *bdaddr, u8 status);
 
 /* LE SMP Management interface */

@@ -117,7 +117,8 @@ struct kthread_delayed_work {
 
 #define KTHREAD_DELAYED_WORK_INIT(dwork, fn) {				\
 	.work = KTHREAD_WORK_INIT((dwork).work, (fn)),			\
-	.timer = __TIMER_INITIALIZER(kthread_delayed_work_timer_fn,\
+	.timer = __TIMER_INITIALIZER((TIMER_FUNC_TYPE)kthread_delayed_work_timer_fn,\
+				     (TIMER_DATA_TYPE)&(dwork.timer),	\
 				     TIMER_IRQSAFE),			\
 	}
 
@@ -163,9 +164,10 @@ extern void __kthread_init_worker(struct kthread_worker *worker,
 #define kthread_init_delayed_work(dwork, fn)				\
 	do {								\
 		kthread_init_work(&(dwork)->work, (fn));		\
-		__init_timer(&(dwork)->timer,				\
-			     kthread_delayed_work_timer_fn,		\
-			     TIMER_IRQSAFE);				\
+		__setup_timer(&(dwork)->timer,				\
+			      (TIMER_FUNC_TYPE)kthread_delayed_work_timer_fn,\
+			      (TIMER_DATA_TYPE)&(dwork)->timer,		\
+			      TIMER_IRQSAFE);				\
 	} while (0)
 
 int kthread_worker_fn(void *worker_ptr);

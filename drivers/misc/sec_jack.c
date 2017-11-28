@@ -340,9 +340,9 @@ static ssize_t earjack_state_onoff_show(struct device *dev,
 static DEVICE_ATTR(state, 0664 , earjack_state_onoff_show,
 	NULL);
 
-static void sec_jack_timer_handler(struct timer_list *t)
+static void sec_jack_timer_handler(unsigned long data)
 {
-	struct sec_jack_info *hi = from_timer(hi, t, timer);
+	struct sec_jack_info *hi = (struct sec_jack_info *)data;
 
 	hi->buttons_enable = true;
 
@@ -556,7 +556,7 @@ static int sec_jack_probe(struct platform_device *pdev)
 		pr_err("Failed to create device file in sysfs entries(%s)!\n",
 				dev_attr_reselect_jack.attr.name);
 
-	timer_setup(&hi->timer, sec_jack_timer_handler, 0);
+	setup_timer(&hi->timer, sec_jack_timer_handler, (unsigned long)hi);
 
 	INIT_WORK(&hi->buttons_work, sec_jack_buttons_work);
 	INIT_WORK(&hi->detect_work, sec_jack_detect_work);

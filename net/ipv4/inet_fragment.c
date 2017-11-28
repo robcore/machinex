@@ -24,9 +24,9 @@
 #include <net/sock.h>
 #include <net/inet_frag.h>
 
-static void inet_frag_secret_rebuild(struct timer_list *t)
+static void inet_frag_secret_rebuild(unsigned long dummy)
 {
-	struct inet_frags *f = from_timer(f, t, secret_timer);
+	struct inet_frags *f = (struct inet_frags *)dummy;
 	unsigned long now = jiffies;
 	int i;
 
@@ -64,8 +64,8 @@ void inet_frags_init(struct inet_frags *f)
 	f->rnd = (u32) ((totalram_pages ^ (totalram_pages >> 7)) ^
 				   (jiffies ^ (jiffies >> 6)));
 
-	timer_setup(&f->secret_timer, inet_frag_secret_rebuild,
-			0);
+	setup_timer(&f->secret_timer, inet_frag_secret_rebuild,
+			(unsigned long)f);
 	f->secret_timer.expires = jiffies + f->secret_interval;
 	add_timer(&f->secret_timer);
 }
@@ -245,7 +245,7 @@ static struct inet_frag_queue *inet_frag_alloc(struct netns_frags *nf,
 
 	f->constructor(q, arg);
 	atomic_add(f->qsize, &nf->mem);
-	timer_setup(&q->timer, f->frag_expire, 0);
+	setup_timer(&q->timer, f->frag_expire, (unsigned long)q);
 	spin_lock_init(&q->lock);
 	atomic_set(&q->refcnt, 1);
 	q->net = nf;

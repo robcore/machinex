@@ -1221,9 +1221,9 @@ EXPORT_SYMBOL_GPL(usbnet_start_xmit);
 
 // tasklet (work deferred from completions, in_irq) or timer
 
-static void usbnet_bh(struct timer_list *t)
+static void usbnet_bh (unsigned long param)
 {
-	struct usbnet		*dev = (struct usbnet *)t;
+	struct usbnet		*dev = (struct usbnet *) param;
 	struct sk_buff		*skb;
 	struct skb_data		*entry;
 
@@ -1287,9 +1287,9 @@ static void usbnet_bh_w(struct work_struct *work)
 {
 	struct usbnet		*dev =
 		container_of(work, struct usbnet, bh_w);
-	struct timer_list *t = &dev->delay;
+	unsigned long param = (unsigned long)dev;
 
-	usbnet_bh(t);
+	usbnet_bh(param);
 }
 
 /*-------------------------------------------------------------------------
@@ -1414,7 +1414,9 @@ usbnet_probe (struct usb_interface *udev, const struct usb_device_id *prod)
 	INIT_WORK(&dev->bh_w, usbnet_bh_w);
 	INIT_WORK (&dev->kevent, kevent);
 	init_usb_anchor(&dev->deferred);
-	timer_setup(&dev->delay, usbnet_bh, 0);
+	dev->delay.function = usbnet_bh;
+	dev->delay.data = (unsigned long) dev;
+	init_timer (&dev->delay);
 	mutex_init (&dev->phy_mutex);
 
 	dev->net = net;

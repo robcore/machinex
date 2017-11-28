@@ -2389,16 +2389,21 @@ static struct platform_driver mdp_driver = {
 };
 
 static unsigned int mx_is_booting = 1;
+static unsigned int screen_wake_lock;
+module_param(screen_wake_lock, uint, 0644);
+
 static int mdp_off(struct platform_device *pdev)
 {
 	int ret = 0;
 	struct msm_fb_data_type *mfd;
 
+	if (screen_wake_lock)
+		return -EBUSY;
+	wake_try_unlock(&main_wake_lock);
 	mfd = platform_get_drvdata(pdev);
 	if (!mfd)
 		return -ENOMEM;
-	wake_try_unlock(&main_wake_lock);
-	prfunction();
+	pr_info("%s:+\n", __func__);
 	mdp_histogram_ctrl_all(FALSE);
 	atomic_set(&vsync_cntrl.suspend, 1);
 	atomic_set(&vsync_cntrl.vsync_resume, 0);
@@ -2461,9 +2466,8 @@ static int mdp_on(struct platform_device *pdev)
 	unsigned long flag;
 	struct msm_fb_data_type *mfd;
 	mfd = platform_get_drvdata(pdev);
-	if (!mfd)
-		return -ENOMEM;
-	prfunction();
+
+	pr_info("%s:+\n", __func__);
 	if (unlikely(mx_is_booting)) {
 		wake_lock_init(&main_wake_lock, WAKE_LOCK_SUSPEND, "main");
 		mx_is_booting = 0;

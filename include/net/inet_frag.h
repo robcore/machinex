@@ -56,7 +56,7 @@ struct inet_frags {
 	void			(*skb_free)(struct sk_buff *);
 	int			(*match)(struct inet_frag_queue *q,
 						void *arg);
-	void			(*frag_expire)(struct timer_list *t);
+	void			(*frag_expire)(unsigned long data);
 };
 
 void inet_frags_init(struct inet_frags *);

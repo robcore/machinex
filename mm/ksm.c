@@ -545,7 +545,7 @@ static struct page *get_ksm_page(struct stable_node *stable_node, bool lock_it)
 	expected_mapping = (void *)stable_node +
 				(PAGE_MAPPING_ANON | PAGE_MAPPING_KSM);
 again:
-	kpfn = READ_ONCE(stable_node->kpfn);
+	kpfn = ACCESS_ONCE(stable_node->kpfn);
 	page = pfn_to_page(kpfn);
 
 	/*
@@ -554,7 +554,7 @@ again:
 	 * but on Alpha we need to be more careful.
 	 */
 	smp_read_barrier_depends();
-	if (READ_ONCE(page->mapping) != expected_mapping)
+	if (ACCESS_ONCE(page->mapping) != expected_mapping)
 		goto stale;
 
 	/*
@@ -580,14 +580,14 @@ again:
 		cpu_relax();
 	}
 
-	if (READ_ONCE(page->mapping) != expected_mapping) {
+	if (ACCESS_ONCE(page->mapping) != expected_mapping) {
 		put_page(page);
 		goto stale;
 	}
 
 	if (lock_it) {
 		lock_page(page);
-		if (READ_ONCE(page->mapping) != expected_mapping) {
+		if (ACCESS_ONCE(page->mapping) != expected_mapping) {
 			unlock_page(page);
 			put_page(page);
 			goto stale;
@@ -603,7 +603,7 @@ stale:
 	 * before checking whether node->kpfn has been changed.
 	 */
 	smp_rmb();
-	if (READ_ONCE(stable_node->kpfn) != kpfn)
+	if (ACCESS_ONCE(stable_node->kpfn) != kpfn)
 		goto again;
 	remove_node_from_stable_tree(stable_node);
 	return NULL;
@@ -1735,9 +1735,9 @@ static void ksm_do_scan(unsigned int scan_npages)
 	}
 }
 
-static void process_timeout(struct timer_list *t)
+static void process_timeout(unsigned long __data)
 {
-	wake_up_process((struct task_struct *)t);
+	wake_up_process((struct task_struct *)__data);
 }
 
 static signed long __sched deferred_schedule_timeout(signed long timeout)
@@ -1755,8 +1755,8 @@ static signed long __sched deferred_schedule_timeout(signed long timeout)
 
 	expire = timeout + jiffies;
 
-	timer_setup_on_stack(&timer, process_timeout,
-			TIMER_DEFERRABLE);
+	setup_deferrable_timer_on_stack(&timer, process_timeout,
+			(unsigned long)current);
 	mod_timer(&timer, expire);
 	schedule();
 	del_singleshot_timer_sync(&timer);

@@ -62,9 +62,9 @@ void nf_ct_unlink_expect_report(struct nf_conntrack_expect *exp,
 }
 EXPORT_SYMBOL_GPL(nf_ct_unlink_expect_report);
 
-static void nf_ct_expectation_timed_out(struct timer_list *t)
+static void nf_ct_expectation_timed_out(unsigned long ul_expect)
 {
-	struct nf_conntrack_expect *exp = from_timer(exp, t, timeout);
+	struct nf_conntrack_expect *exp = (void *)ul_expect;
 
 	spin_lock_bh(&nf_conntrack_lock);
 	nf_ct_unlink_expect(exp);
@@ -328,8 +328,8 @@ static int nf_ct_expect_insert(struct nf_conntrack_expect *exp)
 	hlist_add_head_rcu(&exp->hnode, &net->ct.expect_hash[h]);
 	net->ct.expect_count++;
 
-	timer_setup(&exp->timeout, nf_ct_expectation_timed_out,
-		    0);
+	setup_timer(&exp->timeout, nf_ct_expectation_timed_out,
+		    (unsigned long)exp);
 	helper = rcu_dereference_protected(master_help->helper,
 					   lockdep_is_held(&nf_conntrack_lock));
 	if (helper) {

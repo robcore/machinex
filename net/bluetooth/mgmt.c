@@ -2359,9 +2359,9 @@ done:
 	hci_dev_put(hdev);
 }
 
-void mgmt_disco_timeout(struct timer_list *t)
+void mgmt_disco_timeout(unsigned long data)
 {
-	struct hci_dev *hdev = from_timer(hdev, t, disco_timer);
+	struct hci_dev *hdev = (void *) data;
 	struct pending_cmd *cmd;
 	struct mgmt_mode cp = {0};
 
@@ -2399,9 +2399,9 @@ void mgmt_disco_timeout(struct timer_list *t)
 	hci_dev_put(hdev);
 }
 
-void mgmt_disco_le_timeout(struct timer_list *t)
+void mgmt_disco_le_timeout(unsigned long data)
 {
-	struct hci_dev *hdev = from_timer(hdev, t, disco_le_timer);
+	struct hci_dev *hdev = (void *)data;
 	struct hci_cp_le_set_scan_enable le_cp = {0, 0};
 
 	BT_DBG("hci%d", hdev->id);

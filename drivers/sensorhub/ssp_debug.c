@@ -208,9 +208,10 @@ static void debug_work_func(struct work_struct *work)
 	data->uIrqCnt = 0;
 }
 
-static void debug_timer_func(struct timer_list *t)
+static void debug_timer_func(unsigned long ptr)
 {
-	struct ssp_data *data = from_timer(data, t, debug_timer);
+	struct ssp_data *data = (struct ssp_data *)ptr;
+
 	queue_work(data->debug_wq, &data->work_debug);
 	mod_timer(&data->debug_timer,
 		round_jiffies_up(jiffies + SSP_DEBUG_TIMER_SEC));
@@ -230,7 +231,7 @@ void disable_debug_timer(struct ssp_data *data)
 
 int initialize_debug_timer(struct ssp_data *data)
 {
-	timer_setup(&data->debug_timer, debug_timer_func, 0);
+	setup_timer(&data->debug_timer, debug_timer_func, (unsigned long)data);
 
 	data->debug_wq = create_singlethread_workqueue("ssp_debug_wq");
 	if (!data->debug_wq)

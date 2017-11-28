@@ -732,7 +732,7 @@ int64_t msm_timer_enter_idle(void)
 void msm_timer_exit_idle(int low_power)
 {
 	struct msm_clock *gpt_clk = &msm_clocks[MSM_CLOCK_GPT];
-	struct msm_clock *clock = *raw_cpu_ptr(&msm_active_clock);
+	struct msm_clock *clock = __get_cpu_var(msm_active_clock);
 	struct msm_clock_percpu_data *gpt_clk_state =
 		raw_cpu_ptr(&msm_clocks_percpu)[MSM_CLOCK_GPT];
 	struct msm_clock_percpu_data *clock_state =
@@ -902,11 +902,11 @@ static int msm_local_timer_starting_cpu(unsigned int cpu)
 
 	__raw_writel(DGT_CLK_CTL_DIV_4, MSM_TMR_BASE + DGT_CLK_CTL);
 
-	if (*raw_cpu_ptr(&first_boot)) {
+	if (__get_cpu_var(first_boot)) {
 		__raw_writel(0, clock->regbase  + TIMER_ENABLE);
 		__raw_writel(0, clock->regbase + TIMER_CLEAR);
 		__raw_writel(~0, clock->regbase + TIMER_MATCH_VAL);
-		*raw_cpu_ptr(&first_boot) = false;
+		__get_cpu_var(first_boot) = false;
 		if (clock->status_mask)
 			while (__raw_readl(MSM_TMR_BASE + TIMER_STATUS) &
 			       clock->status_mask)
@@ -916,10 +916,10 @@ static int msm_local_timer_starting_cpu(unsigned int cpu)
 	evt->name = "local_timer";
 	evt->features = CLOCK_EVT_FEAT_ONESHOT;
 	evt->rating = clock->clockevent.rating;
-	//evt->tick_resume = msm_timer_oneshot;
-	evt->set_next_event = msm_timer_set_next_event;
 	evt->set_state_shutdown = msm_timer_shutdown;
 	evt->set_state_oneshot = msm_timer_oneshot;
+	evt->tick_resume = msm_timer_oneshot;
+	evt->set_next_event = msm_timer_set_next_event;
 	evt->shift = clock->clockevent.shift;
 	evt->mult = div_sc(clock->freq, NSEC_PER_SEC, evt->shift);
 	evt->max_delta_ns =

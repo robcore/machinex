@@ -124,9 +124,9 @@ void kgsl_hang_check(struct work_struct *work)
  * work on device workqueue to check for the hang. We restart
  * the timer after KGSL_TIMEOUT_HANG_DETECT time.
  */
-void hang_timer(struct timer_list *t)
+void hang_timer(unsigned long data)
 {
-	struct kgsl_device *device = from_timer(device, t, hang_timer);
+	struct kgsl_device *device = (struct kgsl_device *) data;
 
 	/* check Hang only for 3d device */
 	if (device->id == KGSL_DEVICE_3D0) {
@@ -3438,8 +3438,8 @@ int kgsl_device_platform_probe(struct kgsl_device *device)
 		goto error_pwrctrl_close;
 
 
-	timer_setup(&device->idle_timer, kgsl_timer, 0);
-	timer_setup(&device->hang_timer, hang_timer, 0);
+	setup_timer(&device->idle_timer, kgsl_timer, (unsigned long) device);
+	setup_timer(&device->hang_timer, hang_timer, (unsigned long) device);
 	status = kgsl_create_device_workqueue(device);
 	if (status)
 		goto error_pwrctrl_close;

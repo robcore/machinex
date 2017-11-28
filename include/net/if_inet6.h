@@ -58,7 +58,7 @@ struct inet6_ifaddr {
 	unsigned long		cstamp;	/* created timestamp */
 	unsigned long		tstamp; /* updated timestamp */
 
-	struct delayed_work	dad_work;
+	struct timer_list	timer;
 
 	struct inet6_dev	*idev;
 	struct rt6_info		*rt;
@@ -174,7 +174,6 @@ struct inet6_dev {
 	unsigned long		mc_maxdelay;
 	struct timer_list	mc_gq_timer;	/* general query timer */
 	struct timer_list	mc_ifc_timer;	/* interface change timer */
-	struct timer_list	mc_dad_timer;	/* dad complete mc timer */
 
 	struct ifacaddr6	*ac_list;
 	rwlock_t		lock;
@@ -192,11 +191,6 @@ struct inet6_dev {
 	struct inet6_dev	*next;
 	struct ipv6_devconf	cnf;
 	struct ipv6_devstat	stats;
-
-	struct timer_list	rs_timer;
-	__s32			rs_interval;	/* in jiffies */
-	__u8			rs_probes;
-
 	unsigned long		tstamp; /* ipv6InterfaceTable update timestamp */
 	struct rcu_head		rcu;
 };

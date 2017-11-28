@@ -635,9 +635,9 @@ static int lowpan_skb_deliver(struct sk_buff *skb, struct ipv6hdr *hdr)
 	return stat;
 }
 
-static void lowpan_fragment_timer_expired(struct timer_list *t)
+static void lowpan_fragment_timer_expired(unsigned long entry_addr)
 {
-	struct lowpan_fragment *entry = from_timer(entry, t, timer);
+	struct lowpan_fragment *entry = (struct lowpan_fragment *)entry_addr;
 
 	pr_debug("%s: timer expired for frame with tag %d\n", __func__,
 								entry->tag);
@@ -718,9 +718,11 @@ lowpan_process_data(struct sk_buff *skb)
 			skb_reserve(frame->skb, sizeof(struct ipv6hdr));
 			skb_put(frame->skb, frame->length);
 
-			timer_setup(&frame->timer, lowpan_fragment_timer_expired, 0);
+			init_timer(&frame->timer);
 			/* time out is the same as for ipv6 - 60 sec */
 			frame->timer.expires = jiffies + LOWPAN_FRAG_TIMEOUT;
+			frame->timer.data = (unsigned long)frame;
+			frame->timer.function = lowpan_fragment_timer_expired;
 
 			add_timer(&frame->timer);
 

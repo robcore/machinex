@@ -65,7 +65,7 @@ static inline struct meta *skb_meta(struct sk_buff *skb)
 	return (struct meta *)skb->cb;
 }
 
-static void recv_queue_timer_callback(struct timer_list *t);
+static void recv_queue_timer_callback(unsigned long data);
 static void traverse_receive_queue(struct sock *sk)
 {
 	struct pppox_sock *po = pppox_sk(sk);
@@ -102,16 +102,18 @@ static void traverse_receive_queue(struct sock *sk)
 	  	if (timer_pending(&po->recv_queue_timer)) {
 	        	/* Something is wrong. Recv timer is already active. However, Ignoring...*/
 		} else {	  
-			timer_setup(&po->recv_queue_timer, recv_queue_timer_callback, 0);
+			init_timer(&po->recv_queue_timer);
+			po->recv_queue_timer.data = (unsigned long)sk;
+			po->recv_queue_timer.function = recv_queue_timer_callback;
 			po->recv_queue_timer.expires = now + HZ;
 			add_timer(&po->recv_queue_timer);
 		}
 	}
 }
 
-static void recv_queue_timer_callback(struct timer_list *t)
+static void recv_queue_timer_callback(unsigned long data)
 {
-  struct sock *sk = (struct sock *)t;
+  struct sock *sk = (struct sock *)data;
 
   spin_lock(&pppox_sk(sk)->recv_queue_lock);
   traverse_receive_queue(sk);
@@ -449,7 +451,7 @@ static int pppopns_create(struct net *net, struct socket *sock)
 	po = pppox_sk(sk);
 	opt = &po->proto.pns;
 	opt->ppp_flags = SC_GRE_SEQ_CHK;
-	timer_setup(&po->recv_queue_timer, recv_queue_timer_callback, 0);
+	init_timer(&po->recv_queue_timer);
 	spin_lock_init(&po->recv_queue_lock);
 
 	return 0;

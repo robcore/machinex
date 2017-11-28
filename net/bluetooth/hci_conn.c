@@ -445,9 +445,9 @@ void hci_sco_setup(struct hci_conn *conn, __u8 status)
 	}
 }
 
-static void hci_conn_timeout(struct timer_list *t)
+static void hci_conn_timeout(unsigned long arg)
 {
-	struct hci_conn *conn = from_timer(conn, t, disc_timer);
+	struct hci_conn *conn = (void *) arg;
 	struct hci_dev *hdev = conn->hdev;
 	__u8 reason;
 
@@ -481,9 +481,9 @@ static void hci_conn_timeout(struct timer_list *t)
 	hci_dev_unlock(hdev);
 }
 
-static void hci_conn_idle(struct timer_list *t)
+static void hci_conn_idle(unsigned long arg)
 {
-	struct hci_conn *conn = from_timer(conn, t, idle_timer);
+	struct hci_conn *conn = (void *) arg;
 
 	BT_DBG("conn %p mode %d", conn, conn->mode);
 	if (conn->hdev &&
@@ -506,9 +506,9 @@ static void hci_conn_rssi_update(struct work_struct *work)
 	hci_read_rssi(conn);
 }
 
-static void encryption_disabled_timeout(struct timer_list *t)
+static void encryption_disabled_timeout(unsigned long userdata)
 {
-	struct hci_conn *conn = from_timer(conn, t, encrypt_pause_timer);
+	struct hci_conn *conn = (struct hci_conn *)userdata;
 	BT_INFO("conn %p Grace Prd Exp ", conn);
 
 	hci_encrypt_cfm(conn, 0, 0);
@@ -576,11 +576,11 @@ struct hci_conn *hci_conn_add(struct hci_dev *hdev, int type,
 
 	skb_queue_head_init(&conn->data_q);
 
-	timer_setup(&conn->disc_timer, hci_conn_timeout, 0);
-	timer_setup(&conn->idle_timer, hci_conn_idle, 0);
+	setup_timer(&conn->disc_timer, hci_conn_timeout, (unsigned long)conn);
+	setup_timer(&conn->idle_timer, hci_conn_idle, (unsigned long)conn);
 	INIT_DELAYED_WORK(&conn->rssi_update_work, hci_conn_rssi_update);
-	timer_setup(&conn->encrypt_pause_timer, encryption_disabled_timeout,
-			0);
+	setup_timer(&conn->encrypt_pause_timer, encryption_disabled_timeout,
+			(unsigned long)conn);
 
 	atomic_set(&conn->refcnt, 0);
 

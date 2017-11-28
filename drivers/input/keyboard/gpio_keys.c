@@ -443,9 +443,9 @@ static irqreturn_t gpio_keys_gpio_isr(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static void gpio_keys_irq_timer(struct timer_list *t)
+static void gpio_keys_irq_timer(unsigned long _data)
 {
-	struct gpio_button_data *bdata = from_timer(bdata, t, release_timer);
+	struct gpio_button_data *bdata = (struct gpio_button_data *)_data;
 	struct input_dev *input = bdata->input;
 	unsigned long flags;
 
@@ -572,8 +572,8 @@ static int gpio_keys_setup_key(struct platform_device *pdev,
 		}
 
 		bdata->release_delay = button->debounce_interval;
-		timer_setup(&bdata->release_timer,
-			    gpio_keys_irq_timer, 0);
+		setup_timer(&bdata->release_timer,
+			    gpio_keys_irq_timer, (unsigned long)bdata);
 
 		isr = gpio_keys_irq_isr;
 		irqflags = 0;

@@ -202,7 +202,7 @@ dsthash_free(struct xt_hashlimit_htable *ht, struct dsthash_ent *ent)
 	call_rcu_bh(&ent->rcu, dsthash_free_rcu);
 	ht->count--;
 }
-static void htable_gc(struct timer_list *t);
+static void htable_gc(unsigned long htlong);
 
 static int htable_create(struct net *net, struct xt_hashlimit_mtinfo1 *minfo,
 			 u_int8_t family)
@@ -256,7 +256,7 @@ static int htable_create(struct net *net, struct xt_hashlimit_mtinfo1 *minfo,
 	}
 	hinfo->net = net;
 
-	timer_setup(&hinfo->timer, htable_gc, 0);
+	setup_timer(&hinfo->timer, htable_gc, (unsigned long)hinfo);
 	hinfo->timer.expires = jiffies + msecs_to_jiffies(hinfo->cfg.gc_interval);
 	add_timer(&hinfo->timer);
 
@@ -297,9 +297,9 @@ static void htable_selective_cleanup(struct xt_hashlimit_htable *ht,
 }
 
 /* hash table garbage collector, run by timer */
-static void htable_gc(struct timer_list *t)
+static void htable_gc(unsigned long htlong)
 {
-	struct xt_hashlimit_htable *ht = from_timer(ht, t, timer);
+	struct xt_hashlimit_htable *ht = (struct xt_hashlimit_htable *)htlong;
 
 	htable_selective_cleanup(ht, select_gc);
 
