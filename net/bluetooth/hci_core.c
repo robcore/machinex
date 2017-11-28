@@ -1249,9 +1249,9 @@ int hci_remove_link_key(struct hci_dev *hdev, bdaddr_t *bdaddr)
 }
 
 /* HCI command timer function */
-static void hci_cmd_timer(unsigned long arg)
+static void hci_cmd_timer(struct timer_list *t)
 {
-	struct hci_dev *hdev = (void *) arg;
+	struct hci_dev *hdev = from_timer(hdev, t, cmd_timer);
 
 	BT_ERR("%s command tx timeout", hdev->name);
 	atomic_set(&hdev->cmd_cnt, 1);
@@ -1486,11 +1486,11 @@ int hci_register_dev(struct hci_dev *hdev)
 	skb_queue_head_init(&hdev->cmd_q);
 	skb_queue_head_init(&hdev->raw_q);
 
-	setup_timer(&hdev->cmd_timer, hci_cmd_timer, (unsigned long) hdev);
-	setup_timer(&hdev->disco_timer, mgmt_disco_timeout,
-						(unsigned long) hdev);
-	setup_timer(&hdev->disco_le_timer, mgmt_disco_le_timeout,
-						(unsigned long) hdev);
+	timer_setup(&hdev->cmd_timer, hci_cmd_timer, 0);
+	timer_setup(&hdev->disco_timer, mgmt_disco_timeout,
+						0);
+	timer_setup(&hdev->disco_le_timer, mgmt_disco_le_timeout,
+						0);
 
 	for (i = 0; i < NUM_REASSEMBLY; i++)
 		hdev->reassembly[i] = NULL;
