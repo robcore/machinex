@@ -72,9 +72,9 @@ static LIST_HEAD(flow_cache_gc_list);
 #define flow_cache_hash_size(cache)	(1 << (cache)->hash_shift)
 #define FLOW_HASH_RND_PERIOD		(10 * 60 * HZ)
 
-static void flow_cache_new_hashrnd(unsigned long arg)
+static void flow_cache_new_hashrnd(struct timer_list *t)
 {
-	struct flow_cache *fc = (void *) arg;
+	struct flow_cache *fc = from_timer(fc, t, rnd_timer);
 	int i;
 
 	for_each_possible_cpu(i)
@@ -455,8 +455,8 @@ static int __init flow_cache_init(struct flow_cache *fc)
 	if (cpuhp_state_add_instance(CPUHP_NET_FLOW_PREPARE, &fc->node))
 		goto err;
 
-	setup_timer(&fc->rnd_timer, flow_cache_new_hashrnd,
-		    (unsigned long) fc);
+	timer_setup(&fc->rnd_timer, flow_cache_new_hashrnd,
+		   0);
 	fc->rnd_timer.expires = jiffies + FLOW_HASH_RND_PERIOD;
 	add_timer(&fc->rnd_timer);
 

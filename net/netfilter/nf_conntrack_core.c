@@ -247,9 +247,9 @@ void nf_ct_delete_from_lists(struct nf_conn *ct)
 }
 EXPORT_SYMBOL_GPL(nf_ct_delete_from_lists);
 
-static void death_by_event(unsigned long ul_conntrack)
+static void death_by_event(struct timer_list *t)
 {
-	struct nf_conn *ct = (void *)ul_conntrack;
+	struct nf_conn *ct = from_timer(ct, t, timeout);
 	struct net *net = nf_ct_net(ct);
 	struct nf_conntrack_ecache *ecache = nf_ct_ecache_find(ct);
 
@@ -283,16 +283,16 @@ void nf_ct_insert_dying_list(struct nf_conn *ct)
 			     &net->ct.dying);
 	spin_unlock_bh(&nf_conntrack_lock);
 	/* set a new timer to retry event delivery */
-	setup_timer(&ecache->timeout, death_by_event, (unsigned long)ct);
+	timer_setup(&ecache->timeout, death_by_event, 0);
 	ecache->timeout.expires = jiffies +
 		(prandom_u32() % net->ct.sysctl_events_retry_timeout);
 	add_timer(&ecache->timeout);
 }
 EXPORT_SYMBOL_GPL(nf_ct_insert_dying_list);
 
-static void death_by_timeout(unsigned long ul_conntrack)
+static void death_by_timeout(struct timer_list *t)
 {
-	struct nf_conn *ct = (void *)ul_conntrack;
+	struct nf_conn *ct = from_timer(ct, t, timeout);
 	struct nf_conn_tstamp *tstamp;
 
 	tstamp = nf_conn_tstamp_find(ct);
@@ -656,7 +656,7 @@ static noinline int early_drop(struct net *net, unsigned int hash)
 		return dropped;
 
 	if (del_timer(&ct->timeout)) {
-		death_by_timeout((unsigned long)ct);
+		death_by_timeout(&ct->timeout);
 		/* Check if we indeed killed this entry. Reliable event
 		   delivery may have inserted it into the dying list. */
 		if (test_bit(IPS_DYING_BIT, &ct->status)) {
@@ -735,7 +735,7 @@ __nf_conntrack_alloc(struct net *net, u16 zone,
 	/* save hash for reusing when confirming */
 	*(unsigned long *)(&ct->tuplehash[IP_CT_DIR_REPLY].hnnode.pprev) = hash;
 	/* Don't set timer yet: wait for confirmation */
-	setup_timer(&ct->timeout, death_by_timeout, (unsigned long)ct);
+	timer_setup(&ct->timeout, death_by_timeout, 0);
 	write_pnet(&ct->ct_net, net);
 #ifdef CONFIG_NF_CONNTRACK_ZONES
 	if (zone) {
@@ -1147,7 +1147,7 @@ bool __nf_ct_kill_acct(struct nf_conn *ct,
 	}
 
 	if (del_timer(&ct->timeout)) {
-		ct->timeout.function((unsigned long)ct);
+		death_by_timeout(&ct->timeout);
 		return true;
 	}
 	return false;
@@ -1268,7 +1268,7 @@ void nf_ct_iterate_cleanup(struct net *net,
 	while ((ct = get_next_corpse(net, iter, data, &bucket)) != NULL) {
 		/* Time to push up daises... */
 		if (del_timer(&ct->timeout))
-			death_by_timeout((unsigned long)ct);
+			death_by_timeout(&ct->timeout);
 		/* ... else the timer will get him soon. */
 
 		nf_ct_put(ct);

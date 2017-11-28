@@ -259,12 +259,16 @@ rescan:
 	return ret;
 }
 
-void inet_twdr_hangman(unsigned long data)
+void inet_twdr_hangman(struct timer_list *t)
 {
 	struct inet_timewait_death_row *twdr;
 	unsigned int need_timer;
 
-	twdr = (struct inet_timewait_death_row *)data;
+	twdr = from_timer(twdr, t, tw_timer);
+	if (!twdr) {
+		minisocks_init_hangman();
+		return;
+	}
 	spin_lock(&twdr->death_lock);
 
 	if (twdr->tw_count == 0)
@@ -281,6 +285,7 @@ void inet_twdr_hangman(unsigned long data)
 			need_timer = 1;
 		twdr->slot = ((twdr->slot + 1) & (INET_TWDR_TWKILL_SLOTS - 1));
 	}
+mod:
 	if (need_timer)
 		mod_timer(&twdr->tw_timer, jiffies + twdr->period);
 out:
@@ -417,7 +422,7 @@ void inet_twsk_schedule(struct inet_timewait_sock *tw,
 }
 EXPORT_SYMBOL_GPL(inet_twsk_schedule);
 
-void inet_twdr_twcal_tick(unsigned long data)
+void inet_twdr_twcal_tick(struct timer_list *t)
 {
 	struct inet_timewait_death_row *twdr;
 	int n, slot;
@@ -426,8 +431,11 @@ void inet_twdr_twcal_tick(unsigned long data)
 	int killed = 0;
 	int adv = 0;
 
-	twdr = (struct inet_timewait_death_row *)data;
-
+	twdr = from_timer(twdr, t, twcal_timer);
+	if (!twdr) {
+		minisocks_init_twcal();
+		return;
+	}
 	spin_lock(&twdr->death_lock);
 	if (twdr->twcal_hand < 0)
 		goto out;
