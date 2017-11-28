@@ -81,5 +81,5 @@ fakeroot make ARCH=arm -j6 O=$(pwd)/out oldconfig;
 #echo -n "What am I building? [ENTER] "
 #read DRV
 #fakeroot make ARCH=arm -S -s -j6 O=$(pwd)/out $(pwd)/$DRV;
-fakeroot make ARCH=arm -S -s -j6 O=$(pwd)/out $(pwd)/$1/
+fakeroot make ARCH=arm -S -s -j6 O=$(pwd)/out $(pwd)/$1
 washme
