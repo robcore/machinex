@@ -2317,7 +2317,6 @@ static struct attribute *ksm_attrs[] = {
 #ifdef CONFIG_NUMA
 	&merge_across_nodes_attr.attr,
 #endif
-	&deferred_timer_attr.attr,
 	NULL,
 };
 
