@@ -202,6 +202,7 @@ struct msm_camera_sensor_strobe_flash_data {
 	uint32_t irq;
 	spinlock_t spin_lock;
 	spinlock_t timer_lock;
+	struct timer_list timer_flash;
 	int state;
 };
 
