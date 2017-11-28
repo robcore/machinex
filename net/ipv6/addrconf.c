@@ -189,7 +189,7 @@ static bool ipv6_chk_same_addr(struct net *net, const struct in6_addr *addr,
 			       struct net_device *dev);
 
 static ATOMIC_NOTIFIER_HEAD(inet6addr_chain);
-
+#define RTR_SOLICITATION_MAX_INTERVAL RTR_SOLICITATION_INTERVAL
 static struct ipv6_devconf ipv6_devconf __read_mostly = {
 	.forwarding		= 0,
 	.hop_limit		= IPV6_DEFAULT_HOPLIMIT,
