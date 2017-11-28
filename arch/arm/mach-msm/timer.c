@@ -160,7 +160,7 @@ static struct msm_clock msm_clocks[] = {
 			.set_next_event = msm_timer_set_next_event,
 			.set_state_shutdown = msm_timer_shutdown,
 			.set_state_oneshot = msm_timer_oneshot,
-			//.tick_resume = msm_timer_oneshot,
+			.tick_resume = msm_timer_oneshot,
 		},
 		.clocksource = {
 			.name           = "gp_timer",
@@ -184,7 +184,7 @@ static struct msm_clock msm_clocks[] = {
 			.set_next_event = msm_timer_set_next_event,
 			.set_state_shutdown = msm_timer_shutdown,
 			.set_state_oneshot = msm_timer_oneshot,
-			//.tick_resume = msm_timer_oneshot,
+			.tick_resume = msm_timer_oneshot,
 		},
 		.clocksource = {
 			.name           = "dg_timer",
