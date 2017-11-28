@@ -163,7 +163,7 @@ static int synaptics_rmi4_resume(struct device *dev);
 #endif
 
 #ifdef PROXIMITY
-static void synaptics_rmi4_f51_finger_timer(unsigned long data);
+static void synaptics_rmi4_f51_finger_timer(struct timer_list *t);
 
 static ssize_t synaptics_rmi4_f51_enables_show(struct device *dev,
 		struct device_attribute *attr, char *buf);
@@ -1670,7 +1670,7 @@ static void synaptics_rmi4_f51_report(struct synaptics_rmi4_data *rmi4_data,
 #endif
 		rmi4_data->f51_finger = true;
 		rmi4_data->fingers_on_2d = false;
-		synaptics_rmi4_f51_finger_timer((unsigned long)rmi4_data);
+		synaptics_rmi4_f51_finger_timer(&rmi4_data->f51_finger_timer);
 	}
 
 	if (data->air_swipe_det) {
@@ -3354,7 +3354,7 @@ static void synaptics_ta_cb(struct synaptics_rmi_callbacks *cb, int ta_status)
 #ifdef PROXIMITY
 static void synaptics_rmi4_f51_finger_timer(struct timer_list *t)
 {
-	struct synaptics_rmi4_data *rmi4_data = from_timer(rmi4data, t, f51_finger_timer);
+	struct synaptics_rmi4_data *rmi4_data = from_timer(rmi4_data, t, f51_finger_timer);
 
 	if (rmi4_data->f51_finger) {
 		rmi4_data->f51_finger = false;
