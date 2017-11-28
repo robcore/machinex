@@ -355,6 +355,9 @@ mode_sysfs_add_cpu_exit:
 	return ret;
 }
 
+/*
+ * Add sysfs entries for the sleep modes.
+ */
 static int __init msm_pm_mode_sysfs_add(void)
 {
 	struct kobject *module_kobj;
@@ -1155,9 +1158,9 @@ static int msm_cpu_status_probe(struct platform_device *pdev)
 	if (!pdev)
 		return -EFAULT;
 
-	msm_pm_slp_sts =
-		kzalloc(sizeof(*msm_pm_slp_sts) * num_possible_cpus(),
-				GFP_KERNEL);
+	msm_pm_slp_sts = devm_kzalloc(&pdev->dev,
+			sizeof(*msm_pm_slp_sts) * num_possible_cpus(),
+			GFP_KERNEL);
 
 	if (!msm_pm_slp_sts)
 		return -ENOMEM;

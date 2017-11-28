@@ -160,7 +160,7 @@ static struct msm_clock msm_clocks[] = {
 			.set_next_event = msm_timer_set_next_event,
 			.set_state_shutdown = msm_timer_shutdown,
 			.set_state_oneshot = msm_timer_oneshot,
-			.tick_resume = msm_timer_oneshot,
+			.tick_resume = msm_timer_shutdown,
 		},
 		.clocksource = {
 			.name           = "gp_timer",
@@ -184,7 +184,7 @@ static struct msm_clock msm_clocks[] = {
 			.set_next_event = msm_timer_set_next_event,
 			.set_state_shutdown = msm_timer_shutdown,
 			.set_state_oneshot = msm_timer_oneshot,
-			.tick_resume = msm_timer_oneshot,
+			.tick_resume = msm_timer_shutdown,
 		},
 		.clocksource = {
 			.name           = "dg_timer",
@@ -918,7 +918,7 @@ static int msm_local_timer_starting_cpu(unsigned int cpu)
 	evt->rating = clock->clockevent.rating;
 	evt->set_state_shutdown = msm_timer_shutdown;
 	evt->set_state_oneshot = msm_timer_oneshot;
-	evt->tick_resume = msm_timer_oneshot;
+	evt->tick_resume = msm_timer_shutdown;
 	evt->set_next_event = msm_timer_set_next_event;
 	evt->shift = clock->clockevent.shift;
 	evt->mult = div_sc(clock->freq, NSEC_PER_SEC, evt->shift);
