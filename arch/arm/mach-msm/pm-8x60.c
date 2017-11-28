@@ -162,19 +162,22 @@ static struct msm_pm_sleep_status_data *msm_pm_slp_sts;
 static bool msm_pm_ldo_retention_enabled = false;
 module_param_named(ldo_retention_enabled,
 	msm_pm_ldo_retention_enabled, bool, 0664);
-
+static bool screen_off_sched_clock = false;
+module_param(screen_off_sched_clock, bool, 0644);
 static bool msm_pm_use_sync_timer = false;
 module_param_named(use_sync_timer,
 	msm_pm_use_sync_timer, bool, 0444);
 
 static void msmpm_suspend(struct power_suspend *h)
 {
-	msm_pm_use_sync_timer = true;
+	if (screen_off_sched_clock)
+		msm_pm_use_sync_timer = true;
 }
 
 static void msmpm_resume(struct power_suspend *h)
 {
-	msm_pm_use_sync_timer = false;
+	if (screen_off_sched_clock)
+		msm_pm_use_sync_timer = false;
 }
 
 static struct power_suspend msmpm_suspend_data =
