@@ -732,7 +732,7 @@ int64_t msm_timer_enter_idle(void)
 void msm_timer_exit_idle(int low_power)
 {
 	struct msm_clock *gpt_clk = &msm_clocks[MSM_CLOCK_GPT];
-	struct msm_clock *clock = __get_cpu_var(msm_active_clock);
+	struct msm_clock *clock = *raw_cpu_ptr(&msm_active_clock);
 	struct msm_clock_percpu_data *gpt_clk_state =
 		raw_cpu_ptr(&msm_clocks_percpu)[MSM_CLOCK_GPT];
 	struct msm_clock_percpu_data *clock_state =
@@ -902,11 +902,11 @@ static int msm_local_timer_starting_cpu(unsigned int cpu)
 
 	__raw_writel(DGT_CLK_CTL_DIV_4, MSM_TMR_BASE + DGT_CLK_CTL);
 
-	if (__get_cpu_var(first_boot)) {
+	if (*raw_cpu_ptr(&first_boot)) {
 		__raw_writel(0, clock->regbase  + TIMER_ENABLE);
 		__raw_writel(0, clock->regbase + TIMER_CLEAR);
 		__raw_writel(~0, clock->regbase + TIMER_MATCH_VAL);
-		__get_cpu_var(first_boot) = false;
+		*raw_cpu_ptr(&first_boot) = false;
 		if (clock->status_mask)
 			while (__raw_readl(MSM_TMR_BASE + TIMER_STATUS) &
 			       clock->status_mask)
