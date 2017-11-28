@@ -2842,14 +2842,11 @@ static int ext4_feature_set_ok(struct super_block *sb, int readonly)
  * This function is called once a day if we have errors logged
  * on the file system
  */
-static void print_daily_error_info(unsigned long arg)
+static void print_daily_error_info(struct timer_list *t)
 {
-	struct super_block *sb = (struct super_block *) arg;
-	struct ext4_sb_info *sbi;
-	struct ext4_super_block *es;
-
-	sbi = EXT4_SB(sb);
-	es = sbi->s_es;
+	struct ext4_sb_info *sbi = from_timer(sbi, t, s_err_report);
+	struct super_block *sb = sbi->s_sb;
+	struct ext4_super_block *es = sbi->s_es;
 
 	if (es->s_error_count)
 		/* fsck newer than v1.41.13 is needed to clean this condition. */
@@ -2862,12 +2859,12 @@ static void print_daily_error_info(unsigned long arg)
 		       es->s_first_error_func,
 		       le32_to_cpu(es->s_first_error_line));
 		if (es->s_first_error_ino)
-			printk(": inode %u",
+			printk(KERN_CONT ": inode %u",
 			       le32_to_cpu(es->s_first_error_ino));
 		if (es->s_first_error_block)
-			printk(": block %llu", (unsigned long long)
+			printk(KERN_CONT ": block %llu", (unsigned long long)
 			       le64_to_cpu(es->s_first_error_block));
-		printk("\n");
+		printk(KERN_CONT "\n");
 	}
 	if (es->s_last_error_time) {
 		printk(KERN_NOTICE "EXT4-fs (%s): last error at time %u: %.*s:%d",
@@ -2876,12 +2873,12 @@ static void print_daily_error_info(unsigned long arg)
 		       es->s_last_error_func,
 		       le32_to_cpu(es->s_last_error_line));
 		if (es->s_last_error_ino)
-			printk(": inode %u",
+			printk(KERN_CONT ": inode %u",
 			       le32_to_cpu(es->s_last_error_ino));
 		if (es->s_last_error_block)
-			printk(": block %llu", (unsigned long long)
+			printk(KERN_CONT ": block %llu", (unsigned long long)
 			       le64_to_cpu(es->s_last_error_block));
-		printk("\n");
+		printk(KERN_CONT "\n");
 	}
 	mod_timer(&sbi->s_err_report, jiffies + 24*60*60*HZ);  /* Once a day */
 }
@@ -3939,9 +3936,7 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
 	get_random_bytes(&sbi->s_next_generation, sizeof(u32));
 	spin_lock_init(&sbi->s_next_gen_lock);
 
-	init_timer(&sbi->s_err_report);
-	sbi->s_err_report.function = print_daily_error_info;
-	sbi->s_err_report.data = (unsigned long) sb;
+	timer_setup(&sbi->s_err_report, print_daily_error_info, 0);
 
 	/* Register extent status tree shrinker */
 	ext4_es_register_shrinker(sbi);
