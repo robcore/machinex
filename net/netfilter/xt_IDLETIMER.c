@@ -216,9 +216,9 @@ static void idletimer_tg_work(struct work_struct *work)
 		notify_netlink_uevent(timer->attr.attr.name, timer);
 }
 
-static void idletimer_tg_expired(unsigned long data)
+static void idletimer_tg_expired(struct timer_list *t)
 {
-	struct idletimer_tg *timer = (struct idletimer_tg *) data;
+	struct idletimer_tg *timer = from_timer(timer, t, timer);
 
 	pr_debug("timer %s expired\n", timer->attr.attr.name);
 
@@ -273,7 +273,7 @@ static int idletimer_tg_create(struct idletimer_tg_info *info)
 {
 	int ret;
 
-	info->timer = kzalloc(sizeof(*info->timer), GFP_KERNEL);
+	info->timer = kmalloc(sizeof(*info->timer), GFP_KERNEL);
 	if (!info->timer) {
 		ret = -ENOMEM;
 		goto out;
@@ -296,8 +296,7 @@ static int idletimer_tg_create(struct idletimer_tg_info *info)
 
 	list_add(&info->timer->entry, &idletimer_tg_list);
 
-	setup_timer(&info->timer->timer, idletimer_tg_expired,
-		    (unsigned long) info->timer);
+	timer_setup(&info->timer->timer, idletimer_tg_expired, 0);
 	info->timer->refcnt = 1;
 	info->timer->send_nl_msg = (info->send_nl_msg == 0) ? false : true;
 	info->timer->active = true;
@@ -382,8 +381,9 @@ static unsigned int idletimer_tg_target(struct sk_buff *skb,
 
 	BUG_ON(!info->timer);
 
-	/* TODO: Avoid modifying timers on each packet */
-	reset_timer(info, skb);
+	mod_timer(&info->timer->timer,
+		  msecs_to_jiffies(info->timeout * 1000) + jiffies);
+
 	return XT_CONTINUE;
 }
 
@@ -410,7 +410,9 @@ static int idletimer_tg_checkentry(const struct xt_tgchk_param *par)
 	info->timer = __idletimer_tg_find_by_label(info->label);
 	if (info->timer) {
 		info->timer->refcnt++;
-		reset_timer(info, NULL);
+		mod_timer(&info->timer->timer,
+			  msecs_to_jiffies(info->timeout * 1000) + jiffies);
+
 		pr_debug("increased refcnt of timer %s to %u\n",
 			 info->label, info->timer->refcnt);
 	} else {

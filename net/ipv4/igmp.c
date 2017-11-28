@@ -703,18 +703,18 @@ static int igmp_send_report(struct in_device *in_dev, struct ip_mc_list *pmc,
 	return ip_local_out(skb);
 }
 
-static void igmp_gq_timer_expire(unsigned long data)
+static void igmp_gq_timer_expire(struct timer_list *t)
 {
-	struct in_device *in_dev = (struct in_device *)data;
+	struct in_device *in_dev = from_timer(in_dev, t, mr_gq_timer);
 
 	in_dev->mr_gq_running = 0;
 	igmpv3_send_report(in_dev, NULL);
 	in_dev_put(in_dev);
 }
 
-static void igmp_ifc_timer_expire(unsigned long data)
+static void igmp_ifc_timer_expire(struct timer_list *t)
 {
-	struct in_device *in_dev = (struct in_device *)data;
+	struct in_device *in_dev = from_timer(in_dev, t, mr_ifc_timer);
 
 	igmpv3_send_cr(in_dev);
 	if (in_dev->mr_ifc_count) {
