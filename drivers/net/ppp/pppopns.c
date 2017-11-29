@@ -111,7 +111,7 @@ static void traverse_receive_queue(struct sock *sk)
 
 static void recv_queue_timer_callback(struct timer_list *t)
 {
-	struct pppox_sock *po = from_timer(sk, t, recv_queue_timer);
+	struct pppox_sock *po = from_timer(po, t, recv_queue_timer);
 	struct sock *sk = sk_pppox(po);
 
 	spin_lock(&pppox_sk(sk)->recv_queue_lock);
