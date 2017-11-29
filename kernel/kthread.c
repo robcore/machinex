@@ -72,11 +72,17 @@ static inline struct kthread *to_kthread(struct task_struct *k)
 
 void free_kthread_struct(struct task_struct *k)
 {
+	struct kthread *kthread;
+
 	/*
 	 * Can be NULL if this kthread was created by kernel_thread()
 	 * or if kmalloc() in kthread() failed.
 	 */
-	kfree(to_kthread(k));
+	kthread = to_kthread(k);
+#ifdef CONFIG_BLK_CGROUP
+	WARN_ON_ONCE(kthread && kthread->blkcg_css);
+#endif
+	kfree(kthread);
 }
 
 /**
@@ -196,7 +202,7 @@ static int kthread(void *_create)
 	struct kthread *self;
 	int ret;
 
-	self = kmalloc(sizeof(*self), GFP_KERNEL);
+	self = kzalloc(sizeof(*self), GFP_KERNEL);
 	set_kthread_struct(self);
 
 	/* If user was SIGKILLed, I release the structure. */
@@ -212,7 +218,6 @@ static int kthread(void *_create)
 		do_exit(-ENOMEM);
 	}
 
-	self->flags = 0;
 	self->data = data;
 	init_completion(&self->exited);
 	init_completion(&self->parked);
@@ -836,7 +841,7 @@ void __kthread_queue_delayed_work(struct kthread_worker *worker,
 	struct timer_list *timer = &dwork->timer;
 	struct kthread_work *work = &dwork->work;
 
-	WARN_ON_ONCE(timer->function != (TIMER_FUNC_TYPE)kthread_delayed_work_timer_fn);
+	WARN_ON_ONCE(timer->function != kthread_delayed_work_timer_fn);
 
 	/*
 	 * If @delay is 0, queue @dwork->work immediately.  This is for
