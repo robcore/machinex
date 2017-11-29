@@ -585,7 +585,7 @@ static int msm_fb_remove(struct platform_device *pdev)
 
 	if (mfd->dma_hrtimer.function)
 		hrtimer_cancel(&mfd->dma_hrtimer);
-	if (mfd->msmfb_no_update_notify_timer)
+	if (mfd->msmfb_no_update_notify_timer.function)
 		del_timer(&mfd->msmfb_no_update_notify_timer);
 	complete(&mfd->msmfb_no_update_notify);
 	complete(&mfd->msmfb_update_notify);
@@ -1060,7 +1060,7 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 			mfd->panel_power_on = false;
 			up(&mfd->sem);
 
-			if (mfd->msmfb_no_update_notify_timer)
+			if (mfd->msmfb_no_update_notify_timer.function)
 				del_timer(&mfd->msmfb_no_update_notify_timer);
 			complete(&mfd->msmfb_no_update_notify);
 
@@ -2169,7 +2169,7 @@ static int msm_fb_pan_display_sub(struct fb_var_screeninfo *var,
 	}
 	complete(&mfd->msmfb_update_notify);
 	mutex_lock(&msm_fb_notify_update_sem);
-	if (mfd->msmfb_no_update_notify_timer) {
+	if (mfd->msmfb_no_update_notify_timer.function) {
 		mfd->msmfb_no_update_notify_timer.expires = jiffies + (2 * HZ);
 		mod_timer(&mfd->msmfb_no_update_notify_timer, 
 			mfd->msmfb_no_update_notify_timer.expires);
@@ -3414,7 +3414,7 @@ static int msmfb_overlay_play(struct fb_info *info, unsigned long *argp)
 
 	complete(&mfd->msmfb_update_notify);
 	mutex_lock(&msm_fb_notify_update_sem);
-	if (mfd->msmfb_no_update_notify_timer) {
+	if (mfd->msmfb_no_update_notify_timer.function) {
 		mfd->msmfb_no_update_notify_timer.expires = jiffies + (2 * HZ);
 		mod_timer(&mfd->msmfb_no_update_notify_timer, 
 					mfd->msmfb_no_update_notify_timer.expires);

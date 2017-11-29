@@ -64,10 +64,10 @@
  * let the USB host controller be busy for 5msec or more before an irq
  * is required, under load.  Jumbograms change the equation.
  */
-#define RX_MAX_QUEUE_MEMORY(60 * 1518)
-#define	RX_QLEN(dev)(((dev)->udev->speed == USB_SPEED_HIGH) ? \
+#define RX_MAX_QUEUE_MEMORY (60 * 1518)
+#define	RX_QLEN(dev) (((dev)->udev->speed == USB_SPEED_HIGH) ? \
 			(RX_MAX_QUEUE_MEMORY/(dev)->rx_urb_size) : 4)
-#define	TX_QLEN(dev)(((dev)->udev->speed == USB_SPEED_HIGH) ? \
+#define	TX_QLEN(dev) (((dev)->udev->speed == USB_SPEED_HIGH) ? \
 			(RX_MAX_QUEUE_MEMORY/(dev)->hard_mtu) : 4)
 
 // reawaken network queue this soon after stopping; else watchdog barks
