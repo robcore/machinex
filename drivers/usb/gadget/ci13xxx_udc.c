@@ -1846,9 +1846,9 @@ static inline u8 _usb_addr(struct ci13xxx_ep *ep)
 	return ((ep->dir == TX) ? USB_ENDPOINT_DIR_MASK : 0) | ep->num;
 }
 
-static void ep_prime_timer_func(unsigned long data)
+static void ep_prime_timer_func(struct timer_list *t)
 {
-	struct ci13xxx_ep *mep = (struct ci13xxx_ep *)data;
+	struct ci13xxx_ep *mep = from_timer(mep, t, prime_timer);
 	struct ci13xxx_req *req;
 	struct list_head *ptr = NULL;
 	int n = hw_ep_bit(mep->num, mep->dir);
@@ -3775,8 +3775,8 @@ static int udc_probe(struct ci13xxx_udc_driver *driver, struct device *dev,
 	for (i = 0; i < hw_ep_max; i++) {
 		struct ci13xxx_ep *mEp = &udc->ci13xxx_ep[i];
 		INIT_LIST_HEAD(&mEp->ep.ep_list);
-		setup_timer(&mEp->prime_timer, ep_prime_timer_func,
-			(unsigned long) mEp);
+		timer_setup(&mEp->prime_timer, ep_prime_timer_func,
+			0);
 	}
 
 	if (!(udc->udc_driver->flags & CI13XXX_REGS_SHARED)) {
