@@ -367,7 +367,7 @@ static struct notifier_block mx_nb = {
 void ignition(unsigned int status)
 {
 	if (status) {
-		//struct sched_param param = { .sched_priority = DEFAULT_PRIO };
+		struct sched_param param = { .sched_priority = DEFAULT_PRIO };
 
 		mxget();
 		transmission = kthread_create(mx_gearbox,
@@ -378,7 +378,7 @@ void ignition(unsigned int status)
 			return;
 		}
 		kthread_bind(transmission, 0);
-		//sched_setscheduler_nocheck(transmission, SCHED_NORMAL, &param);
+		sched_setscheduler_nocheck(transmission, SCHED_NORMAL, &param);
 		get_task_struct(transmission);
 		wake_up_process(transmission);
 		mx_hp_engine = create_singlethread_workqueue("mx_engine");
