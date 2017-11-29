@@ -2475,8 +2475,7 @@ int msm_fb_resume_sw_refresher(struct msm_fb_data_type *mfd)
 	up(&mfd->sem);
 
 	if (do_refresh)
-		mdp_refresh_screen((unsigned long)mfd);
-
+		mdp_refresh_screen(&mfd->refresh_timer);
 	return 0;
 }
 
