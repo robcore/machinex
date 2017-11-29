@@ -981,7 +981,7 @@ static void broadcast_timer_setup(void)
 	BUG_ON(res);
 
 	evt = per_cpu_ptr(msm_evt, cpu);
-	evt->name	= "msm_timer";
+	evt->name	= "dummy";
 	evt->features	= CLOCK_EVT_FEAT_ONESHOT |
 			  CLOCK_EVT_FEAT_PERIODIC |
 			  CLOCK_EVT_FEAT_DUMMY;
