@@ -259,9 +259,9 @@ rescan:
 	return ret;
 }
 
-void inet_twdr_hangman(unsigned long data)
+void inet_twdr_hangman(struct timer_list *t)
 {
-	struct inet_timewait_death_row *twdr;
+	struct inet_timewait_death_row *twdr = from_timer(twdr, t, tw_timer);
 	unsigned int need_timer;
 
 	twdr = (struct inet_timewait_death_row *)data;
@@ -417,7 +417,7 @@ void inet_twsk_schedule(struct inet_timewait_sock *tw,
 }
 EXPORT_SYMBOL_GPL(inet_twsk_schedule);
 
-void inet_twdr_twcal_tick(unsigned long data)
+void inet_twdr_twcal_tick(struct timer_list *t)
 {
 	struct inet_timewait_death_row *twdr;
 	int n, slot;
@@ -426,7 +426,7 @@ void inet_twdr_twcal_tick(unsigned long data)
 	int killed = 0;
 	int adv = 0;
 
-	twdr = (struct inet_timewait_death_row *)data;
+	twdr = from_timer(twdr, t, twcal_timer);
 
 	spin_lock(&twdr->death_lock);
 	if (twdr->twcal_hand < 0)

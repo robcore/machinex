@@ -30,15 +30,13 @@ struct inet_timewait_death_row dccp_death_row = {
 	.period		= DCCP_TIMEWAIT_LEN / INET_TWDR_TWKILL_SLOTS,
 	.death_lock	= __SPIN_LOCK_UNLOCKED(dccp_death_row.death_lock),
 	.hashinfo	= &dccp_hashinfo,
-	.tw_timer	= TIMER_INITIALIZER(inet_twdr_hangman, 0,
-					    (unsigned long)&dccp_death_row),
+	.tw_timer	= __TIMER_INITIALIZER(inet_twdr_hangman, 0),
 	.twkill_work	= __WORK_INITIALIZER(dccp_death_row.twkill_work,
 					     inet_twdr_twkill_work),
 /* Short-time timewait calendar */
 
 	.twcal_hand	= -1,
-	.twcal_timer	= TIMER_INITIALIZER(inet_twdr_twcal_tick, 0,
-					    (unsigned long)&dccp_death_row),
+	.twcal_timer	= __TIMER_INITIALIZER(inet_twdr_twcal_tick, 0),
 };
 
 EXPORT_SYMBOL_GPL(dccp_death_row);

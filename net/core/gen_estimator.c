@@ -76,8 +76,7 @@
      at user level painlessly.
  */
 
-#define EST_MAX_INTERVAL	5
-
+int idx;
 struct gen_estimator
 {
 	struct list_head	list;
@@ -95,11 +94,12 @@ struct gen_estimator
 
 struct gen_estimator_head
 {
+	struct gen_estimator *gen;
 	struct timer_list	timer;
 	struct list_head	list;
 };
 
-static struct gen_estimator_head elist[EST_MAX_INTERVAL+1];
+static struct gen_estimator_head elist[6];
 
 /* Protects against NULL dereference */
 static DEFINE_RWLOCK(est_lock);
@@ -108,10 +108,9 @@ static DEFINE_RWLOCK(est_lock);
 static struct rb_root est_root = RB_ROOT;
 static DEFINE_SPINLOCK(est_tree_lock);
 
-static void est_timer(unsigned long arg)
+static void est_timer(struct timer_list *t)
 {
-	int idx = (int)arg;
-	struct gen_estimator *e;
+	struct gen_estimator *e = elist[idx].gen;
 
 	rcu_read_lock();
 	list_for_each_entry_rcu(e, &elist[idx].list, list) {
@@ -234,7 +233,8 @@ int gen_new_estimator(struct gnet_stats_basic_packed *bstats,
 	spin_lock_bh(&est_tree_lock);
 	if (!elist[idx].timer.function) {
 		INIT_LIST_HEAD(&elist[idx].list);
-		setup_timer(&elist[idx].timer, est_timer, idx);
+		timer_setup(&elist[idx].timer, est_timer, 0);
+		elist[idx].gen = est;
 	}
 
 	if (list_empty(&elist[idx].list))
@@ -243,6 +243,7 @@ int gen_new_estimator(struct gnet_stats_basic_packed *bstats,
 	list_add_rcu(&est->list, &elist[idx].list);
 	gen_add_node(est);
 	spin_unlock_bh(&est_tree_lock);
+
 
 	return 0;
 }

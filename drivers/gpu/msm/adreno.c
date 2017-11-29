@@ -242,6 +242,7 @@ static unsigned int adreno_isidle(struct kgsl_device *device);
 
 /* Number of milliseconds to stay active active after a wake on touch */
 static unsigned int _wake_timeout = 100;
+module_param(_wake_timeout, uint, 0644);
 
 /*
  * A workqueue callback responsible for actually turning on the GPU after a
@@ -251,12 +252,15 @@ static unsigned int _wake_timeout = 100;
  */
 static void adreno_input_work(struct work_struct *work)
 {
-	struct adreno_device *adreno_dev = container_of(work,
-			struct adreno_device, input_work);
-	struct kgsl_device *device = &adreno_dev->dev;
+	struct adreno_device *adreno_dev;
+	struct kgsl_device *device;
 
-	if (!is_display_on() || !adreno_touchboost)
+	if (!is_display_on() || !adreno_touchboost || !wakeboost_active)
 		return;
+
+	adreno_dev = container_of(work,
+			struct adreno_device, input_work);
+	device = &adreno_dev->dev;
 
 	mutex_lock(&device->mutex);
 
@@ -287,8 +291,8 @@ static void adreno_input_work(struct work_struct *work)
 static void adreno_input_event(struct input_handle *handle, unsigned int type,
 		unsigned int code, int value)
 {
-	struct kgsl_device *device = handle->handler->private;
-	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
+	struct kgsl_device *device;
+	struct adreno_device *adreno_dev;
 
 	if (!is_display_on() || !adreno_touchboost)
 		return;

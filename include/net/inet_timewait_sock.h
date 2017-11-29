@@ -83,9 +83,9 @@ struct inet_timewait_death_row {
 	int			sysctl_max_tw_buckets;
 };
 
-extern void inet_twdr_hangman(unsigned long data);
+extern void inet_twdr_hangman(struct timer_list *t);
 extern void inet_twdr_twkill_work(struct work_struct *work);
-extern void inet_twdr_twcal_tick(unsigned long data);
+extern void inet_twdr_twcal_tick(struct timer_list *t);
 
 struct inet_bind_bucket;
 
