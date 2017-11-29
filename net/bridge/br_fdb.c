@@ -139,9 +139,9 @@ void br_fdb_change_mac_address(struct net_bridge *br, const u8 *newaddr)
 	fdb_insert(br, NULL, newaddr);
 }
 
-void br_fdb_cleanup(unsigned long _data)
+void br_fdb_cleanup(struct timer_list *t)
 {
-	struct net_bridge *br = (struct net_bridge *)_data;
+	struct net_bridge *br = from_timer(br, t, gc_timer);
 	unsigned long delay = hold_time(br);
 	unsigned long next_timer = jiffies + br->ageing_time;
 	int i;

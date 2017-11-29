@@ -127,6 +127,6 @@ int smp_conn_security(struct l2cap_conn *conn, __u8 sec_level);
 int smp_sig_channel(struct l2cap_conn *conn, struct sk_buff *skb);
 int smp_link_encrypt_cmplt(struct l2cap_conn *conn, __u8 status, __u8 encrypt);
 void smp_conn_security_fail(struct l2cap_conn *conn, __u8 code, __u8 reason);
-void smp_timeout(unsigned long l2cap_conn);
+void smp_timeout(struct timer_list *t);
 
 #endif /* __SMP_H */

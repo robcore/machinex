@@ -1138,9 +1138,9 @@ static void l2cap_conn_unreliable(struct l2cap_conn *conn, int err)
 	read_unlock(&l->lock);
 }
 
-static void l2cap_info_timeout(unsigned long arg)
+static void l2cap_info_timeout(struct timer_list *t)
 {
-	struct l2cap_conn *conn = (void *) arg;
+	struct l2cap_conn *conn = from_timer(conn, t, info_timer);
 
 	conn->info_state |= L2CAP_INFO_FEAT_MASK_REQ_DONE;
 	conn->info_ident = 0;
@@ -1178,11 +1178,11 @@ static struct l2cap_conn *l2cap_conn_add(struct hci_conn *hcon, u8 status)
 	rwlock_init(&conn->chan_list.lock);
 
 	if (hcon->type == LE_LINK)
-		setup_timer(&hcon->smp_timer, smp_timeout,
-						(unsigned long) conn);
+		timer_setup(&hcon->smp_timer, smp_timeout,
+						0);
 	else
-		setup_timer(&conn->info_timer, l2cap_info_timeout,
-						(unsigned long) conn);
+		timer_setup(&conn->info_timer, l2cap_info_timeout,
+						0);
 
 	conn->disc_reason = 0x13;
 
