@@ -1108,6 +1108,8 @@ void __init msm_timer_init(void)
 
 		clockevents_register_device(ce);
 	}
+	__raw_writel(1,
+	msm_clocks[MSM_CLOCK_DGT].regbase + TIMER_ENABLE);
 
 	if (use_user_accessible_timers()) {
 		struct msm_clock *gtclock = &msm_clocks[MSM_CLOCK_GPT];
@@ -1116,8 +1118,6 @@ void __init msm_timer_init(void)
 		setup_user_timer_offset(virt_to_phys(addr)&0xfff);
 		set_user_accessible_timer_flag(true);
 	}
-	__raw_writel(1,
-	msm_clocks[MSM_CLOCK_DGT].regbase + TIMER_ENABLE);
 #ifdef CONFIG_LOCAL_TIMERS
 	broadcast_timer_setup();
 #endif
