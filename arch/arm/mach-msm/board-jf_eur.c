@@ -5341,7 +5341,7 @@ static void __init apq8064_common_init(void)
 		}
 	}
 
-	if (unlikely(!poweroff_charging)) {
+	if (likely(!poweroff_charging)) {
 		printk(KERN_DEBUG"[slimbus] starting init set up : %d %d\n",
 				system_rev, poweroff_charging);
 	        platform_device_register(&apq8064_slim_ctrl);
