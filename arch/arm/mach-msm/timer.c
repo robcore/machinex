@@ -337,7 +337,6 @@ static int msm_timer_shutdown(struct clock_event_device *evt)
 
 	local_irq_save(irq_flags);
 
-
 	cur_clock = &get_cpu_var(msm_active_clock);
 	if (*cur_clock == clock)
 		*cur_clock = NULL;
@@ -974,11 +973,6 @@ static void broadcast_timer_setup(void)
 		pr_err("memory allocation failed for clockevents\n");
 		return;
 	}
-	res = cpuhp_setup_state(CPUHP_AP_QCOM_TIMER_STARTING,
-					"clockevents/qcom/timer:starting",
-					msm_local_timer_starting_cpu,
-					msm_local_timer_dying_cpu);
-	BUG_ON(res);
 
 	evt = per_cpu_ptr(msm_evt, cpu);
 	evt->name	= "dummy_timer";
@@ -990,6 +984,11 @@ static void broadcast_timer_setup(void)
 	evt->cpumask = cpumask_of(smp_processor_id());
 
 	clockevents_register_device(evt);
+	res = cpuhp_setup_state(CPUHP_AP_QCOM_TIMER_STARTING,
+				"clockevents/qcom/timer:starting",
+				msm_local_timer_starting_cpu,
+				msm_local_timer_dying_cpu);
+	BUG_ON(res);
 }
 
 void __init msm_timer_init(void)
@@ -1080,32 +1079,23 @@ void __init msm_timer_init(void)
 			       "failed for %s\n", cs->name);
 
 		ce->irq = clock->irq;
-		if (cpu_is_msm8x60() || cpu_is_msm9615() || cpu_is_msm8625() ||
-		    soc_class_is_msm8960() || soc_class_is_apq8064() ||
-		    soc_class_is_msm8930()) {
-			clock->percpu_evt = alloc_percpu(struct clock_event_device *);
-			if (!clock->percpu_evt) {
-				pr_err("msm_timer_init: memory allocation "
-				       "failed for %s\n", ce->name);
-				continue;
-			}
 
-			*raw_cpu_ptr(clock->percpu_evt) = ce;
-			res = request_percpu_irq(ce->irq, msm_timer_interrupt,
-						 ce->name, clock->percpu_evt);
-			if (!res)
-				enable_percpu_irq(ce->irq,
-						 IRQ_TYPE_EDGE_RISING);
-		} else {
-			clock->evt = ce;
-			res = request_irq(ce->irq, msm_timer_interrupt,
-					  IRQF_TIMER | IRQF_NOBALANCING | IRQF_TRIGGER_RISING,
-					  ce->name, &clock->evt);
+		clock->percpu_evt = alloc_percpu(struct clock_event_device *);
+		if (!clock->percpu_evt) {
+			pr_err("msm_timer_init: memory allocation "
+			       "failed for %s\n", ce->name);
+			continue;
 		}
 
+		*raw_cpu_ptr(clock->percpu_evt) = ce;
+		res = request_percpu_irq(ce->irq, msm_timer_interrupt,
+					 ce->name, clock->percpu_evt);
 		if (res)
 			pr_err("msm_timer_init: request_irq failed for %s\n",
 			       ce->name);
+		else
+			enable_percpu_irq(ce->irq,
+					 IRQ_TYPE_EDGE_RISING);
 
 		chip = irq_get_chip(clock->irq);
 		if (chip && chip->irq_mask)
@@ -1118,6 +1108,7 @@ void __init msm_timer_init(void)
 
 		clockevents_register_device(ce);
 	}
+
 	msm_sched_clock_init();
 	if (use_user_accessible_timers()) {
 		if (cpu_is_msm8960() || cpu_is_msm8930() || cpu_is_apq8064()) {

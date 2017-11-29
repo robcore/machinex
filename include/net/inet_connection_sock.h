@@ -138,6 +138,11 @@ static inline struct inet_connection_sock *inet_csk(const struct sock *sk)
 	return (struct inet_connection_sock *)sk;
 }
 
+static inline struct sock *inet_consk(struct inet_connection_sock *csk)
+{
+	return (struct sock *)csk;
+}
+
 static inline void *inet_csk_ca(const struct sock *sk)
 {
 	return (void *)inet_csk(sk)->icsk_ca_priv;
@@ -155,9 +160,9 @@ enum inet_csk_ack_state_t {
 };
 
 extern void inet_csk_init_xmit_timers(struct sock *sk,
-				      void (*retransmit_handler)(unsigned long),
-				      void (*delack_handler)(unsigned long),
-				      void (*keepalive_handler)(unsigned long));
+				      void (*retransmit_handler)(struct timer_list *t),
+				      void (*delack_handler)(struct timer_list *t),
+				      void (*keepalive_handler)(struct timer_list *t));
 extern void inet_csk_clear_xmit_timers(struct sock *sk);
 
 static inline void inet_csk_schedule_ack(struct sock *sk)

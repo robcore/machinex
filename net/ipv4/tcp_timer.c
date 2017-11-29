@@ -32,9 +32,9 @@ int sysctl_tcp_retries2 __read_mostly = TCP_RETR2;
 int sysctl_tcp_orphan_retries __read_mostly;
 int sysctl_tcp_thin_linear_timeouts __read_mostly;
 
-static void tcp_write_timer(unsigned long);
-static void tcp_delack_timer(unsigned long);
-static void tcp_keepalive_timer (unsigned long data);
+static void tcp_write_timer(struct timer_list *t);
+static void tcp_delack_timer(struct timer_list *t);
+static void tcp_keepalive_timer(struct timer_list *t);
 
 /*Function to reset tcp_ack related sysctl on resetting master control */
 void set_tcp_default(void)
@@ -235,11 +235,11 @@ static int tcp_write_timeout(struct sock *sk)
 	return 0;
 }
 
-static void tcp_delack_timer(unsigned long data)
+static void tcp_delack_timer(struct timer_list *t)
 {
-	struct sock *sk = (struct sock *)data;
+	struct inet_connection_sock *icsk = from_timer(icsk, t, icsk_delack_timer);
+	struct sock *sk = inet_consk(icsk);
 	struct tcp_sock *tp = tcp_sk(sk);
-	struct inet_connection_sock *icsk = inet_csk(sk);
 
 	bh_lock_sock(sk);
 	if (sock_owned_by_user(sk)) {
@@ -475,10 +475,10 @@ out_reset_timer:
 out:;
 }
 
-static void tcp_write_timer(unsigned long data)
+static void tcp_write_timer(struct timer_list *t)
 {
-	struct sock *sk = (struct sock *)data;
-	struct inet_connection_sock *icsk = inet_csk(sk);
+	struct inet_connection_sock *icsk = from_timer(icsk, t, icsk_retransmit_timer);
+	struct sock *sk = inet_consk(icsk);
 	int event;
 
 	bh_lock_sock(sk);
@@ -543,9 +543,9 @@ void tcp_set_keepalive(struct sock *sk, int val)
 }
 
 
-static void tcp_keepalive_timer (unsigned long data)
+static void tcp_keepalive_timer(struct timer_list *t)
 {
-	struct sock *sk = (struct sock *) data;
+	struct sock *sk = from_timer(sk, t, sk_timer);
 	struct inet_connection_sock *icsk = inet_csk(sk);
 	struct tcp_sock *tp = tcp_sk(sk);
 	u32 elapsed;
