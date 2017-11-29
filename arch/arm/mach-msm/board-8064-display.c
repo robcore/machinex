@@ -1662,7 +1662,7 @@ error:
 
 void __init apq8064_init_fb(void)
 {
-	printk(KERN_INFO "[lcd] apq8064_init_fb\n");
+	pr_info("[lcd] apq8064_init_fb\n");
 
 	platform_device_register(&msm_fb_device);
 	platform_device_register(&lvds_chimei_panel_device);
