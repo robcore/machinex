@@ -582,6 +582,7 @@ struct bcm_cfg80211 {
 	struct ap_info *ap_info;
 	struct sta_info *sta_info;
 	struct p2p_info *p2p;
+	struct timer_list listen_timer;
 	bool p2p_supported;
 	void *btcoex_info;
 	struct timer_list scan_timeout;   /* Timer for catch scan event timeout */

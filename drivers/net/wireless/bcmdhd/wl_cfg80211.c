@@ -5058,16 +5058,16 @@ wl_cfg80211_remain_on_channel(struct wiphy *wiphy, bcm_struct_cfgdev *cfgdev,
 		} else {
 			wl_set_drv_status(cfg, FAKE_REMAINING_ON_CHANNEL, ndev);
 
-			if (timer_pending(&cfg->p2p->listen_timer)) {
+			if (timer_pending(&cfg->listen_timer)) {
 				WL_DBG(("cancel current listen timer \n"));
-				del_timer_sync(&cfg->p2p->listen_timer);
+				del_timer_sync(&cfg->listen_timer);
 			}
 
-			_timer = &cfg->p2p->listen_timer;
 			wl_clr_p2p_status(cfg, LISTEN_EXPIRED);
 
-			INIT_TIMER(_timer, wl_cfgp2p_listen_expired, duration, 0);
-
+			timer_setup(&cfg->listen_timer, wl_cfgp2p_listen_expired, 0);
+			cfg->listen_timer.expires = jiffies + msecs_to_jiffies(duration);
+			add_timer(&cfg->listen_timer);
 			err = BCME_OK;
 			goto exit;
 		}
@@ -9042,8 +9042,8 @@ void
 wl_stop_wait_next_action_frame(struct bcm_cfg80211 *cfg, struct net_device *ndev)
 {
 	if (wl_get_drv_status_all(cfg, FINDING_COMMON_CHANNEL)) {
-		if (timer_pending(&cfg->p2p->listen_timer)) {
-			del_timer_sync(&cfg->p2p->listen_timer);
+		if (timer_pending(&cfg->listen_timer)) {
+			del_timer_sync(&cfg->listen_timer);
 		}
 		if (cfg->afx_hdl != NULL) {
 			if (cfg->afx_hdl->dev != NULL) {
@@ -10704,8 +10704,8 @@ void wl_cfg80211_detach(void *para)
 	wl_free_debugfs(cfg);
 #endif
 	if (cfg->p2p_supported) {
-		if (timer_pending(&cfg->p2p->listen_timer))
-			del_timer_sync(&cfg->p2p->listen_timer);
+		if (timer_pending(&cfg->listen_timer))
+			del_timer_sync(&cfg->listen_timer);
 		wl_cfgp2p_deinit_priv(cfg);
 	}
 

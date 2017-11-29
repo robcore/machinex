@@ -153,12 +153,12 @@ DEFINE_MUTEX(msm_fb_notify_update_sem);
 DEFINE_MUTEX(power_state_change);
 #endif
 
-void msmfb_no_update_notify_timer_cb(unsigned long data)
+void msmfb_no_update_notify_timer_cb(struct timer_list *t)
 {
-	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)data;
-	if (!mfd)
-		pr_err("%s mfd NULL\n", __func__);
-	complete(&mfd->msmfb_no_update_notify);
+	struct msm_fb_data_type *mfd = from_timer(mfd, t, 
+						msmfb_no_update_notify_timer);
+	if (mfd)
+		complete(&mfd->msmfb_no_update_notify);
 }
 
 struct dentry *msm_fb_get_debugfs_root(void)
@@ -585,8 +585,7 @@ static int msm_fb_remove(struct platform_device *pdev)
 
 	if (mfd->dma_hrtimer.function)
 		hrtimer_cancel(&mfd->dma_hrtimer);
-
-	if (mfd->msmfb_no_update_notify_timer.function)
+	if (mfd->msmfb_no_update_notify_timer)
 		del_timer(&mfd->msmfb_no_update_notify_timer);
 	complete(&mfd->msmfb_no_update_notify);
 	complete(&mfd->msmfb_update_notify);
@@ -1061,7 +1060,7 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 			mfd->panel_power_on = false;
 			up(&mfd->sem);
 
-			if (mfd->msmfb_no_update_notify_timer.function)
+			if (mfd->msmfb_no_update_notify_timer)
 				del_timer(&mfd->msmfb_no_update_notify_timer);
 			complete(&mfd->msmfb_no_update_notify);
 
@@ -1571,10 +1570,8 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 	init_completion(&mfd->refresher_comp);
 	sema_init(&mfd->sem, 1);
 
-	init_timer(&mfd->msmfb_no_update_notify_timer);
-	mfd->msmfb_no_update_notify_timer.function =
-			msmfb_no_update_notify_timer_cb;
-	mfd->msmfb_no_update_notify_timer.data = (unsigned long)mfd;
+	timer_setup(&mfd->msmfb_no_update_notify_timer, 
+				msmfb_no_update_notify_timer_cb, 0);
 	init_completion(&mfd->msmfb_update_notify);
 	init_completion(&mfd->msmfb_no_update_notify);
 	init_completion(&mfd->commit_comp);
@@ -2172,8 +2169,11 @@ static int msm_fb_pan_display_sub(struct fb_var_screeninfo *var,
 	}
 	complete(&mfd->msmfb_update_notify);
 	mutex_lock(&msm_fb_notify_update_sem);
-	mfd->msmfb_no_update_notify_timer.expires = jiffies + (2 * HZ);
-	mod_timer(&mfd->msmfb_no_update_notify_timer, mfd->msmfb_no_update_notify_timer.expires);
+	if (mfd->msmfb_no_update_notify_timer) {
+		mfd->msmfb_no_update_notify_timer.expires = jiffies + (2 * HZ);
+		mod_timer(&mfd->msmfb_no_update_notify_timer, 
+			mfd->msmfb_no_update_notify_timer.expires);
+	}
 	mutex_unlock(&msm_fb_notify_update_sem);
 
 	down(&msm_fb_pan_sem);
@@ -3414,11 +3414,11 @@ static int msmfb_overlay_play(struct fb_info *info, unsigned long *argp)
 
 	complete(&mfd->msmfb_update_notify);
 	mutex_lock(&msm_fb_notify_update_sem);
-	if (mfd->msmfb_no_update_notify_timer.function)
-		del_timer(&mfd->msmfb_no_update_notify_timer);
-
-	mfd->msmfb_no_update_notify_timer.expires = jiffies + (2 * HZ);
-	add_timer(&mfd->msmfb_no_update_notify_timer);
+	if (mfd->msmfb_no_update_notify_timer) {
+		mfd->msmfb_no_update_notify_timer.expires = jiffies + (2 * HZ);
+		mod_timer(&mfd->msmfb_no_update_notify_timer, 
+					mfd->msmfb_no_update_notify_timer.expires);
+	}
 	mutex_unlock(&msm_fb_notify_update_sem);
 
 	ret = mdp4_overlay_play(info, &req);
