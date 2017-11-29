@@ -987,7 +987,6 @@ static void broadcast_timer_setup(void)
 			  CLOCK_EVT_FEAT_DUMMY;
  	evt->set_state_shutdown = msm_timer_shutdown;
 	evt->set_state_oneshot = msm_timer_shutdown;
-	evt->tick_resume = msm_timer_shutdown;
 	evt->rating	= 100;
 	evt->mult	= 1;
 	evt->cpumask = cpumask_of(smp_processor_id());
@@ -1003,34 +1002,7 @@ void __init msm_timer_init(void)
 	struct msm_clock *dgt = &msm_clocks[MSM_CLOCK_DGT];
 	struct msm_clock *gpt = &msm_clocks[MSM_CLOCK_GPT];
 
-	if (cpu_is_msm7x01() || cpu_is_msm7x25() || cpu_is_msm7x27() ||
-	    cpu_is_msm7x25a() || cpu_is_msm7x27a() || cpu_is_msm7x25aa() ||
-	    cpu_is_msm7x27aa() || cpu_is_msm8625() || cpu_is_msm7x25ab()) {
-		dgt->shift = MSM_DGT_SHIFT;
-		dgt->freq = 19200000 >> MSM_DGT_SHIFT;
-		dgt->clockevent.shift = 32 + MSM_DGT_SHIFT;
-		dgt->clocksource.mask = CLOCKSOURCE_MASK(32 - MSM_DGT_SHIFT);
-		gpt->regbase = MSM_TMR_BASE;
-		dgt->regbase = MSM_TMR_BASE + 0x10;
-		gpt->flags |= MSM_CLOCK_FLAGS_UNSTABLE_COUNT
-			   |  MSM_CLOCK_FLAGS_ODD_MATCH_WRITE
-			   |  MSM_CLOCK_FLAGS_DELAYED_WRITE_POST;
-		if (cpu_is_msm8625()) {
-			dgt->irq = MSM8625_INT_DEBUG_TIMER_EXP;
-			gpt->irq = MSM8625_INT_GP_TIMER_EXP;
-			global_timer_offset =  MSM_TMR0_BASE - MSM_TMR_BASE;
-		}
-	} else if (cpu_is_qsd8x50()) {
-		dgt->freq = 4800000;
-		gpt->regbase = MSM_TMR_BASE;
-		dgt->regbase = MSM_TMR_BASE + 0x10;
-	} else if (cpu_is_fsm9xxx())
-		dgt->freq = 4800000;
-	else if (cpu_is_msm7x30() || cpu_is_msm8x55()) {
-		gpt->status_mask = BIT(10);
-		dgt->status_mask = BIT(2);
-		dgt->freq = 6144000;
-	} else if (cpu_is_msm8x60()) {
+	if (cpu_is_msm8x60()) {
 		global_timer_offset = MSM_TMR0_BASE - MSM_TMR_BASE;
 		gpt->status_mask = BIT(10);
 		dgt->status_mask = BIT(2);
@@ -1148,9 +1120,6 @@ void __init msm_timer_init(void)
 
 		clockevents_register_device(ce);
 	}
-#ifdef CONFIG_LOCAL_TIMERS
-	broadcast_timer_setup();
-#endif
 	msm_sched_clock_init();
 	if (use_user_accessible_timers()) {
 		if (cpu_is_msm8960() || cpu_is_msm8930() || cpu_is_apq8064()) {
@@ -1169,4 +1138,7 @@ void __init msm_timer_init(void)
 		msm_delay_timer.read_current_timer = &msm_read_current_timer;
 		register_current_timer_delay(&msm_delay_timer);
 	}
+#ifdef CONFIG_LOCAL_TIMERS
+	broadcast_timer_setup();
+#endif
 }
