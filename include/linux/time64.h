@@ -39,24 +39,6 @@ struct itimerspec64 {
 #define KTIME_MAX			((s64)~((u64)1 << 63))
 #define KTIME_SEC_MAX			(KTIME_MAX / NSEC_PER_SEC)
 
-static inline struct itimerspec itimerspec64_to_itimerspec(struct itimerspec64 *its64)
-{
-	struct itimerspec ret;
-
-	ret.it_interval = timespec64_to_timespec(its64->it_interval);
-	ret.it_value = timespec64_to_timespec(its64->it_value);
-	return ret;
-}
-
-static inline struct itimerspec64 itimerspec_to_itimerspec64(struct itimerspec *its)
-{
-	struct itimerspec64 ret;
-
-	ret.it_interval = timespec_to_timespec64(its->it_interval);
-	ret.it_value = timespec_to_timespec64(its->it_value);
-	return ret;
-}
-
 static inline int timespec64_equal(const struct timespec64 *a,
 				   const struct timespec64 *b)
 {
