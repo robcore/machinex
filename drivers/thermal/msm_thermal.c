@@ -556,7 +556,7 @@ static int setup_mitigator(void)
 	sched_setscheduler_nocheck(mitigator, SCHED_FIFO, &param);
 	get_task_struct(mitigator);
 	wake_up_process(mitigator);
-
+	last_tempcheck = ktime_get();
 	return 0;
 }
 
