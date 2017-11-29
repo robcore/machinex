@@ -2496,9 +2496,9 @@ dhd_watchdog_thread(void *data)
 	complete_and_exit(&tsk->completed, 0);
 }
 
-static void dhd_watchdog(ulong data)
+static void dhd_watchdog(struct timer_list *t)
 {
-	dhd_info_t *dhd = (dhd_info_t *)data;
+	dhd_info_t *dhd = from_timer(dhd, t, timer);
 	unsigned long flags;
 
 	if (dhd->pub.dongle_reset) {
@@ -4148,9 +4148,7 @@ dhd_attach(osl_t *osh, struct dhd_bus *bus, uint bus_hdrlen)
 
 
 	/* Set up the watchdog timer */
-	init_timer(&dhd->timer);
-	dhd->timer.data = (ulong)dhd;
-	dhd->timer.function = dhd_watchdog;
+	timer_setup(&dhd->timer, dhd_watchdog, 0);
 	dhd->default_wd_interval = dhd_watchdog_ms;
 
 	if (dhd_watchdog_prio >= 0) {
