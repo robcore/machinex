@@ -31,6 +31,7 @@
 #include <linux/timer.h>
 #include <linux/kthread.h>
 #include <linux/slab.h>
+#include <linux/display_state.h>
 #include "cpufreq_machinex_gov_attr.h"
 
 #define gov_attr_ro(_name)						\
@@ -44,6 +45,11 @@ __ATTR(_name, 0200, NULL, store_##_name)
 #define gov_attr_rw(_name)						\
 static struct governor_attr _name =					\
 __ATTR(_name, 0644, show_##_name, store_##_name)
+
+#define DEFAULT_SAMPLING_RATE (20 * USEC_PER_MSEC)
+#define DEFAULT_ABOVE_HISPEED_DELAY DEFAULT_SAMPLING_RATE
+#define DEFAULT_TIMER_SLACK (2 * DEFAULT_SAMPLING_RATE)
+#define DEFAULT_MIN_SAMPLE_TIME (10 * USEC_PER_MSEC)
 
 /* Separate instance required for each 'interactive' directory in sysfs */
 struct interactive_tunables {
@@ -65,7 +71,6 @@ struct interactive_tunables {
 	 * The minimum amount of time to spend at a frequency before we can ramp
 	 * down.
 	 */
-#define DEFAULT_MIN_SAMPLE_TIME (40 * USEC_PER_MSEC)
 	unsigned long min_sample_time;
 
 	/* The sample rate of the timer used to increase frequency */
@@ -91,7 +96,6 @@ struct interactive_tunables {
 	 * Max additional time to wait in idle, beyond sampling_rate, at speeds
 	 * above minimum before wakeup to reduce speed, or -1 if unnecessary.
 	 */
-#define DEFAULT_TIMER_SLACK (2 * DEFAULT_SAMPLING_RATE)
 	unsigned long timer_slack_delay;
 	unsigned long timer_slack;
 };
@@ -141,11 +145,9 @@ static cpumask_t speedchange_cpumask;
 static spinlock_t speedchange_cpumask_lock;
 
 /* Target load. Lower values result in higher CPU speeds. */
-#define DEFAULT_TARGET_LOAD 96
+#define DEFAULT_TARGET_LOAD 95
 static unsigned int default_target_loads[] = {DEFAULT_TARGET_LOAD};
 
-#define DEFAULT_SAMPLING_RATE (10 * USEC_PER_MSEC)
-#define DEFAULT_ABOVE_HISPEED_DELAY DEFAULT_SAMPLING_RATE
 static unsigned int default_above_hispeed_delay[] = {
 	DEFAULT_ABOVE_HISPEED_DELAY
 };
@@ -1042,8 +1044,10 @@ static void update_util_handler(struct update_util_data *data, u64 time,
 		return;
 
 	delta_ns = time - icpu->last_sample_time;
-	if ((s64)delta_ns < tunables->sampling_rate * NSEC_PER_USEC)
+	if (is_display_on() && (s64)delta_ns < tunables->sampling_rate * NSEC_PER_USEC)
 		return;
+	else
+	if ((s64)delta_ns < 80 * USEC_PER_MSEC * NSEC_PER_USEC)
 
 	icpu->last_sample_time = time;
 	icpu->next_sample_jiffies = usecs_to_jiffies(tunables->sampling_rate) +
@@ -1311,7 +1315,7 @@ static void cpufreq_interactive_nop_timer(struct timer_list *t)
 
 static int __init cpufreq_interactive_gov_init(void)
 {
-	struct sched_param param = { .sched_priority = DEFAULT_PRIO };
+	//struct sched_param param = { .sched_priority = DEFAULT_PRIO };
 	struct interactive_cpu *icpu;
 	unsigned int cpu;
 
@@ -1334,7 +1338,7 @@ static int __init cpufreq_interactive_gov_init(void)
 	if (IS_ERR(speedchange_task))
 		return PTR_ERR(speedchange_task);
 
-	sched_setscheduler_nocheck(speedchange_task, SCHED_NORMAL, &param);
+	//sched_setscheduler_nocheck(speedchange_task, SCHED_NORMAL, &param);
 	get_task_struct(speedchange_task);
 
 	/* wake up so the thread does not look hung to the freezer */
