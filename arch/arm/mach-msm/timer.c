@@ -981,12 +981,10 @@ static void broadcast_timer_setup(void)
 	BUG_ON(res);
 
 	evt = per_cpu_ptr(msm_evt, cpu);
-	evt->name	= "dummy";
+	evt->name	= "dummy_timer";
 	evt->features	= CLOCK_EVT_FEAT_ONESHOT |
 			  CLOCK_EVT_FEAT_PERIODIC |
 			  CLOCK_EVT_FEAT_DUMMY;
- 	evt->set_state_shutdown = msm_timer_shutdown;
-	evt->set_state_oneshot = msm_timer_shutdown;
 	evt->rating	= 100;
 	evt->mult	= 1;
 	evt->cpumask = cpumask_of(smp_processor_id());
