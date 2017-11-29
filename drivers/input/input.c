@@ -78,7 +78,7 @@ static void input_start_autorepeat(struct input_dev *dev, int code)
 {
 	if (test_bit(EV_REP, dev->evbit) &&
 	    dev->rep[REP_PERIOD] && dev->rep[REP_DELAY] &&
-	    dev->timer.function) {
+	    dev->timer.data) {
 		dev->repeat_key = code;
 		mod_timer(&dev->timer,
 			  jiffies + msecs_to_jiffies(dev->rep[REP_DELAY]));
@@ -102,23 +102,24 @@ static unsigned int input_to_handler(struct input_handle *handle,
 	struct input_value *end = vals;
 	struct input_value *v;
 
-	for (v = vals; v != vals + count; v++) {
-		if (handler->filter &&
-		    handler->filter(handle, v->type, v->code, v->value))
-			continue;
-		if (end != v)
-			*end = *v;
-		end++;
+	if (handler->filter) {
+		for (v = vals; v != vals + count; v++) {
+			if (handler->filter(handle, v->type, v->code, v->value))
+				continue;
+			if (end != v)
+				*end = *v;
+			end++;
+		}
+		count = end - vals;
 	}
 
-	count = end - vals;
 	if (!count)
 		return 0;
 
 	if (handler->events)
 		handler->events(handle, vals, count);
 	else if (handler->event)
-		for (v = vals; v != end; v++)
+		for (v = vals; v != vals + count; v++)
 			handler->event(handle, v->type, v->code, v->value);
 
 	return count;
@@ -180,9 +181,9 @@ static void input_pass_event(struct input_dev *dev,
  * dev->event_lock here to avoid racing with input_event
  * which may cause keys get "stuck".
  */
-static void input_repeat_key(struct timer_list *t)
+static void input_repeat_key(unsigned long data)
 {
-	struct input_dev *dev = from_timer(dev, t, timer);
+	struct input_dev *dev = (void *) data;
 	unsigned long flags;
 
 	spin_lock_irqsave(&dev->event_lock, flags);
@@ -1826,7 +1827,7 @@ struct input_dev *input_allocate_device(void)
 		device_initialize(&dev->dev);
 		mutex_init(&dev->mutex);
 		spin_lock_init(&dev->event_lock);
-		timer_setup(&dev->timer, NULL, 0);
+		init_timer(&dev->timer);
 		INIT_LIST_HEAD(&dev->h_list);
 		INIT_LIST_HEAD(&dev->node);
 
@@ -2089,6 +2090,7 @@ static void devm_input_device_unregister(struct device *dev, void *res)
  */
 void input_enable_softrepeat(struct input_dev *dev, int delay, int period)
 {
+	dev->timer.data = (unsigned long) dev;
 	dev->timer.function = input_repeat_key;
 	dev->rep[REP_DELAY] = delay;
 	dev->rep[REP_PERIOD] = period;
