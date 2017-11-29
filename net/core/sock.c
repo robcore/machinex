@@ -2054,7 +2054,7 @@ void sk_send_sigurg(struct sock *sk)
 }
 EXPORT_SYMBOL(sk_send_sigurg);
 
-void sk_reset_timer(struct sock *sk, struct timer_list* timer,
+void sk_reset_timer(struct sock *sk, struct timer_list *timer,
 		    unsigned long expires)
 {
 	if (!mod_timer(timer, expires))
@@ -2062,7 +2062,7 @@ void sk_reset_timer(struct sock *sk, struct timer_list* timer,
 }
 EXPORT_SYMBOL(sk_reset_timer);
 
-void sk_stop_timer(struct sock *sk, struct timer_list* timer)
+void sk_stop_timer(struct sock *sk, struct timer_list *timer)
 {
 	if (del_timer(timer))
 		__sock_put(sk);
@@ -2080,7 +2080,7 @@ void sock_init_data(struct socket *sock, struct sock *sk)
 
 	sk->sk_send_head	=	NULL;
 
-	init_timer(&sk->sk_timer);
+	timer_setup(&sk->sk_timer, NULL, 0);
 
 	sk->sk_allocation	=	GFP_KERNEL;
 	sk->sk_rcvbuf		=	sysctl_rmem_default;
