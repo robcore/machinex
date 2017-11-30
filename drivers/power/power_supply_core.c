@@ -183,7 +183,7 @@ void power_supply_changed(struct power_supply *psy)
 {
 try_again:
 	if (!try_psy_changed(psy)) {
-		mdelay(10);
+		mdelay(1);
 		goto try_again;
 	}
 	class_for_each_device(power_supply_class, NULL, psy,
