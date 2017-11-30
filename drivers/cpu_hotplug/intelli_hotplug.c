@@ -34,12 +34,11 @@
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
-#define INTELLI_MS(x) ((((x) * MSEC_PER_SEC) / MSEC_PER_SEC))
-#define DEFAULT_SAMPLING_RATE INTELLI_MS(250UL)
-#define INPUT_INTERVAL INTELLI_MS(500UL)
-#define BOOST_LOCK_DUR INTELLI_MS(500UL)
+#define DEFAULT_SAMPLING_RATE 250UL
+#define INPUT_INTERVAL 500UL
+#define BOOST_LOCK_DUR 500UL
 #define DEFAULT_NR_FSHIFT (DEFAULT_MAX_CPUS_ONLINE - 1)
-#define DEFAULT_DOWN_LOCK_DUR INTELLI_MS(500UL)
+#define DEFAULT_DOWN_LOCK_DUR 500UL
 #define DEFAULT_HYSTERESIS (NR_CPUS << 1)
 
 /*#define CAPACITY_RESERVE (50)
@@ -243,7 +242,7 @@ static void rm_down_lock(unsigned int cpu, unsigned long duration)
 			dl->locked = false;
 	} else
 		mod_delayed_work_on(cpu, intelliplug_wq, &dl->lock_rem,
-		      duration);
+		      msecs_to_jiffies(duration));
 }
 
 static void apply_down_lock(unsigned int cpu)
@@ -456,7 +455,7 @@ static void cpu_up_down_work(struct work_struct *work)
 	}
 reschedule:
 		mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
-					def_sampling_ms);
+					msecs_to_jiffies(def_sampling_ms));
 }
 
 static void intelli_plug_work_fn(struct work_struct *work)
@@ -590,7 +589,7 @@ static void recycle_cpus(void)
 		}
 	}
 	intellinit = false;
-	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work, def_sampling_ms);
+	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work, msecs_to_jiffies(def_sampling_ms));
 	hardplug_all_cpus();
 	wake_unlock(&ipwlock);
 }
@@ -638,7 +637,7 @@ static void intelli_resume(struct power_suspend *h)
 	if (!limit_screen_on_cpus)
 		recycle_cpus();
 	else
-		schedule_delayed_work(&delayed_recycle, 1000);
+		schedule_delayed_work(&delayed_recycle, msecs_to_jiffies(1000));
 }
 
 static struct power_suspend intelli_suspend_data =

@@ -36,9 +36,8 @@
 #include <linux/omniboost.h>
 #include <linux/omniplug.h>
 
-#define MXMS(x) ((((x) * MSEC_PER_SEC) / MSEC_PER_SEC))
-#define MX_SAMPLE_RATE MXMS(200UL)
-#define BOOST_LENGTH MXMS(350UL)
+#define MX_SAMPLE_RATE 200UL
+#define BOOST_LENGTH 350UL
 static unsigned int mx_hotplug_active;
 static DEFINE_RWLOCK(mxhp_lock);
 static DEFINE_MUTEX(mx_mutex);
@@ -56,16 +55,7 @@ static unsigned long sixthgear_rpm = 65ul;
 static unsigned long thirdgear_rpm = 50ul;
 static unsigned long secondgear_rpm = 35ul;
 static unsigned long firstgear_rpm = 20ul;
-#if 0
-static unsigned long sixthgear = 1321ul;
-static unsigned long thirdgear = 1095ul;
-static unsigned long secondgear = 889ul;
-static unsigned long firstgear = 795ul;
-static unsigned long sixthgear_rpm = 70ul;
-static unsigned long thirdgear_rpm = 60ul;
-static unsigned long secondgear_rpm = 40ul;
-static unsigned long firstgear_rpm = 25ul;
-#endif
+
 static unsigned long sampling_rate = MX_SAMPLE_RATE;
 unsigned long air_to_fuel;
 unsigned long current_rpm;
@@ -294,7 +284,7 @@ static void mx_motor(struct work_struct *work)
 	mutex_unlock(&mx_mutex);
 	wake_up_process(transmission);
 out:
-	queue_delayed_work_on(0, mx_hp_engine, &motor, sampling_rate);
+	queue_delayed_work_on(0, mx_hp_engine, &motor, msecs_to_jiffies(sampling_rate));
 }
 
 void fuel_injector(void)
@@ -336,7 +326,7 @@ static void mx_hotplug_resume(struct power_suspend *h)
 	hotplug_suspended = false;
 	mutex_unlock(&mx_mutex);
 	release_clutch();
-	queue_delayed_work_on(0, mx_hp_engine, &motor, sampling_rate);
+	queue_delayed_work_on(0, mx_hp_engine, &motor, msecs_to_jiffies(sampling_rate));
 }
 
 static struct power_suspend mx_suspend_data =
@@ -391,7 +381,7 @@ void ignition(unsigned int status)
 		}
 
 		INIT_DELAYED_WORK(&motor, mx_motor);
-		queue_delayed_work_on(0, mx_hp_engine, &motor, sampling_rate);
+		queue_delayed_work_on(0, mx_hp_engine, &motor, msecs_to_jiffies(sampling_rate));
 		register_power_suspend(&mx_suspend_data);
 		register_omniboost(&mx_nb);
 	} else {
