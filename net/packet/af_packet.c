@@ -3701,7 +3701,7 @@ static int packet_set_ring(struct sock *sk, union tpacket_req_u *req_u,
 	if (closing && (po->tp_version > TPACKET_V2)) {
 		/* Because we don't support block-based V3 on tx-ring */
 		if (!tx_ring)
-			prb_shutdown_retire_blk_timer(po, tx_ring, rb_queue);
+			prb_shutdown_retire_blk_timer(po, rb_queue);
 	}
 
 	if (pg_vec)
