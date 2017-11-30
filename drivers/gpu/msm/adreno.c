@@ -246,7 +246,7 @@ module_param(_wake_timeout, uint, 0644);
 static bool gpu_freq_boost;
 module_param(gpu_freq_boost, bool, 0644);
 static unsigned int current_gpu_freq;
-static unsigned int gpu_boost_freq;
+static unsigned int gpu_boost_freq = 320000000;
 
 static int set_gpu_boost_freq(const char *buf, const struct kernel_param *kp)
 {
@@ -290,7 +290,7 @@ module_param_cb(gpu_boost_freq, &param_ops_gpu_boost_freq, NULL, 0644);
 static void adreno_input_work(struct work_struct *work)
 {
 	struct adreno_device *adreno_dev;
-	struct kgsl_device *device;.
+	struct kgsl_device *device;
 	struct kgsl_pwrctrl *pwr;
 
 	if (!is_display_on() || !adreno_touchboost || !wakeboost_active)
