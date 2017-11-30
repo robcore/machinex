@@ -127,7 +127,7 @@ static inline void addrconf_sysctl_unregister(struct inet6_dev *idev)
 #ifdef CONFIG_IPV6_PRIVACY
 static int __ipv6_regen_rndid(struct inet6_dev *idev);
 static int __ipv6_try_regen_rndid(struct inet6_dev *idev, struct in6_addr *tmpaddr);
-static void ipv6_regen_rndid(unsigned long data);
+static void ipv6_regen_rndid(struct timer_list *t);
 #endif
 
 static int ipv6_generate_eui64(u8 *eui, struct net_device *dev);
@@ -139,7 +139,7 @@ static int ipv6_count_addresses(struct inet6_dev *idev);
 static struct hlist_head inet6_addr_lst[IN6_ADDR_HSIZE];
 static DEFINE_SPINLOCK(addrconf_hash_lock);
 
-static void addrconf_verify(unsigned long);
+static void addrconf_verify(struct timer_list *unused);
 
 static DEFINE_TIMER(addr_chk_timer, addrconf_verify);
 static DEFINE_SPINLOCK(addrconf_verify_lock);
@@ -152,10 +152,10 @@ static void addrconf_type_change(struct net_device *dev,
 static int addrconf_ifdown(struct net_device *dev, int how);
 
 static void addrconf_dad_start(struct inet6_ifaddr *ifp, u32 flags);
-static void addrconf_dad_timer(unsigned long data);
+static void addrconf_dad_timer(struct timer_list *t);
 static void addrconf_dad_completed(struct inet6_ifaddr *ifp);
 static void addrconf_dad_run(struct inet6_dev *idev);
-static void addrconf_rs_timer(unsigned long data);
+static void addrconf_rs_timer(struct timer_list *t);
 static void __ipv6_ifa_notify(int event, struct inet6_ifaddr *ifa);
 static void ipv6_ifa_notify(int event, struct inet6_ifaddr *ifa);
 
@@ -415,7 +415,7 @@ static struct inet6_dev * ipv6_add_dev(struct net_device *dev)
 
 #ifdef CONFIG_IPV6_PRIVACY
 	INIT_LIST_HEAD(&ndev->tempaddr_list);
-	setup_timer(&ndev->regen_timer, ipv6_regen_rndid, (unsigned long)ndev);
+	timer_setup(&ndev->regen_timer, ipv6_regen_rndid, 0);
 	if ((dev->flags&IFF_LOOPBACK) ||
 	    dev->type == ARPHRD_TUNNEL ||
 	    dev->type == ARPHRD_TUNNEL6 ||
@@ -424,7 +424,7 @@ static struct inet6_dev * ipv6_add_dev(struct net_device *dev)
 		ndev->cnf.use_tempaddr = -1;
 	} else {
 		in6_dev_hold(ndev);
-		ipv6_regen_rndid((unsigned long) ndev);
+		ipv6_regen_rndid(&ndev->regen_timer);
 	}
 #endif
 
@@ -650,9 +650,8 @@ ipv6_add_addr(struct inet6_dev *idev, const struct in6_addr *addr, int pfxlen,
 
 	spin_lock_init(&ifa->lock);
 	spin_lock_init(&ifa->state_lock);
-	init_timer(&ifa->timer);
+	timer_setup(&ifa->timer, ifa->timer.function, 0);
 	INIT_HLIST_NODE(&ifa->addr_lst);
-	ifa->timer.data = (unsigned long) ifa;
 	ifa->scope = scope;
 	ifa->prefix_len = pfxlen;
 	ifa->flags = flags | IFA_F_TENTATIVE;
@@ -1659,9 +1658,9 @@ regen:
 	return 0;
 }
 
-static void ipv6_regen_rndid(unsigned long data)
+static void ipv6_regen_rndid(struct timer_list *t)
 {
-	struct inet6_dev *idev = (struct inet6_dev *) data;
+	struct inet6_dev *idev = from_timer(idev, t, regen_timer);
 	unsigned long expires;
 
 	rcu_read_lock_bh();
@@ -2149,7 +2148,7 @@ ok:
 			}
 #endif
 			in6_ifa_put(ifp);
-			addrconf_verify(0);
+			addrconf_verify(&addr_chk_timer);
 		}
 	}
 	inet6_prefix_notify(RTM_NEWPREFIX, in6_dev, pinfo);
@@ -2292,7 +2291,7 @@ static int inet6_addr_add(struct net *net, int ifindex, const struct in6_addr *p
 		 */
 		addrconf_dad_start(ifp, 0);
 		in6_ifa_put(ifp);
-		addrconf_verify(0);
+		addrconf_verify(&addr_chk_timer);
 		return 0;
 	}
 
@@ -2958,9 +2957,9 @@ static int addrconf_ifdown(struct net_device *dev, int how)
 	return 0;
 }
 
-static void addrconf_rs_timer(unsigned long data)
+static void addrconf_rs_timer(struct timer_list *t)
 {
-	struct inet6_ifaddr *ifp = (struct inet6_ifaddr *) data;
+	struct inet6_ifaddr *ifp = from_timer(ifp, t, timer);
 	struct inet6_dev *idev = ifp->idev;
 
 	read_lock(&idev->lock);
@@ -3068,9 +3067,9 @@ out:
 	read_unlock_bh(&idev->lock);
 }
 
-static void addrconf_dad_timer(unsigned long data)
+static void addrconf_dad_timer(struct timer_list *t)
 {
-	struct inet6_ifaddr *ifp = (struct inet6_ifaddr *) data;
+	struct inet6_ifaddr *ifp = from_timer(ifp, t, timer);
 	struct inet6_dev *idev = ifp->idev;
 	struct in6_addr mcaddr;
 
@@ -3344,7 +3343,7 @@ int ipv6_chk_home_addr(struct net *net, const struct in6_addr *addr)
  *	Periodic address status verification
  */
 
-static void addrconf_verify(unsigned long foo)
+static void addrconf_verify(struct timer_list *unused)
 {
 	unsigned long now, next, next_sec, next_sched;
 	struct inet6_ifaddr *ifp;
@@ -3542,7 +3541,7 @@ static int inet6_addr_modify(struct inet6_ifaddr *ifp, u8 ifa_flags,
 
 	addrconf_prefix_route(&ifp->addr, ifp->prefix_len, ifp->idev->dev,
 			      expires, flags);
-	addrconf_verify(0);
+	addrconf_verify(&addr_chk_timer);
 
 	return 0;
 }
@@ -4933,7 +4932,7 @@ int __init addrconf_init(void)
 
 	register_netdevice_notifier(&ipv6_dev_notf);
 
-	addrconf_verify(0);
+	addrconf_verify(&addr_chk_timer);
 
 	err = rtnl_af_register(&inet6_ops);
 	if (err < 0)
