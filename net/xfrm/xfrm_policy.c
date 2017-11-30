@@ -270,7 +270,7 @@ struct xfrm_policy *xfrm_policy_alloc(struct net *net, gfp_t gfp)
 		rwlock_init(&policy->lock);
 		atomic_set(&policy->refcnt, 1);
 		timer_setup(&policy->timer, xfrm_policy_timer,
-				0;
+				0);
 		policy->flo.ops = &xfrm_policy_fc_ops;
 	}
 	return policy;
