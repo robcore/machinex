@@ -256,7 +256,7 @@ static int htable_create(struct net *net, struct xt_hashlimit_mtinfo1 *minfo,
 	}
 	hinfo->net = net;
 
-	setup_timer(&hinfo->timer, htable_gc, 0);
+	timer_setup(&hinfo->timer, htable_gc, 0);
 	hinfo->timer.expires = jiffies + msecs_to_jiffies(hinfo->cfg.gc_interval);
 	add_timer(&hinfo->timer);
 
