@@ -261,10 +261,10 @@ rescan:
 
 void inet_twdr_hangman(struct timer_list *t)
 {
-	struct inet_timewait_death_row *twdr = from_timer(twdr, t, tw_timer);
+	struct inet_timewait_death_row *twdr;
 	unsigned int need_timer;
 
-	twdr = (struct inet_timewait_death_row *)data;
+	twdr = from_timer(twdr, t, tw_timer);
 	spin_lock(&twdr->death_lock);
 
 	if (twdr->tw_count == 0)
