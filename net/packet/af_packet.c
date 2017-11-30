@@ -3642,7 +3642,7 @@ static int packet_set_ring(struct sock *sk, union tpacket_req_u *req_u,
 		 * it above but just being paranoid
 		 */
 			if (!tx_ring)
-				init_prb_bdqc(po, rb, pg_vec, req_u, tx_ring);
+				init_prb_bdqc(po, rb, pg_vec, req_u);
 				break;
 		default:
 			break;
