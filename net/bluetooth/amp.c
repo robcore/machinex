@@ -162,7 +162,7 @@ static struct amp_ctx *create_ctx(u8 type, u8 state)
 	if (ctx) {
 		ctx->type = type;
 		ctx->state = state;
-		timer_setup(&ctx->timer, ctx_timeout);
+		timer_setup(&ctx->timer, ctx_timeout, 0);
 	}
 	BT_DBG("ctx %p, type %d", ctx, type);
 	return ctx;
