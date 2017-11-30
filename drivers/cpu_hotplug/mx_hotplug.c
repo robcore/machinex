@@ -315,6 +315,7 @@ void fuel_injector(void)
 static void mx_hotplug_suspend(struct power_suspend *h)
 {
 	mutex_lock(&mx_mutex);
+	inject_nos(false, true);
 	hotplug_suspended = true;
 	mutex_unlock(&mx_mutex);
 	cancel_delayed_work_sync(&motor);
