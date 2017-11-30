@@ -1,0 +1,2132 @@
+arch/arm/kernel/auto_hotplug.c
+arch/arm/kernel/autosmp.c
+arch/arm/mach-msm/bam_dmux.c
+arch/arm/mach-msm/board-mahimahi-microp.c
+arch/arm/mach-msm/board-msm8x60.c
+arch/arm/mach-msm/dma.c
+arch/arm/mach-msm/ipc_router_hsic_xprt.c
+arch/arm/mach-msm/ipc_router_smd_xprt.c
+arch/arm/mach-msm/lge/mako/board-mako-earjack-debugger.c
+arch/arm/mach-msm/mdm_common.c
+arch/arm/mach-msm/modem-8660.c
+arch/arm/mach-msm/msm_dcvs.c
+arch/arm/mach-msm/msm_watchdog.c
+arch/arm/mach-msm/msm_watchdog_v2.c
+arch/arm/mach-msm/msm_zen_decision.c
+arch/arm/mach-msm/ocmem_sched.c
+arch/arm/mach-msm/peripheral-loader.c
+arch/arm/mach-msm/rmt_storage_client.c
+arch/arm/mach-msm/rpcrouter_sdio_xprt.c
+arch/arm/mach-msm/rpm-regulator.c
+arch/arm/mach-msm/sdio_dmux.c
+arch/arm/mach-msm/sec_thermistor.c
+arch/arm/mach-msm/smd_pkt.c
+arch/arm/mach-msm/smd_tty.c
+arch/arm/mach-msm/state_helper.c
+arch/arm/mach-msm/wcnss-ssr-8960.c
+arch/arm/mach-pxa/sharpsl_pm.c
+arch/arm/mach-s3c24xx/mach-gta02.c
+arch/arm/mach-shmobile/board-mackerel.c
+arch/arm/mvp/commkm/comm_os_linux.c
+arch/arm/mvp/oektestkm/mvp_fake_kb.c
+arch/arm/mvp/pvtcpkm/comm_os_linux.c
+arch/tile/kernel/smpboot.c
+arch/um/drivers/chan_kern.c
+arch/x86/kernel/check.c
+arch/x86/kernel/hpet.c
+arch/x86/kernel/tsc.c
+block/blk-core.c
+block/blk-mq.c
+block/blk-throttle.c
+block/genhd.c
+drivers/ata/libata-eh.c
+drivers/ata/libata-scsi.c
+drivers/ata/libata-sff.c
+drivers/ata/pata_arasan_cf.c
+drivers/ata/pata_octeon_cf.c
+drivers/auxdisplay/cfag12864b.c
+drivers/barcode_emul/barcode_emul_ice4_8930_442.c
+drivers/barcode_emul/barcode_emul_ice4_8930.c
+drivers/barcode_emul/barcode_emul_ice4.c
+drivers/base/devcoredump.c
+drivers/base/firmware_class.c
+drivers/battery/max17050_fuelgauge.c
+drivers/battery/max77693_charger_8930.c
+drivers/battery/max77693_charger.c
+drivers/battery/sec_battery_8930.c
+drivers/battery/sec_battery.c
+drivers/battery/sec_charger_8930.c
+drivers/battery/sec_charger.c
+drivers/battery/sec_fuelgauge_8930.c
+drivers/battery/sec_fuelgauge.c
+drivers/block/paride/pd.c
+drivers/block/paride/pseudo.h
+drivers/bluetooth/bluesleep_bcm.c
+drivers/bluetooth/bluesleep.c
+drivers/char/hw_random/n2-drv.c
+drivers/char/msm_rotator.c
+drivers/cpufreq/cpu-boost.c
+drivers/cpufreq/cpufreq_abyssplugv2.c
+drivers/cpufreq/cpufreq_adaptive.c
+drivers/cpufreq/cpufreq_alucard.c
+drivers/cpufreq/cpufreq_bioshock.c
+drivers/cpufreq/cpufreq.c
+drivers/cpufreq/cpufreq_dancedance.c
+drivers/cpufreq/cpufreq_darkness.c
+drivers/cpufreq/cpufreq_electroactive.c
+drivers/cpufreq/cpufreq_electrodemand.c
+drivers/cpufreq/cpufreq_elementalx.c
+drivers/cpufreq/cpufreq_lazy.c
+drivers/cpufreq/cpufreq_lightning.c
+drivers/cpufreq/cpufreq_lionfish.c
+drivers/cpufreq/cpufreq_lionheart.c
+drivers/cpufreq/cpufreq_medusa.c
+drivers/cpufreq/cpufreq_pegasusq.c
+drivers/cpufreq/cpufreq_preservative.c
+drivers/cpufreq/cpufreq_smartmax.c
+drivers/cpufreq/cpufreq_smartmax_eps.c
+drivers/cpufreq/cpufreq_stockdemand.c
+drivers/cpufreq/cpufreq_uberdemand.c
+drivers/cpufreq/cpufreq_wheatley.c
+drivers/cpufreq/cpufreq_zzmoove.c
+drivers/cpu_hotplug/autosmp.c
+drivers/cpu_hotplug/blu_plug.c
+drivers/cpu_hotplug/bricked_hotplug.c
+drivers/cpu_hotplug/dyn_hotplug.c
+drivers/cpu_hotplug/intelli_hotplug.c
+drivers/cpu_hotplug/mako_hotplug.c
+drivers/cpu_hotplug/msm_hotplug.c
+drivers/cpu_hotplug/mx_hotplug.c
+drivers/cpuquiet/governors/balanced.c
+drivers/cpuquiet/governors/rqbalance.c
+drivers/crypto/hifn_795x.c
+drivers/devfreq/devfreq.c
+drivers/edac/edac_device.c
+drivers/edac/edac_mc.c
+drivers/edac/edac_pci.c
+drivers/edac/i5100_edac.c
+drivers/felica/felica.c
+drivers/firewire/core-card.c
+drivers/firewire/core-cdev.c
+drivers/firewire/core-device.c
+drivers/firewire/sbp2.c
+drivers/gpu/drm/drm_crtc_helper.c
+drivers/gpu/drm/i915/i915_gem.c
+drivers/gpu/drm/i915/intel_display.c
+drivers/gpu/drm/i915/intel_dp.c
+drivers/gpu/drm/radeon/radeon_pm.c
+drivers/gpu/drm/ttm/ttm_bo.c
+drivers/gpu/drm/udl/udl_main.c
+drivers/gpu/drm/vmwgfx/vmwgfx_fb.c
+drivers/hid/hid-picolcd.c
+drivers/hv/hv_kvp.c
+drivers/infiniband/core/addr.c
+drivers/infiniband/core/cm.c
+drivers/infiniband/core/mad.c
+drivers/infiniband/core/mad_rmpp.c
+drivers/infiniband/hw/cxgb3/iwch.c
+drivers/infiniband/hw/nes/nes_hw.c
+drivers/infiniband/hw/nes/nes_nic.c
+drivers/infiniband/hw/qib/qib_iba7220.c
+drivers/infiniband/hw/qib/qib_iba7322.c
+drivers/infiniband/ulp/ipoib/ipoib_cm.c
+drivers/infiniband/ulp/ipoib/ipoib_ib.c
+drivers/infiniband/ulp/ipoib/ipoib_multicast.c
+drivers/input/input_booster.c
+drivers/input/input-polldev.c
+drivers/input/joystick/tdisc_vtd518_shinetsu.c
+drivers/input/keyboard/adp5588-keys.c
+drivers/input/keyboard/atkbd.c
+drivers/input/keyboard/gpio_keys.c
+drivers/input/keyboard/matrix_keypad.c
+drivers/input/keyboard/qt2160.c
+drivers/input/keyboard/tca6416-keypad.c
+drivers/input/keyreset.c
+drivers/input/misc/bma150.c
+drivers/input/misc/bmp18x-core.c
+drivers/input/misc/da9052_onkey.c
+drivers/input/misc/lis3dh_acc.c
+drivers/input/misc/mpu3050.c
+drivers/input/misc/mpu6050/mpu6050_input.c
+drivers/input/misc/mpu6500/mpu6500_input.c
+drivers/input/misc/pmic8058-othc.c
+drivers/input/misc/wm831x-on.c
+drivers/input/mouse/psmouse-base.c
+drivers/input/mouse/synaptics_i2c.c
+drivers/input/serio/hp_sdc.c
+drivers/input/touchscreen/atmel_maxtouch.c
+drivers/input/touchscreen/cy8c_ts.c
+drivers/input/touchscreen/cyttsp4_mt_common.c
+drivers/input/touchscreen/da9034-ts.c
+drivers/input/touchscreen/hp680_ts_input.c
+drivers/input/touchscreen/ili210x.c
+drivers/input/touchscreen/lge_touch_core.c
+drivers/input/touchscreen/mc13783_ts.c
+drivers/input/touchscreen/mms_ts_144.c
+drivers/input/touchscreen/mxt224e.c
+drivers/input/touchscreen/mxts.c
+drivers/input/touchscreen/mxts_msm8930.c
+drivers/input/touchscreen/mxts_sec_msm8930.c
+drivers/input/touchscreen/pcap_ts.c
+drivers/input/touchscreen/rmi_f54.c
+drivers/input/touchscreen/rmi_f54_msm8930.c
+drivers/input/touchscreen/stmpe-ts.c
+drivers/input/touchscreen/sweep2sleep.c
+drivers/input/touchscreen/synaptics_fw_update.c
+drivers/input/touchscreen/synaptics_i2c_rmi4.c
+drivers/input/touchscreen/synaptics_i2c_rmi.c
+drivers/input/touchscreen/synaptics_i2c_rmi_msm8930.c
+drivers/input/touchscreen/tps6507x-ts.c
+drivers/input/touchscreen/tsc2005.c
+drivers/input/touchscreen/tsc2007.c
+drivers/input/touchscreen/wm97xx-core.c
+drivers/macintosh/rack-meter.c
+drivers/md/bcache/btree.c
+drivers/md/bcache/journal.c
+drivers/md/bcache/sysfs.c
+drivers/md/bcache/writeback.c
+drivers/md/dm-bufio.c
+drivers/md/dm-cache-target.c
+drivers/md/dm-log-userspace-base.c
+drivers/md/dm-mpath.c
+drivers/md/dm-thin.c
+drivers/media/dvb/b2c2/flexcop-pci.c
+drivers/media/dvb/dvb-usb/dvb-usb-remote.c
+drivers/media/dvb/dvb-usb/technisat-usb2.c
+drivers/media/dvb/frontends/af9013.c
+drivers/media/isdbtmm/tuner_drv.c
+drivers/media/radio/radio-tavarua.c
+drivers/media/video/em28xx/em28xx-input.c
+drivers/media/video/ir-kbd-i2c.c
+drivers/media/video/saa6588.c
+drivers/media/video/tm6000/tm6000-input.c
+drivers/message/fusion/mptbase.c
+drivers/message/fusion/mptlan.c
+drivers/message/i2o/i2o_block.c
+drivers/mfd/tps65010.c
+drivers/misc/arm-charlcd.c
+drivers/misc/bh1770glc.c
+drivers/misc/fsa9485.c
+drivers/misc/fsa9485_lt02.c
+drivers/misc/inv_mpu/mpuirq.c
+drivers/misc/max77693-muic.c
+drivers/misc/max77693-muic_melius.c
+drivers/misc/max77693-muic_serrano.c
+drivers/misc/slimport_anx7808/slimport.c
+drivers/misc/tsu6721.c
+drivers/misc/vmw_balloon.c
+drivers/mmc/core/core.c
+drivers/mmc/core/host.c
+drivers/mmc/host/sh_mmcif.c
+drivers/mmc/host/tmio_mmc_pio.c
+drivers/mmc/host/vub300.c
+drivers/mtd/nand/r852.c
+drivers/net/bonding/bond_3ad.c
+drivers/net/bonding/bond_alb.c
+drivers/net/bonding/bond_main.c
+drivers/net/bonding/bond_sysfs.c
+drivers/net/can/sja1000/peak_pci.c
+drivers/net/ethernet/broadcom/bnx2x/bnx2x_cmn.c
+drivers/net/ethernet/broadcom/bnx2x/bnx2x_dcb.c
+drivers/net/ethernet/broadcom/bnx2x/bnx2x_main.c
+drivers/net/ethernet/broadcom/cnic.c
+drivers/net/ethernet/chelsio/cxgb3/cxgb3_main.c
+drivers/net/ethernet/chelsio/cxgb/cxgb2.c
+drivers/net/ethernet/chelsio/cxgb/my3126.c
+drivers/net/ethernet/davicom/dm9000.c
+drivers/net/ethernet/emulex/benet/be_main.c
+drivers/net/ethernet/ibm/ehea/ehea_main.c
+drivers/net/ethernet/ibm/emac/core.c
+drivers/net/ethernet/icplus/ipg.c
+drivers/net/ethernet/intel/e1000/e1000_main.c
+drivers/net/ethernet/intel/e1000e/netdev.c
+drivers/net/ethernet/mellanox/mlx4/en_netdev.c
+drivers/net/ethernet/mellanox/mlx4/sense.c
+drivers/net/ethernet/qlogic/netxen/netxen_nic_main.c
+drivers/net/ethernet/qlogic/qla3xxx.c
+drivers/net/ethernet/qlogic/qlcnic/qlcnic_main.c
+drivers/net/ethernet/qlogic/qlge/qlge_main.c
+drivers/net/ethernet/qlogic/qlge/qlge_mpi.c
+drivers/net/ethernet/realtek/8139too.c
+drivers/net/ethernet/sfc/efx.c
+drivers/net/ethernet/sfc/selftest.c
+drivers/net/ethernet/tile/tilepro.c
+drivers/net/ethernet/toshiba/ps3_gelic_wireless.c
+drivers/net/hamradio/baycom_epp.c
+drivers/net/hyperv/netvsc_drv.c
+drivers/net/irda/sir_dev.c
+drivers/net/phy/phy.c
+drivers/net/plip/plip.c
+drivers/net/usb/ipheth.c
+drivers/net/usb/kaweth.c
+drivers/net/usb/pegasus.c
+drivers/net/virtio_net.c
+drivers/net/wireless/at76c50x-usb.c
+drivers/net/wireless/ath/ath5k/base.c
+drivers/net/wireless/ath/ath9k/htc_drv_gpio.c
+drivers/net/wireless/ath/ath9k/htc_drv_main.c
+drivers/net/wireless/ath/ath9k/main.c
+drivers/net/wireless/ath/ath9k/xmit.c
+drivers/net/wireless/ath/carl9170/led.c
+drivers/net/wireless/ath/carl9170/main.c
+drivers/net/wireless/ath/carl9170/tx.c
+drivers/net/wireless/b43legacy/main.c
+drivers/net/wireless/b43/main.c
+drivers/net/wireless/bcmdhd/wl_cfg80211.c
+drivers/net/wireless/brcm80211/brcmsmac/mac80211_if.c
+drivers/net/wireless/ipw2x00/ipw2100.c
+drivers/net/wireless/ipw2x00/ipw2200.c
+drivers/net/wireless/iwlegacy/3945.c
+drivers/net/wireless/iwlegacy/3945-mac.c
+drivers/net/wireless/iwlegacy/4965-mac.c
+drivers/net/wireless/iwlegacy/common.c
+drivers/net/wireless/iwlwifi/iwl-scan.c
+drivers/net/wireless/iwmc3200wifi/rx.c
+drivers/net/wireless/libertas/cfg.c
+drivers/net/wireless/mac80211_hwsim.c
+drivers/net/wireless/p54/led.c
+drivers/net/wireless/p54/main.c
+drivers/net/wireless/p54/txrx.c
+drivers/net/wireless/rndis_wlan.c
+drivers/net/wireless/rt2x00/rt2x00config.c
+drivers/net/wireless/rt2x00/rt2x00link.c
+drivers/net/wireless/rtl818x/rtl8180/dev.c
+drivers/net/wireless/rtl818x/rtl8187/dev.c
+drivers/net/wireless/rtl818x/rtl8187/leds.c
+drivers/net/wireless/rtlwifi/base.c
+drivers/net/wireless/rtlwifi/core.c
+drivers/net/wireless/rtlwifi/ps.c
+drivers/net/wireless/wcnss/wcnss_wlan.c
+drivers/net/wireless/wl1251/ps.c
+drivers/net/wireless/wl12xx/main.c
+drivers/net/wireless/wl12xx/ps.c
+drivers/net/wireless/wl12xx/scan.c
+drivers/net/wireless/zd1211rw/zd_mac.c
+drivers/net/wireless/zd1211rw/zd_usb.c
+drivers/oprofile/cpu_buffer.c
+drivers/oprofile/oprof.c
+drivers/parisc/led.c
+drivers/pci/hotplug/pciehp_ctrl.c
+drivers/pci/hotplug/shpchp_ctrl.c
+drivers/pci/pci.c
+drivers/platform/msm/ipa/ipa.c
+drivers/platform/msm/qpnp-power-on.c
+drivers/platform/x86/acer-wmi.c
+drivers/platform/x86/dell-laptop.c
+drivers/platform/x86/msi-laptop.c
+drivers/platform/x86/thinkpad_acpi.c
+drivers/power/ab8500_btemp.c
+drivers/power/ab8500_charger.c
+drivers/power/ab8500_fg.c
+drivers/power/abx500_chargalg.c
+drivers/power/battery_current_limit.c
+drivers/power/battery_temp_ctrl.c
+drivers/power/bq27520_fuelgauger.c
+drivers/power/bq27541_fuelgauger.c
+drivers/power/bq27x00_battery.c
+drivers/power/charger-manager.c
+drivers/power/da9030_battery.c
+drivers/power/ds2760_battery.c
+drivers/power/generic-adc-battery.c
+drivers/power/intel_mid_battery.c
+drivers/power/isl9519q.c
+drivers/power/jz4740-battery.c
+drivers/power/lp8727_charger.c
+drivers/power/max17040_battery.c
+drivers/power/msm_charger.c
+drivers/power/pm8921-bms.c
+drivers/power/pm8921-charger.c
+drivers/power/pm8921-sec-charger-8930.c
+drivers/power/pm8921-sec-charger.c
+drivers/power/pm8xxx-ccadc.c
+drivers/power/pmic8058-charger.c
+drivers/power/s3c_adc_battery.c
+drivers/power/sbs-battery.c
+drivers/power/sec_battery.c
+drivers/power/smb137b.c
+drivers/regulator/core.c
+drivers/rtc/rtc-88pm860x.c
+drivers/s390/block/dasd_alias.c
+drivers/s390/char/tape_core.c
+drivers/s390/net/qeth_core_main.c
+drivers/s390/scsi/zfcp_fc.c
+drivers/scsi/bnx2fc/bnx2fc_io.c
+drivers/scsi/fcoe/fcoe_sysfs.c
+drivers/scsi/imm.c
+drivers/scsi/libfc/fc_disc.c
+drivers/scsi/libfc/fc_exch.c
+drivers/scsi/libfc/fc_lport.c
+drivers/scsi/libfc/fc_rport.c
+drivers/scsi/megaraid/megaraid_sas_base.c
+drivers/scsi/mpt2sas/mpt2sas_base.c
+drivers/scsi/mpt2sas/mpt2sas_scsih.c
+drivers/scsi/mvsas/mv_sas.c
+drivers/scsi/NCR5380.c
+drivers/scsi/ppa.c
+drivers/scsi/scsi_transport_fc.c
+drivers/scsi/scsi_transport_iscsi.c
+drivers/sensorhub/ssp_dev.c
+drivers/sensors/asp01.c
+drivers/sensors/geomagnetic/yas_mag_kernel_driver.c
+drivers/sensors/k2dh.c
+drivers/sensors/optical/gp2ap020.c
+drivers/sensors/yas_acc_kernel_driver.c
+drivers/soc/qcom/bricked_hotplug.c
+drivers/staging/csr/oska/kernel-compat.h
+drivers/staging/iio/impedance-analyzer/ad5933.c
+drivers/staging/iio/light/tsl2563.c
+drivers/staging/mei/interrupt.c
+drivers/staging/mei/main.c
+drivers/staging/nvec/nvec_power.c
+drivers/staging/octeon/ethernet.c
+drivers/staging/rtl8187se/ieee80211/ieee80211_softmac.c
+drivers/staging/rtl8187se/r8180_core.c
+drivers/staging/rtl8192e/rtllib.h
+drivers/staging/rtl8192u/ieee80211/ieee80211_softmac.c
+drivers/staging/rtl8192u/r8192U_core.c
+drivers/staging/rtl8192u/r8192U_dm.c
+drivers/staging/rtl8192u/r819xU_phy.c
+drivers/staging/zcache/ramster/ramster.c
+drivers/staging/zcache/ramster/tcp.c
+drivers/switch/hds_fsa8008.c
+drivers/thermal/franco_thermal.c
+drivers/thermal/machinex_thermal.c
+drivers/thermal/msm_thermal_backup.c
+drivers/thermal/msm_thermal.c
+drivers/thermal/msm_thermal-last-working.c
+drivers/thermal/msm_thermal_wip.c
+drivers/thermal/pm8xxx-tm.c
+drivers/thermal/thermal_core.c
+drivers/tty/hvc/hvc_iucv.c
+drivers/tty/hvc/hvsi.c
+drivers/tty/n_smux.c
+drivers/tty/serial/msm_serial_hs.c
+drivers/usb/atm/cxacru.c
+drivers/usb/core/driver.c
+drivers/usb/core/hub.c
+drivers/usb/dwc3/dwc3-msm.c
+drivers/usb/gadget/ci13xxx_udc.c
+drivers/usb/gadget/f_accessory.c
+drivers/usb/gadget/f_rmnet_sdio.c
+drivers/usb/gadget/f_rmnet_smd_sdio.c
+drivers/usb/gadget/msm72k_udc.c
+drivers/usb/gadget/u_rmnet_ctrl_smd.c
+drivers/usb/gadget/u_sdio.c
+drivers/usb/gadget/u_smd.c
+drivers/usb/host/u132-hcd.c
+drivers/usb/misc/appledisplay.c
+drivers/usb/misc/ftdi-elan.c
+drivers/usb/otg/ab8500-usb.c
+drivers/usb/otg/fsl_otg.c
+drivers/usb/otg/gpio_vbus.c
+drivers/usb/otg/msm_otg_8930.c
+drivers/usb/otg/msm_otg.c
+drivers/usb/otg/mv_otg.c
+drivers/usb/renesas_usbhs/common.c
+drivers/usb/serial/oti6858.c
+drivers/usb/storage/usb.c
+drivers/usb/wusbcore/devconnect.c
+drivers/usb/wusbcore/wusbhc.c
+drivers/uwb/drp.c
+drivers/uwb/rsv.c
+drivers/video/fb_defio.c
+drivers/video/hyperv_fb.c
+drivers/video/msm/mdp.c
+drivers/video/msm/mdss/mdss_mdp.c
+drivers/video/msm/mipi_ql_dsi2lvds.c
+drivers/video/msm/mipi_samsung_esd_refresh-8960.c
+drivers/video/msm/mipi_samsung_esd_refresh.c
+drivers/video/msm/mipi_samsung_oled-8960.c
+drivers/video/omap2/displays/panel-taal.c
+drivers/video/omap2/dss/dsi.c
+drivers/video/omap2/omapfb/omapfb-main.c
+drivers/video/omap/lcd_mipid.c
+drivers/video/sh_mobile_hdmi.c
+drivers/video/sh_mobile_lcdcfb.c
+drivers/video/smscufx.c
+drivers/video/udlfb.c
+drivers/xen/balloon.c
+drivers/xen/xen-selfballoon.c
+fs/affs/super.c
+fs/afs/callback.c
+fs/afs/flock.c
+fs/afs/mntpt.c
+fs/afs/server.c
+fs/afs/vlocation.c
+fs/btrfs/transaction.c
+fs/ceph/mds_client.c
+fs/cifs/cifs_dfs_ref.c
+fs/cifs/connect.c
+fs/fs-writeback.c
+fs/gfs2/glock.c
+fs/gfs2/lock_dlm.c
+fs/jffs2/wbuf.c
+fs/lockd/svc.c
+fs/namespace.c
+fs/nfsd/nfs4state.c
+fs/nfs/namespace.c
+fs/nfs/nfs4renewd.c
+fs/ocfs2/alloc.c
+fs/ocfs2/cluster/heartbeat.c
+fs/ocfs2/cluster/tcp.c
+fs/ocfs2/journal.c
+fs/ocfs2/localalloc.c
+fs/ocfs2/quota_global.c
+fs/reiserfs/journal.c
+fs/ufs/super.c
+fs/xfs/xfs_mru_cache.c
+fs/xfs/xfs_sync.c
+include/linux/blkdev.h
+include/linux/kthread.h
+include/linux/libata.h
+include/linux/workqueue.h
+include/net/mac80211.h
+kernel/cgroup.c
+kernel/jump_label.c
+kernel/kprobes.c
+kernel/kthread.c
+kernel/power/qos.c
+kernel/power/state_notifier.c
+kernel/rcu/srcutree.c
+kernel/time/ntp.c
+kernel/workqueue.c
+MachinexChangeLog
+mm/backing-dev.c
+mm/slab.c
+mm/vmstat.c
+net/atm/lec.c
+net/batman-adv/bat_iv_ogm.c
+net/batman-adv/originator.c
+net/batman-adv/send.c
+net/batman-adv/translation-table.c
+net/batman-adv/vis.c
+net/bluetooth/hci_conn.c
+net/bluetooth/l2cap_core.c
+net/ceph/messenger.c
+net/ceph/mon_client.c
+net/ceph/osd_client.c
+net/core/dst.c
+net/core/link_watch.c
+net/core/neighbour.c
+net/core/netpoll.c
+net/ipv4/inetpeer.c
+net/ipv4/route.c
+net/mac80211/scan.c
+net/mac80211/util.c
+net/mac80211/work.c
+net/netfilter/ipvs/ip_vs_ctl.c
+net/netfilter/ipvs/ip_vs_sync.c
+net/openvswitch/datapath.c
+net/rds/connection.c
+net/rds/ib_rdma.c
+net/rds/ib_send.c
+net/rds/iw_recv.c
+net/rds/iw_send.c
+net/rds/send.c
+net/rds/tcp_recv.c
+net/rds/tcp_send.c
+net/rds/threads.c
+net/rfkill/core.c
+net/rfkill/input.c
+net/rxrpc/ar-connection.c
+net/rxrpc/ar-internal.h
+net/rxrpc/ar-transport.c
+net/sunrpc/cache.c
+net/sunrpc/rpc_pipe.c
+net/sunrpc/xprtrdma/transport.c
+net/sunrpc/xprtsock.c
+net/wireless/reg.c
+patches-all/allpatches.txt
+sound/aoa/core/gpio-feature.c
+sound/aoa/core/gpio-pmf.c
+sound/i2c/other/ak4113.c
+sound/i2c/other/ak4114.c
+sound/pci/ac97/ac97_codec.c
+sound/pci/hda/hda_beep.c
+sound/pci/hda/hda_codec.c
+sound/pci/hda/patch_hdmi.c
+sound/pci/hda/patch_via.c
+sound/soc/codecs/audience/es325.c
+sound/soc/codecs/audience/es705.c
+sound/soc/codecs/es325.c
+sound/soc/codecs/sta32x.c
+sound/soc/codecs/twl6040.c
+sound/soc/codecs/wcd9304.c
+sound/soc/codecs/wcd9306.c
+sound/soc/codecs/wcd9310.c
+sound/soc/codecs/wcd9320.c
+sound/soc/codecs/wcd9335.c
+sound/soc/codecs/wcd9xxx-mbhc.c
+sound/soc/codecs/wm8350.c
+sound/soc/codecs/wm8753.c
+sound/soc/codecs/wm8962.c
+sound/soc/codecs/wm8971.c
+sound/soc/msm/msm8230.c
+sound/soc/msm/msm8930.c
+sound/soc/msm/msm8960-d2.c
+sound/soc/msm/msm8960-jaguar.c
+sound/soc/soc-jack.c
+sound/soc/soc-pcm.c
+arch/arm/kernel/auto_hotplug.c:				schedule_delayed_work(&hotplug_unpause_work, HZ );
+arch/arm/kernel/auto_hotplug.c:			schedule_delayed_work(&hotplug_unpause_work, HZ );
+arch/arm/kernel/auto_hotplug.c:	schedule_delayed_work(&hotplug_unpause_work, HZ * 10);
+arch/arm/kernel/auto_hotplug.c:	schedule_delayed_work(&hotplug_unpause_work, HZ * 2);
+arch/arm/kernel/auto_hotplug.c:				schedule_delayed_work_on(0, &aphotplug_offline_work, HZ);
+arch/arm/kernel/auto_hotplug.c:		schedule_delayed_work_on(0, &hotplug_decision_work, 0);
+arch/arm/kernel/auto_hotplug.c:	schedule_delayed_work_on(0, &hotplug_decision_work, HZ);
+arch/arm/kernel/auto_hotplug.c:	schedule_delayed_work_on(0, &hotplug_decision_work, HZ * 5);
+arch/arm/kernel/auto_hotplug.c:				schedule_delayed_work_on(0, &hotplug_decision_work, MIN_SAMPLING_RATE);
+arch/arm/kernel/auto_hotplug.c:			schedule_delayed_work_on(0, &hotplug_decision_work, MIN_SAMPLING_RATE);
+arch/arm/kernel/auto_hotplug.c:	schedule_delayed_work_on(0, &hotplug_decision_work, MIN_SAMPLING_RATE);
+arch/arm/kernel/auto_hotplug.c:	schedule_delayed_work_on(0, &hotplug_decision_work, MIN_SAMPLING_RATE);
+arch/arm/kernel/auto_hotplug.c:	schedule_delayed_work_on(0, &hotplug_decision_work, MIN_SAMPLING_RATE);
+arch/arm/kernel/auto_hotplug.c:		schedule_delayed_work_on(0, &hotplug_decision_work, sampling_rate);
+arch/arm/kernel/auto_hotplug.c:		schedule_delayed_work_on(0, &hotplug_decision_work, sampling_rate);
+arch/arm/kernel/auto_hotplug.c:	schedule_delayed_work_on(0, &hotplug_decision_work, sampling_rate);
+arch/arm/kernel/autosmp.c:		queue_delayed_work(asmp_workq, &asmp_work,
+arch/arm/kernel/autosmp.c:		queue_delayed_work(asmp_workq, &asmp_work,
+arch/arm/kernel/autosmp.c:		queue_delayed_work(asmp_workq, &asmp_work,
+arch/arm/kernel/autosmp.c:	queue_delayed_work(asmp_workq, &asmp_work, delay_jif);
+arch/arm/mach-msm/bam_dmux.c:	schedule_delayed_work(&ul_timeout_work,
+arch/arm/mach-msm/bam_dmux.c:		schedule_delayed_work(&ul_timeout_work,
+arch/arm/mach-msm/bam_dmux.c:		schedule_delayed_work(&ul_timeout_work,
+arch/arm/mach-msm/bam_dmux.c:			schedule_delayed_work(&ul_timeout_work,
+arch/arm/mach-msm/board-mahimahi-microp.c:			schedule_delayed_work(&cdata->hpin_debounce_work,
+arch/arm/mach-msm/board-mahimahi-microp.c:			schedule_delayed_work(&cdata->hpin_debounce_work,
+arch/arm/mach-msm/board-mahimahi-microp.c:	schedule_delayed_work(&cdata->ls_read_work, LS_READ_DELAY);
+arch/arm/mach-msm/board-msm8x60.c:	schedule_delayed_work(&pmic_id_det, USB_PMIC_ID_DET_DELAY);
+arch/arm/mach-msm/dma.c:		queue_delayed_work(dmov_conf[adm].cmd_wq, &dmov_conf[adm].work,
+arch/arm/mach-msm/ipc_router_hsic_xprt.c:	queue_delayed_work(hsic_remote_xprt[id].hsic_xprt_wq,
+arch/arm/mach-msm/ipc_router_smd_xprt.c:					queue_delayed_work(
+arch/arm/mach-msm/ipc_router_smd_xprt.c:			queue_delayed_work(smd_xprtp->smd_xprt_wq,
+arch/arm/mach-msm/lge/mako/board-mako-earjack-debugger.c:	schedule_delayed_work(&adev->work, msecs_to_jiffies(10));
+arch/arm/mach-msm/mdm_common.c:			schedule_delayed_work(&mdev->mdm2ap_status_check_work,
+arch/arm/mach-msm/modem-8660.c:		ret = schedule_delayed_work(&modem_unlock_timeout_work,
+arch/arm/mach-msm/modem-8660.c:	schedule_delayed_work(&debug_crash_modem_work, msecs_to_jiffies(1000));
+arch/arm/mach-msm/modem-8660.c:	schedule_delayed_work(&debug_crash_modem_work, msecs_to_jiffies(5000));
+arch/arm/mach-msm/msm_dcvs.c:	schedule_delayed_work(&core->temperature_work,
+arch/arm/mach-msm/msm_dcvs.c:	schedule_delayed_work(&core->temperature_work,
+arch/arm/mach-msm/msm_watchdog.c:		schedule_delayed_work_on(0, &dogwork_struct, delay_time);
+arch/arm/mach-msm/msm_watchdog.c:	schedule_delayed_work_on(0, &dogwork_struct, delay_time);
+arch/arm/mach-msm/msm_watchdog_v2.c:	schedule_delayed_work_on(0, &wdog_dd->dogwork_struct, delay_time);
+arch/arm/mach-msm/msm_watchdog_v2.c:		schedule_delayed_work(&wdog_dd->dogwork_struct,
+arch/arm/mach-msm/msm_zen_decision.c:	queue_delayed_work(zen_wake_wq, &wake_work,
+arch/arm/mach-msm/ocmem_sched.c:	schedule_delayed_work(&ocmem_sched_thread,
+arch/arm/mach-msm/peripheral-loader.c:		schedule_delayed_work(&pil->proxy, msecs_to_jiffies(timeout));
+arch/arm/mach-msm/rmt_storage_client.c:	queue_delayed_work(rmc->workq, &sdio_smem_work, 0);
+arch/arm/mach-msm/rmt_storage_client.c:		queue_delayed_work(rmc->workq, &srv->restart_work,
+arch/arm/mach-msm/rmt_storage_client.c:	queue_delayed_work(rmc->workq, &srv->restart_work,
+arch/arm/mach-msm/rpcrouter_sdio_xprt.c:		queue_delayed_work(sdio_xprt_read_workqueue,
+arch/arm/mach-msm/rpcrouter_sdio_xprt.c:			queue_delayed_work(sdio_xprt_read_workqueue,
+arch/arm/mach-msm/rpcrouter_sdio_xprt.c:			queue_delayed_work(sdio_xprt_read_workqueue,
+arch/arm/mach-msm/rpcrouter_sdio_xprt.c:			queue_delayed_work(sdio_xprt_read_workqueue,
+arch/arm/mach-msm/rpm-regulator.c:		schedule_delayed_work(&tcxo_disable_work,
+arch/arm/mach-msm/sdio_dmux.c:			queue_delayed_work(sdio_mux_workqueue,
+arch/arm/mach-msm/sec_thermistor.c:	schedule_delayed_work(&info->polling_work,
+arch/arm/mach-msm/sec_thermistor.c:		schedule_delayed_work(&info->polling_work,
+arch/arm/mach-msm/sec_thermistor.c:		schedule_delayed_work(&info->polling_work,
+arch/arm/mach-msm/smd_pkt.c:			schedule_delayed_work(&loopback_work,
+arch/arm/mach-msm/smd_pkt.c:		schedule_delayed_work(&loopback_work, msecs_to_jiffies(1000));
+arch/arm/mach-msm/smd_tty.c:			schedule_delayed_work(&loopback_work,
+arch/arm/mach-msm/smd_tty.c:		schedule_delayed_work(&loopback_work, msecs_to_jiffies(1000));
+arch/arm/mach-msm/state_helper.c:	queue_delayed_work(helper_wq, &helper_work,
+arch/arm/mach-msm/state_helper.c:	queue_delayed_work(helper_wq, &helper_work, 0);
+arch/arm/mach-msm/wcnss-ssr-8960.c:	schedule_delayed_work(&cancel_vote_work, msecs_to_jiffies(5000));
+arch/arm/mach-pxa/sharpsl_pm.c:	schedule_delayed_work(&sharpsl_bat, 0);
+arch/arm/mach-pxa/sharpsl_pm.c:	schedule_delayed_work(&sharpsl_bat, 0);
+arch/arm/mach-pxa/sharpsl_pm.c:	schedule_delayed_work(&sharpsl_bat, msecs_to_jiffies(125));
+arch/arm/mach-pxa/sharpsl_pm.c:	schedule_delayed_work(&sharpsl_bat, msecs_to_jiffies(500));
+arch/arm/mach-pxa/sharpsl_pm.c:	schedule_delayed_work(&sharpsl_bat, SHARPSL_BATCHK_TIME);
+arch/arm/mach-pxa/sharpsl_pm.c:		schedule_delayed_work(&toggle_charger, 0);
+arch/arm/mach-pxa/sharpsl_pm.c:		schedule_delayed_work(&toggle_charger, 0);
+arch/arm/mach-pxa/sharpsl_pm.c:		schedule_delayed_work(&toggle_charger, 0);
+arch/arm/mach-pxa/sharpsl_pm.c:	schedule_delayed_work(&toggle_charger, msecs_to_jiffies(250));
+arch/arm/mach-s3c24xx/mach-gta02.c:	schedule_delayed_work(&gta02_charger_work,
+arch/arm/mach-s3c24xx/mach-gta02.c:		schedule_delayed_work(&gta02_charger_work,
+arch/arm/mach-shmobile/board-mackerel.c:	schedule_delayed_work(&priv->work, USBHS0_POLL_INTERVAL);
+arch/arm/mach-shmobile/board-mackerel.c:	schedule_delayed_work(&priv->work, USBHS0_POLL_INTERVAL);
+arch/arm/mvp/commkm/comm_os_linux.c:	return !queue_delayed_work(wq, work, jif) ? -1 : 0;
+arch/arm/mvp/oektestkm/mvp_fake_kb.c:			schedule_delayed_work(&unregister_keyboard_work,
+arch/arm/mvp/pvtcpkm/comm_os_linux.c:	return !queue_delayed_work(wq, work, jif) ? -1 : 0;
+arch/tile/kernel/smpboot.c:	 * via schedule_delayed_work() in the init routines will land
+arch/um/drivers/chan_kern.c:			schedule_delayed_work(&line->task, 1);
+arch/x86/kernel/check.c:	schedule_delayed_work(&bios_check_work,
+arch/x86/kernel/check.c:	schedule_delayed_work(&bios_check_work, 0);
+arch/x86/kernel/hpet.c:		schedule_delayed_work_on(cpu, &work.work, 0);
+arch/x86/kernel/tsc.c:	schedule_delayed_work(&tsc_irqwork, 0);
+arch/x86/kernel/tsc.c:		schedule_delayed_work(&tsc_irqwork, HZ);
+block/blk-core.c:EXPORT_SYMBOL(kblockd_schedule_delayed_work);
+block/blk-core.c:EXPORT_SYMBOL(kblockd_schedule_delayed_work_on);
+block/blk-core.c:int kblockd_schedule_delayed_work_on(int cpu, struct delayed_work *dwork,
+block/blk-core.c:int kblockd_schedule_delayed_work(struct delayed_work *dwork, unsigned long delay)
+block/blk-core.c:		mod_delayed_work(kblockd_workqueue, &q->delay_work, 0);
+block/blk-core.c:		queue_delayed_work(kblockd_workqueue, &q->delay_work,
+block/blk-core.c:	return queue_delayed_work(kblockd_workqueue, dwork, delay);
+block/blk-mq.c:	kblockd_schedule_delayed_work_on(blk_mq_hctx_next_cpu(hctx),
+block/blk-mq.c:	kblockd_schedule_delayed_work_on(blk_mq_hctx_next_cpu(hctx),
+block/blk-throttle.c:			schedule_delayed_work(dwork, msecs_to_jiffies(10));
+block/blk-throttle.c:	schedule_delayed_work(&tg_stats_alloc_work, 0);
+block/genhd.c:		mod_delayed_work(system_freezable_power_efficient_wq,
+block/genhd.c:		queue_delayed_work(system_freezable_power_efficient_wq,
+block/genhd.c:		queue_delayed_work(system_freezable_power_efficient_wq,
+block/genhd.c:		queue_delayed_work(system_freezable_power_efficient_wq,
+drivers/ata/libata-eh.c:		schedule_delayed_work(&ap->hotplug_task, 0);
+drivers/ata/libata-scsi.c:	queue_delayed_work(system_long_wq, &ap->hotplug_task,
+drivers/ata/libata-sff.c:	ata_sff_queue_delayed_work(&ap->sff_pio_task, msecs_to_jiffies(delay));
+drivers/ata/libata-sff.c:	queue_delayed_work(ata_sff_wq, dwork, delay);
+drivers/ata/libata-sff.c:void ata_sff_queue_delayed_work(struct delayed_work *dwork, unsigned long delay)
+drivers/ata/pata_arasan_cf.c:			ata_sff_queue_delayed_work(&acdev->dwork, 1);
+drivers/ata/pata_arasan_cf.c:		ata_sff_queue_delayed_work(&acdev->dwork, 1);
+drivers/ata/pata_octeon_cf.c:		queue_delayed_work(cf_port->wq,
+drivers/ata/pata_octeon_cf.c:				queue_delayed_work(cf_port->wq,
+drivers/auxdisplay/cfag12864b.c:	queue_delayed_work(cfag12864b_workqueue, &cfag12864b_work,
+drivers/barcode_emul/barcode_emul_ice4_8930_442.c:	queue_delayed_work(data->firmware_dl,
+drivers/barcode_emul/barcode_emul_ice4_8930.c:	queue_delayed_work(data->firmware_dl,
+drivers/barcode_emul/barcode_emul_ice4.c:	queue_delayed_work(data->firmware_dl,
+drivers/base/devcoredump.c:	mod_delayed_work(system_wq, &devcd->del_wk, 0);
+drivers/base/devcoredump.c:	schedule_delayed_work(&devcd->del_wk, DEVCD_TIMEOUT);
+drivers/base/firmware_class.c:			queue_delayed_work(system_wq,
+drivers/base/firmware_class.c:	queue_delayed_work(system_wq, &fw_cache.work,
+drivers/battery/max17050_fuelgauge.c:		schedule_delayed_work(&fuelgauge->info.full_comp_work, 100);
+drivers/battery/max17050_fuelgauge.c:	schedule_delayed_work(&fuelgauge->info.full_comp_work, 100);
+drivers/battery/max77693_charger_8930.c:	queue_delayed_work(charger->wqueue, &charger->chgin_init_work,
+drivers/battery/max77693_charger_8930.c:		queue_delayed_work(charger->wqueue, &charger->recovery_work,
+drivers/battery/max77693_charger_8930.c:					queue_delayed_work(charger->wqueue, &charger->wpc_work,
+drivers/battery/max77693_charger_8930.c:			queue_delayed_work(chg_data->wqueue, &chg_data->recovery_work,
+drivers/battery/max77693_charger_8930.c:			queue_delayed_work(chg_data->wqueue, &chg_data->wpc_work,
+drivers/battery/max77693_charger_8930.c:	queue_delayed_work(chg_data->wqueue, &chg_data->wpc_work,
+drivers/battery/max77693_charger_8930.c:		schedule_delayed_work(&charger->isr_work, 0);
+drivers/battery/max77693_charger.c:		mod_delayed_work(charger->wqueue, &charger->recovery_work,
+drivers/battery/max77693_charger.c:	mod_delayed_work(chg_data->wqueue, &chg_data->wpc_work,
+drivers/battery/max77693_charger.c:	queue_delayed_work(charger->wqueue, &charger->chgin_init_work,
+drivers/battery/max77693_charger.c:					queue_delayed_work(charger->wqueue, &charger->wpc_work,
+drivers/battery/max77693_charger.c:			queue_delayed_work(chg_data->wqueue, &chg_data->recovery_work,
+drivers/battery/max77693_charger.c:			queue_delayed_work(chg_data->wqueue, &chg_data->wpc_work,
+drivers/battery/max77693_charger.c:		schedule_delayed_work(&charger->isr_work, 0);
+drivers/battery/sec_battery_8930.c:	queue_delayed_work(battery->monitor_wqueue,
+drivers/battery/sec_battery_8930.c:			queue_delayed_work(battery->monitor_wqueue,
+drivers/battery/sec_battery_8930.c:	queue_delayed_work(battery->monitor_wqueue, &battery->monitor_work,
+drivers/battery/sec_battery_8930.c:			queue_delayed_work(battery->monitor_wqueue, &battery->monitor_work, 0);
+drivers/battery/sec_battery_8930.c:			queue_delayed_work(battery->monitor_wqueue, &battery->monitor_work, 0);
+drivers/battery/sec_battery_8930.c:		queue_delayed_work(battery->monitor_wqueue, &battery->monitor_work, 0);
+drivers/battery/sec_battery_8930.c:		queue_delayed_work(battery->monitor_wqueue, &battery->monitor_work, 0);
+drivers/battery/sec_battery_8930.c:	queue_delayed_work(battery->monitor_wqueue, &battery->monitor_work, 0);
+drivers/battery/sec_battery_8930.c:	queue_delayed_work(battery->monitor_wqueue, &battery->monitor_work, 0);
+drivers/battery/sec_battery_8930.c:			schedule_delayed_work(&battery->polling_work,
+drivers/battery/sec_battery_8930.c:			schedule_delayed_work(&battery->polling_work, HZ);
+drivers/battery/sec_battery.c:			schedule_delayed_work(&battery->polling_work,
+drivers/battery/sec_battery.c:			schedule_delayed_work(&battery->polling_work, HZ);
+drivers/battery/sec_charger_8930.c:	schedule_delayed_work(&charger->isr_work, 0);
+drivers/battery/sec_charger.c:	schedule_delayed_work(&charger->isr_work, 0);
+drivers/battery/sec_fuelgauge_8930.c:		schedule_delayed_work(&fuelgauge->isr_work, 0);
+drivers/battery/sec_fuelgauge.c:		schedule_delayed_work(&fuelgauge->isr_work, 0);
+drivers/block/paride/pd.c:		schedule_delayed_work(&fsm_tq, 0);
+drivers/block/paride/pd.c:		schedule_delayed_work(&fsm_tq, nice-1);
+drivers/block/paride/pseudo.h:			schedule_delayed_work(&ps_tq, 0);
+drivers/block/paride/pseudo.h:		schedule_delayed_work(&ps_tq, 0);
+drivers/block/paride/pseudo.h:			schedule_delayed_work(&ps_tq, ps_nice-1);
+drivers/block/paride/pseudo.h:		schedule_delayed_work(&ps_tq, ps_nice-1);
+drivers/bluetooth/bluesleep_bcm.c:#define bluesleep_rx_busy()     schedule_delayed_work(&sleep_workqueue, 0)
+drivers/bluetooth/bluesleep_bcm.c:#define bluesleep_rx_idle()     schedule_delayed_work(&sleep_workqueue, 0)
+drivers/bluetooth/bluesleep_bcm.c:#define bluesleep_tx_busy()     schedule_delayed_work(&sleep_workqueue, 0)
+drivers/bluetooth/bluesleep_bcm.c:#define bluesleep_tx_idle()     schedule_delayed_work(&sleep_workqueue, 0)
+drivers/bluetooth/bluesleep.c:#define bluesleep_rx_busy()     schedule_delayed_work(&sleep_workqueue, 0)
+drivers/bluetooth/bluesleep.c:#define bluesleep_rx_idle()     schedule_delayed_work(&sleep_workqueue, 0)
+drivers/bluetooth/bluesleep.c:#define bluesleep_tx_busy()     schedule_delayed_work(&sleep_workqueue, 0)
+drivers/bluetooth/bluesleep.c:#define bluesleep_tx_idle()     schedule_delayed_work(&sleep_workqueue, 0)
+drivers/bluetooth/bluesleep.c:#define bluesleep_tx_timer_expired()     schedule_delayed_work(&tx_timer_expired_workqueue, 0)
+drivers/char/hw_random/n2-drv.c:				schedule_delayed_work(&np->work, 0);
+drivers/char/hw_random/n2-drv.c:	schedule_delayed_work(&np->work, 0);
+drivers/char/hw_random/n2-drv.c:		schedule_delayed_work(&np->work, HZ * 2);
+drivers/char/msm_rotator.c:		mod_delayed_work(system_wq, &msm_rotator_dev->imem_clk_work, msecs_to_jiffies(100));
+drivers/char/msm_rotator.c:		mod_delayed_work(system_wq, &msm_rotator_dev->imem_clk_work, msecs_to_jiffies(100));
+drivers/char/msm_rotator.c:	mod_delayed_work(system_wq, &msm_rotator_dev->rot_clk_work, msecs_to_jiffies(100));
+drivers/cpufreq/cpu-boost.c:	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_rem,
+drivers/cpufreq/cpu-boost.c:	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_work, 0);
+drivers/cpufreq/cpufreq_abyssplugv2.c:	schedule_delayed_work_on(bds_info->cpu, &bds_info->work, delay);
+drivers/cpufreq/cpufreq_abyssplugv2.c:	schedule_delayed_work_on(cpu, &bds_info->work, delay);
+drivers/cpufreq/cpufreq_adaptive.c:	schedule_delayed_work_on(0, &this_dbs_info->work, 10);
+drivers/cpufreq/cpufreq_adaptive.c:			schedule_delayed_work_on(0, &this_dbs_info->work, delay);
+drivers/cpufreq/cpufreq_adaptive.c:		schedule_delayed_work_on(0, &this_dbs_info->work, delay);
+drivers/cpufreq/cpufreq_adaptive.c:		schedule_delayed_work_on(cpu, &dbs_info->work, delay);
+drivers/cpufreq/cpufreq_adaptive.c:	schedule_delayed_work_on(dbs_info->cpu, &dbs_info->work, delay);
+drivers/cpufreq/cpufreq_alucard.c:	mod_delayed_work_on(cpu, system_wq, &alucard_cpuinfo->work, delay);
+drivers/cpufreq/cpufreq_alucard.c:		mod_delayed_work_on(this_alucard_cpuinfo->cpu, system_wq, &this_alucard_cpuinfo->work, delay);
+drivers/cpufreq/cpufreq_bioshock.c:	schedule_delayed_work_on(cpu, &dbs_info->work, delay);
+drivers/cpufreq/cpufreq_bioshock.c:	schedule_delayed_work_on(dbs_info->cpu, &dbs_info->work, delay);
+drivers/cpufreq/cpufreq.c:	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_rem,
+drivers/cpufreq/cpufreq.c:	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_work, 0);
+drivers/cpufreq/cpufreq_dancedance.c:    schedule_delayed_work_on(cpu, &dbs_info->work, delay);
+drivers/cpufreq/cpufreq_dancedance.c:	schedule_delayed_work_on(dbs_info->cpu, &dbs_info->work, delay);
+drivers/cpufreq/cpufreq_darkness.c:	mod_delayed_work_on(cpu, system_wq, &darkness_cpuinfo->work, delay);
+drivers/cpufreq/cpufreq_darkness.c:		mod_delayed_work_on(this_darkness_cpuinfo->cpu, system_wq, &this_darkness_cpuinfo->work, delay);
+drivers/cpufreq/cpufreq_electroactive.c:	schedule_delayed_work_on(cpu, &dbs_info->work, delay);
+drivers/cpufreq/cpufreq_electroactive.c:			schedule_delayed_work_on(dbs_info->cpu, &dbs_info->work,
+drivers/cpufreq/cpufreq_electroactive.c:	schedule_delayed_work_on(dbs_info->cpu, &dbs_info->work, delay);
+drivers/cpufreq/cpufreq_electrodemand.c:		 * dbs_timer_exit() before schedule_delayed_work_on() of this
+drivers/cpufreq/cpufreq_electrodemand.c:	schedule_delayed_work_on(cpu, &dbs_info->work, delay);
+drivers/cpufreq/cpufreq_electrodemand.c:			schedule_delayed_work_on(dbs_info->cpu, &dbs_info->work,
+drivers/cpufreq/cpufreq_electrodemand.c:	schedule_delayed_work_on(dbs_info->cpu, &dbs_info->work, 10 * delay);
+drivers/cpufreq/cpufreq_elementalx.c:	schedule_delayed_work_on(cpu, &dbs_info->work, delay);
+drivers/cpufreq/cpufreq_elementalx.c:			schedule_delayed_work_on(dbs_info->cpu, &dbs_info->work,
+drivers/cpufreq/cpufreq_elementalx.c:	schedule_delayed_work_on(dbs_info->cpu, &dbs_info->work, delay);
+drivers/cpufreq/cpufreq_lazy.c:    schedule_delayed_work_on(cpu, &dbs_info->work, delay);
+drivers/cpufreq/cpufreq_lazy.c:    schedule_delayed_work_on(dbs_info->cpu, &dbs_info->work, delay);
+drivers/cpufreq/cpufreq_lightning.c:	schedule_delayed_work_on(cpu, &lightning_info->work, delay);
+drivers/cpufreq/cpufreq_lightning.c:			schedule_delayed_work_on(lightning_info->cpu, &lightning_info->work,
+drivers/cpufreq/cpufreq_lightning.c:	schedule_delayed_work_on(lightning_info->cpu, &lightning_info->work, delay);
+drivers/cpufreq/cpufreq_lionfish.c:	mod_delayed_work_on(cpu, system_wq, &cdbs->work, delay);
+drivers/cpufreq/cpufreq_lionheart.c:	schedule_delayed_work_on(cpu, &dbs_info->work, delay);
+drivers/cpufreq/cpufreq_lionheart.c:	schedule_delayed_work_on(dbs_info->cpu, &dbs_info->work, delay);
+drivers/cpufreq/cpufreq_medusa.c:	ret = schedule_delayed_work(&tick_work, usecs_to_jiffies(tick_rate_us));
+drivers/cpufreq/cpufreq_medusa.c:	ret = schedule_delayed_work(&update_work, usecs_to_jiffies(update_rate_us));
+drivers/cpufreq/cpufreq_medusa.c:	schedule_delayed_work(&tick_work, usecs_to_jiffies(tick_rate_us));
+drivers/cpufreq/cpufreq_medusa.c:	schedule_delayed_work(&update_work, usecs_to_jiffies(update_rate_us));
+drivers/cpufreq/cpufreq_pegasusq.c:	schedule_delayed_work_on(cpu, &dbs_info->work, delay);
+drivers/cpufreq/cpufreq_pegasusq.c:	schedule_delayed_work_on(dbs_info->cpu, &dbs_info->work, delay);
+drivers/cpufreq/cpufreq_preservative.c:	mod_delayed_work_on(cpu, dbs_wq, &dbs_info->work, delay);
+drivers/cpufreq/cpufreq_preservative.c:	mod_delayed_work_on(dbs_info->cpu, dbs_wq, &dbs_info->work, delay);
+drivers/cpufreq/cpufreq_smartmax.c:	schedule_delayed_work_on(cpu, &this_smartmax->work, delay);
+drivers/cpufreq/cpufreq_smartmax.c:	schedule_delayed_work_on(this_smartmax->cpu, &this_smartmax->work, delay);
+drivers/cpufreq/cpufreq_smartmax_eps.c:	schedule_delayed_work_on(this_smartmax_eps->cpu, &this_smartmax_eps->work, delay);
+drivers/cpufreq/cpufreq_stockdemand.c:			mod_delayed_work_on(cpu, dbs_wq,
+drivers/cpufreq/cpufreq_stockdemand.c:	mod_delayed_work_on(cpu, dbs_wq, &dbs_info->work, delay);
+drivers/cpufreq/cpufreq_stockdemand.c:			mod_delayed_work_on(dbs_info->cpu, dbs_wq,
+drivers/cpufreq/cpufreq_stockdemand.c:	mod_delayed_work_on(dbs_info->cpu, dbs_wq, &dbs_info->work, delay);
+drivers/cpufreq/cpufreq_uberdemand.c:	schedule_delayed_work_on(cpu, &dbs_info->work, delay);
+drivers/cpufreq/cpufreq_uberdemand.c:	schedule_delayed_work_on(dbs_info->cpu, &dbs_info->work, delay);
+drivers/cpufreq/cpufreq_wheatley.c:    schedule_delayed_work_on(cpu, &dbs_info->work, delay);
+drivers/cpufreq/cpufreq_wheatley.c:    schedule_delayed_work_on(dbs_info->cpu, &dbs_info->work, delay);
+drivers/cpufreq/cpufreq_zzmoove.c:		schedule_delayed_work(&tmu_read_work, msecs_to_jiffies(DEF_TMU_READ_DELAY));	// ZZ: start work
+drivers/cpufreq/cpufreq_zzmoove.c:		schedule_delayed_work(&work_tmu_check, msecs_to_jiffies(tmu_check_delay));
+drivers/cpu_hotplug/autosmp.c:	mod_delayed_work_on(0, asmp_workq, &asmp_work,
+drivers/cpu_hotplug/autosmp.c:		mod_delayed_work_on(0, asmp_workq, &prework,
+drivers/cpu_hotplug/autosmp.c:	mod_delayed_work_on(0, asmp_workq, &prework,
+drivers/cpu_hotplug/autosmp.c:	mod_delayed_work_on(0, asmp_workq, &prework,
+drivers/cpu_hotplug/autosmp.c:	mod_delayed_work_on(0, asmp_workq, &prework,
+drivers/cpu_hotplug/blu_plug.c:	mod_delayed_work_on(0, dyn_workq, &dyn_work, msecs_to_jiffies(delay));
+drivers/cpu_hotplug/bricked_hotplug.c:		queue_delayed_work(hotplug_wq, &hotplug_work,
+drivers/cpu_hotplug/bricked_hotplug.c:		queue_delayed_work(hotplug_wq, &hotplug_work,
+drivers/cpu_hotplug/bricked_hotplug.c:	queue_delayed_work(hotplug_wq, &hotplug_work,
+drivers/cpu_hotplug/dyn_hotplug.c:	schedule_delayed_work_on(0, &hp_data->work, hp_data->delay);
+drivers/cpu_hotplug/dyn_hotplug.c:	schedule_delayed_work_on(0, &hp_data->work, hp_data->delay);
+drivers/cpu_hotplug/dyn_hotplug.c:	schedule_delayed_work_on(0, &hp_data->work, INIT_DELAY);
+drivers/cpu_hotplug/intelli_hotplug.c:		mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
+drivers/cpu_hotplug/intelli_hotplug.c:	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work, def_sampling_ms);
+drivers/cpu_hotplug/intelli_hotplug.c:		mod_delayed_work_on(0, updown_wq, &up_down_work, 0);
+drivers/cpu_hotplug/intelli_hotplug.c:	mod_delayed_work_on(0, updown_wq, &up_down_work, 0);
+drivers/cpu_hotplug/intelli_hotplug.c:	mod_delayed_work_on(0, updown_wq, &up_down_work, 0);
+drivers/cpu_hotplug/intelli_hotplug.c:		mod_delayed_work_on(cpu, intelliplug_wq, &dl->lock_rem,
+drivers/cpu_hotplug/intelli_hotplug.c:		schedule_delayed_work(&delayed_recycle, 1000);
+drivers/cpu_hotplug/mako_hotplug.c:	mod_delayed_work(wq, &decide_hotplug,
+drivers/cpu_hotplug/mako_hotplug.c:	mod_delayed_work(wq, &decide_hotplug, msecs_to_jiffies(200));
+drivers/cpu_hotplug/mako_hotplug.c:	queue_delayed_work(wq, &decide_hotplug, msecs_to_jiffies(3000));
+drivers/cpu_hotplug/msm_hotplug.c:			mod_delayed_work(hotplug_wq, &dl->lock_rem, 0);
+drivers/cpu_hotplug/msm_hotplug.c:	mod_delayed_work_on(0, hotplug_wq, &dl->lock_rem,
+drivers/cpu_hotplug/msm_hotplug.c:	mod_delayed_work_on(0, hotplug_wq, &hotplug_work,
+drivers/cpu_hotplug/mx_hotplug.c:		mod_delayed_work_on(0, mx_hp_engine, &motor, 0);
+drivers/cpuquiet/governors/balanced.c:		queue_delayed_work(
+drivers/cpuquiet/governors/balanced.c:				queue_delayed_work(
+drivers/cpuquiet/governors/balanced.c:				queue_delayed_work(
+drivers/cpuquiet/governors/balanced.c:				queue_delayed_work(
+drivers/cpuquiet/governors/balanced.c:			queue_delayed_work(balanced_wq,
+drivers/cpuquiet/governors/balanced.c:				queue_delayed_work(balanced_wq,
+drivers/cpuquiet/governors/rqbalance.c:		queue_delayed_work(
+drivers/cpuquiet/governors/rqbalance.c:				queue_delayed_work(
+drivers/cpuquiet/governors/rqbalance.c:				queue_delayed_work(
+drivers/cpuquiet/governors/rqbalance.c:				queue_delayed_work(
+drivers/cpuquiet/governors/rqbalance.c:			queue_delayed_work(rqbalance_wq,
+drivers/cpuquiet/governors/rqbalance.c:				queue_delayed_work(rqbalance_wq,
+drivers/cpuquiet/governors/rqbalance.c:		queue_delayed_work(rq_data->nr_run_wq, &rq_data->work,
+drivers/cpuquiet/governors/rqbalance.c:	queue_delayed_work(rq_data->nr_run_wq, &rq_data->work,
+drivers/crypto/hifn_795x.c:	schedule_delayed_work(&dev->work, HZ);
+drivers/crypto/hifn_795x.c:	schedule_delayed_work(&dev->work, HZ);
+drivers/devfreq/devfreq.c:			queue_delayed_work(devfreq_wq, &devfreq->work,
+drivers/devfreq/devfreq.c:		queue_delayed_work(devfreq_wq, &devfreq->work,
+drivers/devfreq/devfreq.c:		queue_delayed_work(devfreq_wq, &devfreq->work,
+drivers/devfreq/devfreq.c:		queue_delayed_work(devfreq_wq, &devfreq->work,
+drivers/devfreq/devfreq.c:	queue_delayed_work(devfreq_wq, &devfreq->work,
+drivers/edac/edac_device.c:		queue_delayed_work(edac_workqueue, &edac_dev->work,
+drivers/edac/edac_device.c:		queue_delayed_work(edac_workqueue, &edac_dev->work,
+drivers/edac/edac_device.c:		queue_delayed_work(edac_workqueue, &edac_dev->work,
+drivers/edac/edac_device.c:		queue_delayed_work(edac_workqueue, &edac_dev->work,
+drivers/edac/edac_mc.c:	queue_delayed_work(edac_workqueue, &mci->work,
+drivers/edac/edac_mc.c:	queue_delayed_work(edac_workqueue, &mci->work, msecs_to_jiffies(msec));
+drivers/edac/edac_pci.c:	queue_delayed_work(edac_workqueue, &pci->work,
+drivers/edac/edac_pci.c:		queue_delayed_work(edac_workqueue, &pci->work, delay);
+drivers/edac/i5100_edac.c:		schedule_delayed_work(&(priv->i5100_scrubbing),
+drivers/edac/i5100_edac.c:		schedule_delayed_work(&(priv->i5100_scrubbing),
+drivers/edac/i5100_edac.c:		schedule_delayed_work(&(priv->i5100_scrubbing),
+drivers/felica/felica.c:	schedule_delayed_work(&g_intu_d->work, msecs_to_jiffies(10));
+drivers/felica/felica.c:	schedule_delayed_work(&g_rfs_d->work, msecs_to_jiffies(10));
+drivers/felica/felica.c:	schedule_delayed_work(&intu_d->work, 0);
+drivers/felica/felica.c:	schedule_delayed_work(&pgint_irq->work,
+drivers/felica/felica.c:	schedule_delayed_work(&pgint_irq->work, msecs_to_jiffies(10));
+drivers/felica/felica.c:	schedule_delayed_work(&rfs_d->work, msecs_to_jiffies(RFS_POLL_DELAY));
+drivers/firewire/core-card.c:	if (!queue_delayed_work(fw_workqueue, &card->br_work,
+drivers/firewire/core-card.c:		if (!queue_delayed_work(fw_workqueue, &card->br_work, 2 * HZ))
+drivers/firewire/core-card.c:	if (!schedule_delayed_work(&card->bm_work, delay))
+drivers/firewire/core-cdev.c:	if (!queue_delayed_work(fw_workqueue, &r->work, delay))
+drivers/firewire/core-device.c:	queue_delayed_work(fw_workqueue, &device->work, delay);
+drivers/firewire/sbp2.c:	queue_delayed_work(fw_workqueue, &lu->work, delay);
+drivers/gpu/drm/drm_crtc_helper.c:		schedule_delayed_work(delayed_work, DRM_OUTPUT_POLL_PERIOD);
+drivers/gpu/drm/drm_crtc_helper.c:		schedule_delayed_work(&dev->mode_config.output_poll_work, 0);
+drivers/gpu/drm/drm_crtc_helper.c:		schedule_delayed_work(&dev->mode_config.output_poll_work, DRM_OUTPUT_POLL_PERIOD);
+drivers/gpu/drm/i915/i915_gem.c:			queue_delayed_work(dev_priv->wq,
+drivers/gpu/drm/i915/i915_gem.c:		queue_delayed_work(dev_priv->wq, &dev_priv->mm.retire_work, 0);
+drivers/gpu/drm/i915/i915_gem.c:		queue_delayed_work(dev_priv->wq, &dev_priv->mm.retire_work, HZ);
+drivers/gpu/drm/i915/i915_gem.c:		queue_delayed_work(dev_priv->wq, &dev_priv->mm.retire_work, HZ);
+drivers/gpu/drm/i915/intel_display.c:	schedule_delayed_work(&work->work, msecs_to_jiffies(50));
+drivers/gpu/drm/i915/intel_dp.c:		schedule_delayed_work(&intel_dp->panel_vdd_work,
+drivers/gpu/drm/radeon/radeon_pm.c:		schedule_delayed_work(&rdev->pm.dynpm_idle_work,
+drivers/gpu/drm/radeon/radeon_pm.c:		schedule_delayed_work(&rdev->pm.dynpm_idle_work,
+drivers/gpu/drm/radeon/radeon_pm.c:					schedule_delayed_work(&rdev->pm.dynpm_idle_work,
+drivers/gpu/drm/radeon/radeon_pm.c:					schedule_delayed_work(&rdev->pm.dynpm_idle_work,
+drivers/gpu/drm/ttm/ttm_bo.c:	schedule_delayed_work(&bdev->wq,
+drivers/gpu/drm/ttm/ttm_bo.c:		schedule_delayed_work(&bdev->wq,
+drivers/gpu/drm/ttm/ttm_bo.c:		schedule_delayed_work(&bdev->wq,
+drivers/gpu/drm/udl/udl_main.c:		schedule_delayed_work(&unode->release_urb_work, 0);
+drivers/gpu/drm/vmwgfx/vmwgfx_fb.c:	schedule_delayed_work(&info->deferred_work, 0);
+drivers/gpu/drm/vmwgfx/vmwgfx_fb.c:			schedule_delayed_work(&info->deferred_work, VMW_DIRTY_DELAY);
+drivers/hid/hid-picolcd.c:		schedule_delayed_work(&data->fb_info->deferred_work, 0);
+drivers/hid/hid-picolcd.c:		schedule_delayed_work(&data->fb_info->deferred_work, 0);
+drivers/hid/hid-picolcd.c:		schedule_delayed_work(&info->deferred_work, 0);
+drivers/hid/hid-picolcd.c:	schedule_delayed_work(&info->deferred_work, 0);
+drivers/hid/hid-picolcd.c:	schedule_delayed_work(&info->deferred_work, 0);
+drivers/hid/hid-picolcd.c:	schedule_delayed_work(&info->deferred_work, 0);
+drivers/hid/hid-picolcd.c:	schedule_delayed_work(&info->deferred_work, 0);
+drivers/hv/hv_kvp.c:			schedule_delayed_work(&kvp_work, 5*HZ);
+drivers/infiniband/core/addr.c:	queue_delayed_work(addr_wq, &work, delay);
+drivers/infiniband/core/cm.c:	queue_delayed_work(cm.wq, &cm_id_priv->timewait_info->work.work,
+drivers/infiniband/core/cm.c:	queue_delayed_work(cm.wq, &work->work, 0);
+drivers/infiniband/core/cm.c:	queue_delayed_work(cm.wq, &work->work, 0);
+drivers/infiniband/core/mad.c:		mod_delayed_work(mad_agent_priv->qp_info->port_priv->wq,
+drivers/infiniband/core/mad.c:			mod_delayed_work(mad_agent_priv->qp_info->port_priv->wq,
+drivers/infiniband/core/mad.c:			queue_delayed_work(mad_agent_priv->qp_info->
+drivers/infiniband/core/mad_rmpp.c:		queue_delayed_work(agent->qp_info->port_priv->wq,
+drivers/infiniband/core/mad_rmpp.c:	queue_delayed_work(rmpp_recv->agent->qp_info->port_priv->wq,
+drivers/infiniband/hw/cxgb3/iwch.c:		schedule_delayed_work(&rnicp->db_drop_task,
+drivers/infiniband/hw/nes/nes_hw.c:			mod_delayed_work(system_wq, &nesdev->work,
+drivers/infiniband/hw/nes/nes_hw.c:		schedule_delayed_work(&nesdev->work, NES_LINK_RECHECK_DELAY);
+drivers/infiniband/hw/nes/nes_nic.c:		mod_delayed_work(system_wq, &nesdev->work,
+drivers/infiniband/hw/qib/qib_iba7220.c:	queue_delayed_work(ib_wq, &ppd->cpspec->autoneg_work,
+drivers/infiniband/hw/qib/qib_iba7322.c:	queue_delayed_work(ib_wq, &ppd->cpspec->autoneg_work,
+drivers/infiniband/hw/qib/qib_iba7322.c:	queue_delayed_work(ib_wq, &ppd->cpspec->ipg_work,
+drivers/infiniband/ulp/ipoib/ipoib_cm.c:	queue_delayed_work(ipoib_workqueue,
+drivers/infiniband/ulp/ipoib/ipoib_cm.c:		queue_delayed_work(ipoib_workqueue,
+drivers/infiniband/ulp/ipoib/ipoib_ib.c:		queue_delayed_work(ipoib_workqueue,
+drivers/infiniband/ulp/ipoib/ipoib_ib.c:			queue_delayed_work(ipoib_workqueue,
+drivers/infiniband/ulp/ipoib/ipoib_ib.c:		queue_delayed_work(ipoib_workqueue, &priv->ah_reap_task,
+drivers/infiniband/ulp/ipoib/ipoib_ib.c:	queue_delayed_work(ipoib_workqueue, &priv->ah_reap_task,
+drivers/infiniband/ulp/ipoib/ipoib_multicast.c:			queue_delayed_work(ipoib_workqueue,
+drivers/infiniband/ulp/ipoib/ipoib_multicast.c:			queue_delayed_work(ipoib_workqueue,
+drivers/infiniband/ulp/ipoib/ipoib_multicast.c:				queue_delayed_work(ipoib_workqueue,
+drivers/infiniband/ulp/ipoib/ipoib_multicast.c:		queue_delayed_work(ipoib_workqueue, &priv->mcast_task,
+drivers/infiniband/ulp/ipoib/ipoib_multicast.c:		queue_delayed_work(ipoib_workqueue, &priv->mcast_task, 0);
+drivers/input/input_booster.c:		schedule_delayed_work(&booster->work_dvfs_chg,
+drivers/input/input_booster.c:			schedule_delayed_work(&booster->work_dvfs_chg,
+drivers/input/input_booster.c:				schedule_delayed_work(&booster->work_dvfs_chg,
+drivers/input/input_booster.c:				schedule_delayed_work(&booster->work_dvfs_chg,
+drivers/input/input_booster.c:				schedule_delayed_work(&booster->work_dvfs_chg,
+drivers/input/input_booster.c:				schedule_delayed_work(&booster->work_dvfs_chg,
+drivers/input/input_booster.c:				schedule_delayed_work(&booster->work_dvfs_chg,
+drivers/input/input_booster.c:				schedule_delayed_work(&booster->work_dvfs_chg,
+drivers/input/input_booster.c:		schedule_delayed_work(&booster->work_dvfs_off,
+drivers/input/input_booster.c:			schedule_delayed_work(&booster->work_dvfs_off,
+drivers/input/input_booster.c:				schedule_delayed_work(&booster->work_dvfs_off,
+drivers/input/input_booster.c:				schedule_delayed_work(&booster->work_dvfs_off,
+drivers/input/input-polldev.c:	queue_delayed_work(system_freezable_wq, &dev->work, delay);
+drivers/input/joystick/tdisc_vtd518_shinetsu.c:	schedule_delayed_work(&dd->tdisc_work, 0);
+drivers/input/joystick/tdisc_vtd518_shinetsu.c:	schedule_delayed_work(&dd->tdisc_work, TDISC_READ_DELAY);
+drivers/input/keyboard/adp5588-keys.c:	schedule_delayed_work(&kpad->work, kpad->delay);
+drivers/input/keyboard/atkbd.c:		schedule_delayed_work(&atkbd->event_work,
+drivers/input/keyboard/atkbd.c:	schedule_delayed_work(&atkbd->event_work, delay);
+drivers/input/keyboard/gpio_keys.c:		mod_delayed_work(flipqueue, &ddata->flip_cover_dwork, msecs_to_jiffies(4));
+drivers/input/keyboard/gpio_keys.c:		mod_delayed_work(flipqueue, &ddata->flip_cover_dwork, msecs_to_jiffies(4));
+drivers/input/keyboard/gpio_keys.c:	mod_delayed_work(system_wq,
+drivers/input/keyboard/matrix_keypad.c:	schedule_delayed_work(&keypad->work,
+drivers/input/keyboard/matrix_keypad.c:	schedule_delayed_work(&keypad->work, 0);
+drivers/input/keyboard/qt2160.c:	mod_delayed_work(system_wq, &qt2160->dwork, 0);
+drivers/input/keyboard/qt2160.c:	schedule_delayed_work(&qt2160->dwork, QT2160_CYCLE_INTERVAL);
+drivers/input/keyboard/tca6416-keypad.c:		schedule_delayed_work(&chip->dwork, msecs_to_jiffies(100));
+drivers/input/keyboard/tca6416-keypad.c:	schedule_delayed_work(&chip->dwork, msecs_to_jiffies(100));
+drivers/input/keyreset.c:			schedule_delayed_work(&state->restart_work,
+drivers/input/misc/bma150.c:	schedule_delayed_work(&bma150->work, delay);
+drivers/input/misc/bma150.c:	schedule_delayed_work(&data->work,
+drivers/input/misc/bma150.c:	schedule_delayed_work(&data->work,
+drivers/input/misc/bmp18x-core.c:	schedule_delayed_work(&client_data->work, delay-(jiffies-j1));
+drivers/input/misc/bmp18x-core.c:		schedule_delayed_work(&data->work,
+drivers/input/misc/bmp18x-core.c:			schedule_delayed_work(&data->work,
+drivers/input/misc/bmp18x-core.c:			schedule_delayed_work(&data->work,
+drivers/input/misc/da9052_onkey.c:		schedule_delayed_work(&onkey->work, msecs_to_jiffies(50));
+drivers/input/misc/lis3dh_acc.c:		schedule_delayed_work(&acc->input_work,
+drivers/input/misc/lis3dh_acc.c:	schedule_delayed_work(&acc->input_work, msecs_to_jiffies(
+drivers/input/misc/mpu3050.c:		schedule_delayed_work(&sensor->input_work,
+drivers/input/misc/mpu3050.c:		schedule_delayed_work(&sensor->input_work,
+drivers/input/misc/mpu6050/mpu6050_input.c:		schedule_delayed_work(&data->accel_work,
+drivers/input/misc/mpu6050/mpu6050_input.c:		schedule_delayed_work(&data->accel_work,
+drivers/input/misc/mpu6050/mpu6050_input.c:			schedule_delayed_work(&data->accel_work, 0);
+drivers/input/misc/mpu6050/mpu6050_input.c:		schedule_delayed_work(&data->accel_work, 0);
+drivers/input/misc/mpu6050/mpu6050_input.c:		schedule_delayed_work(&data->gyro_work,
+drivers/input/misc/mpu6050/mpu6050_input.c:		schedule_delayed_work(&data->gyro_work,
+drivers/input/misc/mpu6050/mpu6050_input.c:			schedule_delayed_work(&data->gyro_work, 0);
+drivers/input/misc/mpu6050/mpu6050_input.c:		schedule_delayed_work(&data->gyro_work, 0);
+drivers/input/misc/mpu6050/mpu6050_input.c:		schedule_delayed_work(&gb_mpu_data->accel_off_work,
+drivers/input/misc/mpu6500/mpu6500_input.c:		schedule_delayed_work(&data->accel_work,
+drivers/input/misc/mpu6500/mpu6500_input.c:			schedule_delayed_work(&data->accel_work, 0);
+drivers/input/misc/mpu6500/mpu6500_input.c:		schedule_delayed_work(&data->accel_work, 0);
+drivers/input/misc/mpu6500/mpu6500_input.c:		schedule_delayed_work(&data->accel_work, msecs_to_jiffies(5));
+drivers/input/misc/mpu6500/mpu6500_input.c:		schedule_delayed_work(&data->gyro_work,
+drivers/input/misc/mpu6500/mpu6500_input.c:		schedule_delayed_work(&data->gyro_work,
+drivers/input/misc/mpu6500/mpu6500_input.c:			schedule_delayed_work(&data->gyro_work, 0);
+drivers/input/misc/mpu6500/mpu6500_input.c:		schedule_delayed_work(&data->gyro_work, 0);
+drivers/input/misc/pmic8058-othc.c:	schedule_delayed_work(&dd->detect_work,
+drivers/input/misc/pmic8058-othc.c:		schedule_delayed_work(&dd->detect_work,
+drivers/input/misc/pmic8058-othc.c:	schedule_delayed_work(&dd->hs_work, 0);
+drivers/input/misc/wm831x-on.c:	schedule_delayed_work(&wm831x_on->work, 0);
+drivers/input/misc/wm831x-on.c:		schedule_delayed_work(&wm831x_on->work, 100);
+drivers/input/mouse/psmouse-base.c:	queue_delayed_work(kpsmoused_wq, work, delay);
+drivers/input/mouse/synaptics_i2c.c:	mod_delayed_work(system_wq, &touch->dwork, delay);
+drivers/input/serio/hp_sdc.c:		schedule_delayed_work(&moduleloader_work,
+drivers/input/touchscreen/atmel_maxtouch.c:		schedule_delayed_work(&mxt->dwork, 0);
+drivers/input/touchscreen/atmel_maxtouch.c:		schedule_delayed_work(&mxt->dwork, 0);
+drivers/input/touchscreen/atmel_maxtouch.c:		schedule_delayed_work(&mxt->dwork, 0);
+drivers/input/touchscreen/atmel_maxtouch.c:	schedule_delayed_work(&mxt->dwork, 0);
+drivers/input/touchscreen/cy8c_ts.c:			queue_delayed_work(ts->wq, &ts->work, 0);
+drivers/input/touchscreen/cy8c_ts.c:	queue_delayed_work(ts->wq, &ts->work, 0);
+drivers/input/touchscreen/cyttsp4_mt_common.c:			schedule_delayed_work(&md->work_dvfs_chg,
+drivers/input/touchscreen/cyttsp4_mt_common.c:			schedule_delayed_work(&md->work_dvfs_off,msecs_to_jiffies(TOUCH_BOOSTER_OFF_TIME));
+drivers/input/touchscreen/da9034-ts.c:			schedule_delayed_work(&touch->tsi_work,
+drivers/input/touchscreen/hp680_ts_input.c:	schedule_delayed_work(&work, HZ / 20);
+drivers/input/touchscreen/ili210x.c:		schedule_delayed_work(&priv->dwork,
+drivers/input/touchscreen/ili210x.c:	schedule_delayed_work(&priv->dwork, 0);
+drivers/input/touchscreen/lge_touch_core.c:		queue_delayed_work(touch_wq, &ts->work_init,
+drivers/input/touchscreen/lge_touch_core.c:		queue_delayed_work(touch_wq, &ts->work_init, 0);
+drivers/input/touchscreen/lge_touch_core.c:	queue_delayed_work(touch_wq, &ts->work_init, msecs_to_jiffies(10));
+drivers/input/touchscreen/mc13783_ts.c:	queue_delayed_work(priv->workq, &priv->work, 0);
+drivers/input/touchscreen/mc13783_ts.c:			queue_delayed_work(priv->workq, &priv->work, HZ / 50);
+drivers/input/touchscreen/mms_ts_144.c:			schedule_delayed_work(&info->work_dvfs_chg,
+drivers/input/touchscreen/mms_ts_144.c:			schedule_delayed_work(&info->work_dvfs_off,
+drivers/input/touchscreen/mxt224e.c:			schedule_delayed_work(&data->work_dvfs_chg,
+drivers/input/touchscreen/mxt224e.c:			schedule_delayed_work(&data->work_dvfs_off,
+drivers/input/touchscreen/mxts.c:		schedule_delayed_work(&data->noti_dwork, HZ / 5);
+drivers/input/touchscreen/mxts.c:	schedule_delayed_work(&data->noti_dwork, HZ / 5);
+drivers/input/touchscreen/mxts.c:			schedule_delayed_work(&data->work_dvfs_off,
+drivers/input/touchscreen/mxts_msm8930.c:		schedule_delayed_work(&data->noti_dwork, HZ / 5);
+drivers/input/touchscreen/mxts_msm8930.c:	schedule_delayed_work(&data->noti_dwork, HZ / 5);
+drivers/input/touchscreen/mxts_sec_msm8930.c:			schedule_delayed_work(&data->booster.work_dvfs_chg,
+drivers/input/touchscreen/mxts_sec_msm8930.c:			schedule_delayed_work(&data->booster.work_dvfs_off,
+drivers/input/touchscreen/pcap_ts.c:			schedule_delayed_work(&pcap_ts->work,
+drivers/input/touchscreen/pcap_ts.c:			schedule_delayed_work(&pcap_ts->work, 0);
+drivers/input/touchscreen/pcap_ts.c:		schedule_delayed_work(&pcap_ts->work, 0);
+drivers/input/touchscreen/pcap_ts.c:		schedule_delayed_work(&pcap_ts->work, 0);
+drivers/input/touchscreen/pcap_ts.c:	schedule_delayed_work(&pcap_ts->work, 0);
+drivers/input/touchscreen/rmi_f54.c:		queue_delayed_work(f54->status_workqueue,
+drivers/input/touchscreen/rmi_f54.c:			queue_delayed_work(f54->status_workqueue,
+drivers/input/touchscreen/rmi_f54_msm8930.c:		queue_delayed_work(f54->status_workqueue,
+drivers/input/touchscreen/rmi_f54_msm8930.c:			queue_delayed_work(f54->status_workqueue,
+drivers/input/touchscreen/stmpe-ts.c:	schedule_delayed_work(&ts->work, HZ / 50);
+drivers/input/touchscreen/sweep2sleep.c:	schedule_delayed_work(&sweep2sleep_releasepwr_work, msecs_to_jiffies(S2S_PWRKEY_DUR));
+drivers/input/touchscreen/synaptics_fw_update.c:	queue_delayed_work(fwu->fwu_workqueue,
+drivers/input/touchscreen/synaptics_i2c_rmi4.c:	queue_delayed_work(rmi4_data->det_workqueue,
+drivers/input/touchscreen/synaptics_i2c_rmi.c:	schedule_delayed_work(&rmi4_data->work_init_power_on,
+drivers/input/touchscreen/synaptics_i2c_rmi.c:			schedule_delayed_work(&rmi4_data->work_init_power_on,
+drivers/input/touchscreen/synaptics_i2c_rmi.c:	schedule_delayed_work(&rmi4_data->work_rezero,
+drivers/input/touchscreen/synaptics_i2c_rmi_msm8930.c:			schedule_delayed_work(&rmi4_data->work_dvfs_chg,
+drivers/input/touchscreen/synaptics_i2c_rmi_msm8930.c:			schedule_delayed_work(&rmi4_data->work_dvfs_off,
+drivers/input/touchscreen/synaptics_i2c_rmi_msm8930.c:	schedule_delayed_work(&rmi4_data->work_init_power_on,
+drivers/input/touchscreen/synaptics_i2c_rmi_msm8930.c:	schedule_delayed_work(&rmi4_data->work_rezero,
+drivers/input/touchscreen/tps6507x-ts.c:		schd = schedule_delayed_work(&tsc->work,
+drivers/input/touchscreen/tps6507x-ts.c:	schd = schedule_delayed_work(&tsc->work,
+drivers/input/touchscreen/tsc2005.c:	schedule_delayed_work(&ts->esd_work,
+drivers/input/touchscreen/tsc2005.c:		schedule_delayed_work(&ts->esd_work,
+drivers/input/touchscreen/tsc2007.c:		schedule_delayed_work(&ts->work,
+drivers/input/touchscreen/tsc2007.c:		schedule_delayed_work(&ts->work,
+drivers/input/touchscreen/wm97xx-core.c:		queue_delayed_work(wm->ts_workq, &wm->ts_reader,
+drivers/input/touchscreen/wm97xx-core.c:		queue_delayed_work(wm->ts_workq, &wm->ts_reader,
+drivers/input/touchscreen/wm97xx-core.c:		queue_delayed_work(wm->ts_workq, &wm->ts_reader,
+drivers/input/touchscreen/wm97xx-core.c:			queue_delayed_work(wm->ts_workq, &wm->ts_reader, 1);
+drivers/macintosh/rack-meter.c:	schedule_delayed_work_on(cpu, &rcpu->sniffer,
+drivers/macintosh/rack-meter.c:		schedule_delayed_work_on(cpu, &rm->cpu[cpu].sniffer,
+drivers/md/bcache/btree.c:		schedule_delayed_work(&b->work, 30 * HZ);
+drivers/md/bcache/btree.c:		schedule_delayed_work(&b->work, 30 * HZ);
+drivers/md/bcache/journal.c:		schedule_delayed_work(&c->journal.work,
+drivers/md/bcache/sysfs.c:		schedule_delayed_work(&dc->writeback_rate_update,
+drivers/md/bcache/writeback.c:	schedule_delayed_work(&dc->writeback_rate_update,
+drivers/md/bcache/writeback.c:	schedule_delayed_work(&dc->writeback_rate_update,
+drivers/md/dm-bufio.c:	queue_delayed_work(dm_bufio_wq, &dm_bufio_work,
+drivers/md/dm-bufio.c:	queue_delayed_work(dm_bufio_wq, &dm_bufio_work,
+drivers/md/dm-cache-target.c:	queue_delayed_work(cache->wq, &cache->waker, COMMIT_PERIOD);
+drivers/md/dm-log-userspace-base.c:		queue_delayed_work(lc->dmlog_wq, &lc->flush_log_work, 3 * HZ);
+drivers/md/dm-mpath.c:		if (queue_delayed_work(kmpath_handlerd, &pgpath->activate_path,
+drivers/md/dm-thin.c:	queue_delayed_work(pool->wq, &pool->waker, COMMIT_PERIOD);
+drivers/media/dvb/b2c2/flexcop-pci.c:	schedule_delayed_work(&fc_pci->irq_check_work,
+drivers/media/dvb/b2c2/flexcop-pci.c:		schedule_delayed_work(&fc_pci->irq_check_work,
+drivers/media/dvb/dvb-usb/dvb-usb-remote.c:	schedule_delayed_work(&d->rc_query_work,
+drivers/media/dvb/dvb-usb/dvb-usb-remote.c:	schedule_delayed_work(&d->rc_query_work,
+drivers/media/dvb/dvb-usb/dvb-usb-remote.c:	schedule_delayed_work(&d->rc_query_work,
+drivers/media/dvb/dvb-usb/dvb-usb-remote.c:	schedule_delayed_work(&d->rc_query_work,msecs_to_jiffies(d->props.rc.legacy.rc_interval));
+drivers/media/dvb/dvb-usb/technisat-usb2.c:	schedule_delayed_work(&state->green_led_work,
+drivers/media/dvb/dvb-usb/technisat-usb2.c:			schedule_delayed_work(&state->green_led_work,
+drivers/media/dvb/frontends/af9013.c:	schedule_delayed_work(&state->statistics_work,
+drivers/media/dvb/frontends/af9013.c:	schedule_delayed_work(&state->statistics_work, msecs_to_jiffies(400));
+drivers/media/isdbtmm/tuner_drv.c:	schedule_delayed_work(&tmm_chg_ctrl_polling_work, TMM_CHG_CTRL_POLLING_TIME * HZ);
+drivers/media/isdbtmm/tuner_drv.c:	schedule_delayed_work(&tmm_chg_ctrl_polling_work, TMM_CHG_CTRL_START_DELAY * HZ);
+drivers/media/isdbtmm/tuner_drv.c:	tmm_chg_log(KERN_ALERT"%s: schedule_delayed_work(tmm_chg_ctrl_polling_work, TMM_CHG_CTRL_POLLING_TIME(%d) * HZ(0x%x))!\n", __func__, TMM_CHG_CTRL_POLLING_TIME, HZ);
+drivers/media/isdbtmm/tuner_drv.c:	tmm_chg_log(KERN_ALERT"%s: schedule_delayed_work(tmm_chg_ctrl_polling_work, TMM_CHG_CTRL_START_DELAY(%d) * HZ(0x%x))!\n", __func__, TMM_CHG_CTRL_START_DELAY, HZ);
+drivers/media/radio/radio-tavarua.c:	queue_delayed_work(radio->wqueue, &radio->work,
+drivers/media/radio/radio-tavarua.c:	queue_delayed_work(radio->wqueue, &radio->work,
+drivers/media/video/em28xx/em28xx-input.c:	schedule_delayed_work(&dev->sbutton_query_work,
+drivers/media/video/em28xx/em28xx-input.c:	schedule_delayed_work(&dev->sbutton_query_work,
+drivers/media/video/em28xx/em28xx-input.c:	schedule_delayed_work(&ir->work, 0);
+drivers/media/video/em28xx/em28xx-input.c:	schedule_delayed_work(&ir->work, msecs_to_jiffies(ir->polling));
+drivers/media/video/ir-kbd-i2c.c:	schedule_delayed_work(&ir->work, 0);
+drivers/media/video/ir-kbd-i2c.c:	schedule_delayed_work(&ir->work, msecs_to_jiffies(ir->polling_interval));
+drivers/media/video/saa6588.c:	schedule_delayed_work(&s->work, 0);
+drivers/media/video/saa6588.c:	schedule_delayed_work(&s->work, msecs_to_jiffies(20));
+drivers/media/video/tm6000/tm6000-input.c:	schedule_delayed_work(&ir->work, 0);
+drivers/media/video/tm6000/tm6000-input.c:	schedule_delayed_work(&ir->work, msecs_to_jiffies(10));
+drivers/media/video/tm6000/tm6000-input.c:	schedule_delayed_work(&ir->work, msecs_to_jiffies(ir->polling));
+drivers/media/video/tm6000/tm6000-input.c:		schedule_delayed_work(&ir->work, msecs_to_jiffies(URB_INT_LED_DELAY));
+drivers/media/video/tm6000/tm6000-input.c:			schedule_delayed_work(&ir->work, msecs_to_jiffies(URB_SUBMIT_DELAY));
+drivers/media/video/tm6000/tm6000-input.c:		schedule_delayed_work(&ir->work, msecs_to_jiffies(URB_SUBMIT_DELAY));
+drivers/media/video/tm6000/tm6000-input.c:	schedule_delayed_work(&ir->work, msecs_to_jiffies(URB_SUBMIT_DELAY));
+drivers/message/fusion/mptbase.c:		queue_delayed_work(ioc->reset_work_q, &ioc->fault_reset_work,
+drivers/message/fusion/mptbase.c:		queue_delayed_work(ioc->reset_work_q, &ioc->fault_reset_work,
+drivers/message/fusion/mptlan.c:			schedule_delayed_work(&priv->post_buckets_task, 0);
+drivers/message/fusion/mptlan.c:			schedule_delayed_work(&priv->post_buckets_task, 1);
+drivers/message/i2o/i2o_block.c:			if (!queue_delayed_work(i2o_block_driver.event_queue,
+drivers/mfd/tps65010.c:		schedule_delayed_work(&the_tps->work, 0);
+drivers/mfd/tps65010.c:	schedule_delayed_work(&tps->work, 0);
+drivers/mfd/tps65010.c:		schedule_delayed_work(&tps->work, POWER_POLL_DELAY);
+drivers/mfd/tps65010.c:	schedule_delayed_work(&tps->work, POWER_POLL_DELAY);
+drivers/misc/arm-charlcd.c:	schedule_delayed_work(&lcd->init_work, 0);
+drivers/misc/bh1770glc.c:		schedule_delayed_work(&chip->prox_work,
+drivers/misc/fsa9485.c:	schedule_delayed_work(&usbsw->audio_work, msecs_to_jiffies(20000));
+drivers/misc/fsa9485.c:	schedule_delayed_work(&usbsw->init_work, msecs_to_jiffies(2700));
+drivers/misc/fsa9485_lt02.c:	schedule_delayed_work(&usbsw->init_work, msecs_to_jiffies(2700));
+drivers/misc/inv_mpu/mpuirq.c:		schedule_delayed_work(&mpuirq_dev_data.reactive_work,
+drivers/misc/max77693-muic.c:	schedule_delayed_work(&info->dock_usb_work, msecs_to_jiffies(22000));
+drivers/misc/max77693-muic.c:	schedule_delayed_work(&info->dock_work, msecs_to_jiffies(50));
+drivers/misc/max77693-muic.c:	schedule_delayed_work(&info->init_work, msecs_to_jiffies(3000));
+drivers/misc/max77693-muic.c:	schedule_delayed_work(&info->mhl_work, msecs_to_jiffies(25000));
+drivers/misc/max77693-muic.c:	schedule_delayed_work(&info->usb_work, msecs_to_jiffies(10000));
+drivers/misc/max77693-muic_melius.c:	schedule_delayed_work(&info->dock_usb_work, msecs_to_jiffies(22000));
+drivers/misc/max77693-muic_melius.c:	schedule_delayed_work(&info->dock_usb_work, msecs_to_jiffies(27000));
+drivers/misc/max77693-muic_melius.c:	schedule_delayed_work(&info->dock_work, msecs_to_jiffies(50));
+drivers/misc/max77693-muic_melius.c:	schedule_delayed_work(&info->init_work, msecs_to_jiffies(3000));
+drivers/misc/max77693-muic_melius.c:	schedule_delayed_work(&info->mhl_work, msecs_to_jiffies(25000));
+drivers/misc/max77693-muic_melius.c:	schedule_delayed_work(&info->usb_work, msecs_to_jiffies(10000));
+drivers/misc/max77693-muic_serrano.c:	schedule_delayed_work(&info->dock_usb_work, msecs_to_jiffies(22000));
+drivers/misc/max77693-muic_serrano.c:	schedule_delayed_work(&info->dock_work, msecs_to_jiffies(50));
+drivers/misc/max77693-muic_serrano.c:	schedule_delayed_work(&info->init_work, msecs_to_jiffies(3000));
+drivers/misc/max77693-muic_serrano.c:	schedule_delayed_work(&info->mhl_work, msecs_to_jiffies(25000));
+drivers/misc/max77693-muic_serrano.c:	schedule_delayed_work(&info->usb_work, msecs_to_jiffies(10000));
+drivers/misc/slimport_anx7808/slimport.c:		queue_delayed_work(anx7808->workqueue, &anx7808->work, 0);
+drivers/misc/slimport_anx7808/slimport.c:	queue_delayed_work(td->workqueue, &td->work,
+drivers/misc/tsu6721.c:	schedule_delayed_work(&usbsw->init_work, msecs_to_jiffies(2700));
+drivers/misc/vmw_balloon.c:	queue_delayed_work(system_freezable_wq,
+drivers/misc/vmw_balloon.c:	queue_delayed_work(system_freezable_wq, &balloon.dwork, 0);
+drivers/mmc/core/core.c:	mmc_schedule_delayed_work(&card->bkops_info.dw,
+drivers/mmc/core/core.c:			mmc_schedule_delayed_work(&host->clk_scaling.work, 1);
+drivers/mmc/core/core.c:		mmc_schedule_delayed_work(&host->clk_scaling.work, 1);
+drivers/mmc/core/core.c:	mmc_schedule_delayed_work(&host->detect, delay);
+drivers/mmc/core/core.c:		mmc_schedule_delayed_work(&host->detect, msecs_to_jiffies(100));
+drivers/mmc/core/core.c:	return queue_delayed_work(mx_mmc, work, delay);
+drivers/mmc/core/core.c:static int mmc_schedule_delayed_work(struct delayed_work *work,
+drivers/mmc/core/host.c:		queue_delayed_work(mx_clk_gate_wq, &host->clk_gate_work,
+drivers/mmc/host/sh_mmcif.c:	schedule_delayed_work(&host->timeout_work, host->timeout);
+drivers/mmc/host/sh_mmcif.c:	schedule_delayed_work(&host->timeout_work, host->timeout);
+drivers/mmc/host/sh_mmcif.c:	schedule_delayed_work(&host->timeout_work, host->timeout);
+drivers/mmc/host/sh_mmcif.c:	schedule_delayed_work(&host->timeout_work, host->timeout);
+drivers/mmc/host/sh_mmcif.c:	schedule_delayed_work(&host->timeout_work, host->timeout);
+drivers/mmc/host/sh_mmcif.c:	schedule_delayed_work(&host->timeout_work, host->timeout);
+drivers/mmc/host/sh_mmcif.c:	schedule_delayed_work(&host->timeout_work, host->timeout);
+drivers/mmc/host/sh_mmcif.c:	schedule_delayed_work(&host->timeout_work, host->timeout);
+drivers/mmc/host/tmio_mmc_pio.c:		schedule_delayed_work(&host->delayed_reset_work,
+drivers/mmc/host/vub300.c:	if (queue_delayed_work(pollworkqueue, &vub300->pollwork, delay)) {
+drivers/mtd/nand/r852.c:	queue_delayed_work(dev->card_workqueue,
+drivers/mtd/nand/r852.c:		queue_delayed_work(dev->card_workqueue,
+drivers/mtd/nand/r852.c:		queue_delayed_work(dev->card_workqueue,
+drivers/net/bonding/bond_3ad.c:	queue_delayed_work(bond->wq, &bond->ad_work, ad_delta_in_ticks);
+drivers/net/bonding/bond_alb.c:	queue_delayed_work(bond->wq, &bond->alb_work, alb_delta_in_ticks);
+drivers/net/bonding/bond_main.c:		queue_delayed_work(bond->wq, &bond->ad_work, 0);
+drivers/net/bonding/bond_main.c:		queue_delayed_work(bond->wq, &bond->alb_work, 0);
+drivers/net/bonding/bond_main.c:		queue_delayed_work(bond->wq, &bond->arp_work, 0);
+drivers/net/bonding/bond_main.c:		queue_delayed_work(bond->wq, &bond->arp_work, delta_in_ticks);
+drivers/net/bonding/bond_main.c:		queue_delayed_work(bond->wq, &bond->arp_work, delta_in_ticks);
+drivers/net/bonding/bond_main.c:		queue_delayed_work(bond->wq, &bond->mcast_work, 0);
+drivers/net/bonding/bond_main.c:		queue_delayed_work(bond->wq, &bond->mcast_work, HZ/5);
+drivers/net/bonding/bond_main.c:		queue_delayed_work(bond->wq, &bond->mii_work, 0);
+drivers/net/bonding/bond_main.c:		queue_delayed_work(bond->wq, &bond->mii_work, delay);
+drivers/net/bonding/bond_sysfs.c:			queue_delayed_work(bond->wq, &bond->arp_work, 0);
+drivers/net/bonding/bond_sysfs.c:			queue_delayed_work(bond->wq, &bond->mii_work, 0);
+drivers/net/can/sja1000/peak_pci.c:		schedule_delayed_work(&card->led_work, HZ);
+drivers/net/can/sja1000/peak_pci.c:		schedule_delayed_work(&card->led_work, HZ);
+drivers/net/ethernet/broadcom/bnx2x/bnx2x_cmn.c:	schedule_delayed_work(&bp->sp_rtnl_task, 0);
+drivers/net/ethernet/broadcom/bnx2x/bnx2x_dcb.c:		schedule_delayed_work(&bp->sp_rtnl_task, 0);
+drivers/net/ethernet/broadcom/bnx2x/bnx2x_main.c:			queue_delayed_work(bnx2x_wq, &bp->period_task, 0);
+drivers/net/ethernet/broadcom/bnx2x/bnx2x_main.c:	queue_delayed_work(bnx2x_wq, &bp->period_task, 0);
+drivers/net/ethernet/broadcom/bnx2x/bnx2x_main.c:		queue_delayed_work(bnx2x_wq, &bp->period_task, 1*HZ);
+drivers/net/ethernet/broadcom/bnx2x/bnx2x_main.c:		queue_delayed_work(bnx2x_wq, &bp->sp_task, 0);
+drivers/net/ethernet/broadcom/bnx2x/bnx2x_main.c:	queue_delayed_work(bnx2x_wq, &bp->sp_task, 0);
+drivers/net/ethernet/broadcom/bnx2x/bnx2x_main.c:						schedule_delayed_work(
+drivers/net/ethernet/broadcom/bnx2x/bnx2x_main.c:					schedule_delayed_work(&bp->sp_rtnl_task,
+drivers/net/ethernet/broadcom/bnx2x/bnx2x_main.c:					schedule_delayed_work(&bp->sp_rtnl_task,
+drivers/net/ethernet/broadcom/bnx2x/bnx2x_main.c:		schedule_delayed_work(&bp->sp_rtnl_task, 0);
+drivers/net/ethernet/broadcom/bnx2x/bnx2x_main.c:	schedule_delayed_work(&bp->sp_rtnl_task, 0);
+drivers/net/ethernet/broadcom/cnic.c:		queue_delayed_work(cnic_wq, &cp->delete_task,
+drivers/net/ethernet/broadcom/cnic.c:		queue_delayed_work(cnic_wq, &cp->delete_task, 0);
+drivers/net/ethernet/broadcom/cnic.c:		queue_delayed_work(cnic_wq, &cp->delete_task, delta);
+drivers/net/ethernet/broadcom/cnic.c:	queue_delayed_work(cnic_wq, &cp->delete_task, msecs_to_jiffies(2000));
+drivers/net/ethernet/chelsio/cxgb3/cxgb3_main.c:		queue_delayed_work(cxgb3_wq, &adap->adap_check_task, timeo);
+drivers/net/ethernet/chelsio/cxgb/cxgb2.c:	schedule_delayed_work(&ap->stats_update_task, secs * HZ);
+drivers/net/ethernet/chelsio/cxgb/my3126.c:	schedule_delayed_work(&cphy->phy_update, HZ/30);
+drivers/net/ethernet/davicom/dm9000.c:			schedule_delayed_work(&db->phy_poll, 1);
+drivers/net/ethernet/davicom/dm9000.c:		schedule_delayed_work(&db->phy_poll, HZ * 2);
+drivers/net/ethernet/emulex/benet/be_main.c:	schedule_delayed_work(&adapter->work, msecs_to_jiffies(1000));
+drivers/net/ethernet/emulex/benet/be_main.c:	schedule_delayed_work(&adapter->work, msecs_to_jiffies(1000));
+drivers/net/ethernet/ibm/ehea/ehea_main.c:	schedule_delayed_work(&port->stats_work,
+drivers/net/ethernet/ibm/ehea/ehea_main.c:	schedule_delayed_work(&port->stats_work,
+drivers/net/ethernet/ibm/emac/core.c:		schedule_delayed_work(&dev->link_work, link_poll_interval);
+drivers/net/ethernet/ibm/emac/core.c:	schedule_delayed_work(&dev->link_work, link_poll_interval);
+drivers/net/ethernet/ibm/emac/core.c:			schedule_delayed_work(&dev->link_work,  PHY_POLL_LINK_OFF);
+drivers/net/ethernet/icplus/ipg.c:		schedule_delayed_work(&sp->task, 0);
+drivers/net/ethernet/icplus/ipg.c:		schedule_delayed_work(&sp->task, HZ);
+drivers/net/ethernet/intel/e1000/e1000_main.c:			schedule_delayed_work(&adapter->fifo_stall_task, 1);
+drivers/net/ethernet/intel/e1000/e1000_main.c:			schedule_delayed_work(&adapter->fifo_stall_task, 1);
+drivers/net/ethernet/intel/e1000/e1000_main.c:				schedule_delayed_work(&adapter->phy_info_task,
+drivers/net/ethernet/intel/e1000/e1000_main.c:				schedule_delayed_work(&adapter->phy_info_task,
+drivers/net/ethernet/intel/e1000/e1000_main.c:			schedule_delayed_work(&adapter->watchdog_task, 1);
+drivers/net/ethernet/intel/e1000/e1000_main.c:		schedule_delayed_work(&adapter->watchdog_task, 2 * HZ);
+drivers/net/ethernet/intel/e1000e/netdev.c:	/* TODO: make this use queue_delayed_work() */
+drivers/net/ethernet/mellanox/mlx4/en_netdev.c:		queue_delayed_work(mdev->workqueue, &priv->stats_task, STATS_DELAY);
+drivers/net/ethernet/mellanox/mlx4/en_netdev.c:	queue_delayed_work(mdev->workqueue, &priv->stats_task, STATS_DELAY);
+drivers/net/ethernet/mellanox/mlx4/sense.c:	queue_delayed_work(mlx4_wq , &sense->sense_poll,
+drivers/net/ethernet/mellanox/mlx4/sense.c:	queue_delayed_work(mlx4_wq , &sense->sense_poll,
+drivers/net/ethernet/qlogic/netxen/netxen_nic_main.c:	schedule_delayed_work(&adapter->fw_work, delay);
+drivers/net/ethernet/qlogic/qla3xxx.c:	queue_delayed_work(qdev->workqueue, &qdev->link_state_work, 0);
+drivers/net/ethernet/qlogic/qla3xxx.c:		queue_delayed_work(qdev->workqueue, &qdev->reset_work, 0);
+drivers/net/ethernet/qlogic/qla3xxx.c:	queue_delayed_work(qdev->workqueue, &qdev->tx_timeout_work, 0);
+drivers/net/ethernet/qlogic/qlcnic/qlcnic_main.c:	queue_delayed_work(qlcnic_wq, &adapter->fw_work,
+drivers/net/ethernet/qlogic/qlge/qlge_main.c:	queue_delayed_work(qdev->workqueue,
+drivers/net/ethernet/qlogic/qlge/qlge_main.c:	queue_delayed_work(qdev->workqueue, &qdev->asic_reset_work, 0);
+drivers/net/ethernet/qlogic/qlge/qlge_main.c:	queue_delayed_work(qdev->workqueue, &qdev->mpi_port_cfg_work, 0);
+drivers/net/ethernet/qlogic/qlge/qlge_main.c:	queue_delayed_work(qdev->workqueue, &qdev->mpi_reset_work, 0);
+drivers/net/ethernet/qlogic/qlge/qlge_mpi.c:		queue_delayed_work(qdev->workqueue,
+drivers/net/ethernet/qlogic/qlge/qlge_mpi.c:		queue_delayed_work(qdev->workqueue,
+drivers/net/ethernet/qlogic/qlge/qlge_mpi.c:		queue_delayed_work(qdev->workqueue, &qdev->mpi_idc_work, 0);
+drivers/net/ethernet/realtek/8139too.c:		schedule_delayed_work(&tp->thread, next_tick);
+drivers/net/ethernet/realtek/8139too.c:	schedule_delayed_work(&tp->thread, next_tick);
+drivers/net/ethernet/realtek/8139too.c:		schedule_delayed_work(&tp->thread, thr_delay);
+drivers/net/ethernet/sfc/efx.c:		queue_delayed_work(efx->workqueue, &efx->monitor_work,
+drivers/net/ethernet/sfc/efx.c:	queue_delayed_work(efx->workqueue, &efx->monitor_work,
+drivers/net/ethernet/sfc/selftest.c:	schedule_delayed_work(&efx->selftest_work, IRQ_TIMEOUT);
+drivers/net/ethernet/tile/tilepro.c:		schedule_delayed_work(&priv->retry_work,
+drivers/net/ethernet/tile/tilepro.c:	schedule_delayed_work(&priv->retry_work, TILE_NET_RETRY_INTERVAL);
+drivers/net/ethernet/toshiba/ps3_gelic_wireless.c:		queue_delayed_work(wl->event_queue, &wl->event_work, 0);
+drivers/net/ethernet/toshiba/ps3_gelic_wireless.c:	ret = schedule_delayed_work(&wl->assoc_work, 0);
+drivers/net/ethernet/toshiba/ps3_gelic_wireless.c:		schedule_delayed_work(&wl->assoc_work, HZ/10); /*FIXME*/
+drivers/net/hamradio/baycom_epp.c:	schedule_delayed_work(&bc->run_work, 1);
+drivers/net/hamradio/baycom_epp.c:	schedule_delayed_work(&bc->run_work, 1);
+drivers/net/hyperv/netvsc_drv.c:		schedule_delayed_work(&ndev_ctx->dwork, 0);
+drivers/net/hyperv/netvsc_drv.c:		schedule_delayed_work(&ndev_ctx->dwork, msecs_to_jiffies(20));
+drivers/net/irda/sir_dev.c:	queue_delayed_work(irda_sir_wq, &fsm->work, 0);
+drivers/net/irda/sir_dev.c:	queue_delayed_work(irda_sir_wq, &fsm->work, msecs_to_jiffies(delay));
+drivers/net/phy/phy.c:	schedule_delayed_work(&phydev->state_queue,
+drivers/net/phy/phy.c:	schedule_delayed_work(&phydev->state_queue, 0);
+drivers/net/phy/phy.c:	schedule_delayed_work(&phydev->state_queue, HZ);
+drivers/net/plip/plip.c:				schedule_delayed_work(&nl->deferred, 1);
+drivers/net/plip/plip.c:		schedule_delayed_work(&nl->deferred, 1);
+drivers/net/plip/plip.c:		schedule_delayed_work(&nl->deferred, 1);
+drivers/net/plip/plip.c:		schedule_delayed_work(&nl->deferred, 1);
+drivers/net/plip/plip.c:		schedule_delayed_work(&nl->timer, 1);
+drivers/net/plip/plip.c:		schedule_delayed_work(&nl->timer, 1);
+drivers/net/usb/ipheth.c:	schedule_delayed_work(&dev->carrier_work, IPHETH_CARRIER_CHECK_TIMEOUT);
+drivers/net/usb/ipheth.c:	schedule_delayed_work(&dev->carrier_work, IPHETH_CARRIER_CHECK_TIMEOUT);
+drivers/net/usb/kaweth.c:			schedule_delayed_work(&kaweth->lowmem_work, HZ/4);
+drivers/net/usb/kaweth.c:		schedule_delayed_work(&kaweth->lowmem_work, HZ/4);
+drivers/net/usb/pegasus.c:		queue_delayed_work(pegasus_workqueue, &pegasus->carrier_check,
+drivers/net/usb/pegasus.c:	queue_delayed_work(pegasus_workqueue, &pegasus->carrier_check,
+drivers/net/usb/pegasus.c:	queue_delayed_work(pegasus_workqueue, &pegasus->carrier_check,
+drivers/net/virtio_net.c:			schedule_delayed_work(&vi->refill, 0);
+drivers/net/virtio_net.c:		schedule_delayed_work(&vi->refill, 0);
+drivers/net/virtio_net.c:		schedule_delayed_work(&vi->refill, 0);
+drivers/net/virtio_net.c:		schedule_delayed_work(&vi->refill, HZ/2);
+drivers/net/wireless/at76c50x-usb.c:		ieee80211_queue_delayed_work(priv->hw, &priv->dwork_hw_scan,
+drivers/net/wireless/at76c50x-usb.c:	ieee80211_queue_delayed_work(priv->hw, &priv->dwork_hw_scan,
+drivers/net/wireless/ath/ath5k/base.c:	ieee80211_queue_delayed_work(ah->hw, &ah->tx_complete_work,
+drivers/net/wireless/ath/ath5k/base.c:	ieee80211_queue_delayed_work(ah->hw, &ah->tx_complete_work,
+drivers/net/wireless/ath/ath9k/htc_drv_gpio.c:	ieee80211_queue_delayed_work(priv->hw, &priv->coex_period_work,
+drivers/net/wireless/ath/ath9k/htc_drv_gpio.c:	ieee80211_queue_delayed_work(priv->hw, &priv->coex_period_work, 0);
+drivers/net/wireless/ath/ath9k/htc_drv_gpio.c:	ieee80211_queue_delayed_work(priv->hw, &priv->duty_cycle_work,
+drivers/net/wireless/ath/ath9k/htc_drv_main.c:	ieee80211_queue_delayed_work(common->hw, &priv->ani_work,
+drivers/net/wireless/ath/ath9k/htc_drv_main.c:	ieee80211_queue_delayed_work(common->hw, &priv->ani_work,
+drivers/net/wireless/ath/ath9k/main.c:	ieee80211_queue_delayed_work(hw, &sc->tx_complete_work, 0);
+drivers/net/wireless/ath/ath9k/main.c:		ieee80211_queue_delayed_work(sc->hw, &sc->hw_pll_work, HZ/2);
+drivers/net/wireless/ath/ath9k/main.c:		ieee80211_queue_delayed_work(sc->hw, &sc->hw_pll_work, HZ/5);
+drivers/net/wireless/ath/ath9k/main.c:		ieee80211_queue_delayed_work(sc->hw, &sc->tx_complete_work, 0);
+drivers/net/wireless/ath/ath9k/xmit.c:	ieee80211_queue_delayed_work(sc->hw, &sc->tx_complete_work,
+drivers/net/wireless/ath/carl9170/led.c:	ieee80211_queue_delayed_work(ar->hw,
+drivers/net/wireless/ath/carl9170/led.c:		ieee80211_queue_delayed_work(ar->hw, &ar->led_work, HZ / 10);
+drivers/net/wireless/ath/carl9170/main.c:	ieee80211_queue_delayed_work(ar->hw, &ar->stat_work,
+drivers/net/wireless/ath/carl9170/main.c:	ieee80211_queue_delayed_work(ar->hw, &ar->stat_work,
+drivers/net/wireless/ath/carl9170/tx.c:	ieee80211_queue_delayed_work(ar->hw, &ar->tx_janitor,
+drivers/net/wireless/ath/carl9170/tx.c:	ieee80211_queue_delayed_work(ar->hw, &ar->tx_janitor,
+drivers/net/wireless/b43legacy/main.c:	ieee80211_queue_delayed_work(dev->wl->hw, work, 0);
+drivers/net/wireless/b43legacy/main.c:	ieee80211_queue_delayed_work(wl->hw, &dev->periodic_work, delay);
+drivers/net/wireless/b43/main.c:	ieee80211_queue_delayed_work(dev->wl->hw, work, 0);
+drivers/net/wireless/b43/main.c:	ieee80211_queue_delayed_work(wl->hw, &dev->periodic_work, delay);
+drivers/net/wireless/bcmdhd/wl_cfg80211.c:					mod_scheduled_work(&cfg->pm_enable_work,
+drivers/net/wireless/bcmdhd/wl_cfg80211.c:					mod_scheduled_work(&cfg->pm_enable_work,
+drivers/net/wireless/bcmdhd/wl_cfg80211.c:			schedule_delayed_work(&cfg->pm_enable_work,
+drivers/net/wireless/brcm80211/brcmsmac/mac80211_if.c:	ieee80211_queue_delayed_work(hw, &t->dly_wrk, msecs_to_jiffies(ms));
+drivers/net/wireless/brcm80211/brcmsmac/mac80211_if.c:			ieee80211_queue_delayed_work(t->wl->pub->ieee_hw,
+drivers/net/wireless/ipw2x00/ipw2100.c:			mod_delayed_work(system_wq, &priv->rf_kill,
+drivers/net/wireless/ipw2x00/ipw2100.c:	mod_delayed_work(system_wq, &priv->rf_kill, round_jiffies_relative(HZ));
+drivers/net/wireless/ipw2x00/ipw2100.c:		schedule_delayed_work(&priv->hang_check, HZ / 2);
+drivers/net/wireless/ipw2x00/ipw2100.c:		schedule_delayed_work(&priv->hang_check, HZ / 2);
+drivers/net/wireless/ipw2x00/ipw2100.c:			schedule_delayed_work(&priv->reset_work,
+drivers/net/wireless/ipw2x00/ipw2100.c:			schedule_delayed_work(&priv->reset_work, 0);
+drivers/net/wireless/ipw2x00/ipw2100.c:			schedule_delayed_work(&priv->rf_kill,
+drivers/net/wireless/ipw2x00/ipw2100.c:			schedule_delayed_work(&priv->rf_kill,
+drivers/net/wireless/ipw2x00/ipw2100.c:			schedule_delayed_work(&priv->scan_event_later,
+drivers/net/wireless/ipw2x00/ipw2100.c:		schedule_delayed_work(&priv->security_work, 0);
+drivers/net/wireless/ipw2x00/ipw2100.c:	schedule_delayed_work(&priv->wx_event_work, 0);
+drivers/net/wireless/ipw2x00/ipw2100.c:	schedule_delayed_work(&priv->wx_event_work, HZ / 10);
+drivers/net/wireless/ipw2x00/ipw2200.c:						schedule_delayed_work(
+drivers/net/wireless/ipw2x00/ipw2200.c:	schedule_delayed_work(&priv->adhoc_check,
+drivers/net/wireless/ipw2x00/ipw2200.c:	schedule_delayed_work(&priv->gather_stats, IPW_STATS_INTERVAL);
+drivers/net/wireless/ipw2x00/ipw2200.c:		schedule_delayed_work(&priv->led_act_off, LD_TIME_ACT_ON);
+drivers/net/wireless/ipw2x00/ipw2200.c:		schedule_delayed_work(&priv->led_act_off, LD_TIME_ACT_ON);
+drivers/net/wireless/ipw2x00/ipw2200.c:			schedule_delayed_work(&priv->led_link_off,
+drivers/net/wireless/ipw2x00/ipw2200.c:			schedule_delayed_work(&priv->led_link_on,
+drivers/net/wireless/ipw2x00/ipw2200.c:				schedule_delayed_work(&priv->request_direct_scan, 0);
+drivers/net/wireless/ipw2x00/ipw2200.c:				schedule_delayed_work(&priv->request_scan,
+drivers/net/wireless/ipw2x00/ipw2200.c:				schedule_delayed_work(&priv->request_scan,
+drivers/net/wireless/ipw2x00/ipw2200.c:				schedule_delayed_work(&priv->request_scan, 0);
+drivers/net/wireless/ipw2x00/ipw2200.c:				schedule_delayed_work(&priv->request_scan, 0);
+drivers/net/wireless/ipw2x00/ipw2200.c:				schedule_delayed_work(&priv->request_scan, 0);
+drivers/net/wireless/ipw2x00/ipw2200.c:				schedule_delayed_work(&priv->request_scan, 0);
+drivers/net/wireless/ipw2x00/ipw2200.c:			schedule_delayed_work(&priv->request_scan, 0);
+drivers/net/wireless/ipw2x00/ipw2200.c:		schedule_delayed_work(&priv->request_scan, 0);
+drivers/net/wireless/ipw2x00/ipw2200.c:		schedule_delayed_work(&priv->request_scan, HZ);
+drivers/net/wireless/ipw2x00/ipw2200.c:			schedule_delayed_work(&priv->rf_kill,
+drivers/net/wireless/ipw2x00/ipw2200.c:			schedule_delayed_work(&priv->rf_kill, 2 * HZ);
+drivers/net/wireless/ipw2x00/ipw2200.c:		schedule_delayed_work(&priv->rf_kill, 2 * HZ);
+drivers/net/wireless/ipw2x00/ipw2200.c:		schedule_delayed_work(&priv->rf_kill, 2 * HZ);
+drivers/net/wireless/ipw2x00/ipw2200.c:		schedule_delayed_work(&priv->scan_check, HZ);
+drivers/net/wireless/ipw2x00/ipw2200.c:	schedule_delayed_work(&priv->scan_check, IPW_SCAN_CHECK_WATCHDOG);
+drivers/net/wireless/ipw2x00/ipw2200.c:			schedule_delayed_work(&priv->scan_event,
+drivers/net/wireless/ipw2x00/ipw2200.c:	schedule_delayed_work(work, 0);
+drivers/net/wireless/iwlegacy/3945.c:	queue_delayed_work(il->workqueue, &il->_3945.thermal_periodic,
+drivers/net/wireless/iwlegacy/3945-mac.c:	queue_delayed_work(il->workqueue, &il->_3945.rfkill_poll,
+drivers/net/wireless/iwlegacy/3945-mac.c:	queue_delayed_work(il->workqueue, &il->_3945.rfkill_poll,
+drivers/net/wireless/iwlegacy/3945-mac.c:	queue_delayed_work(il->workqueue, &il->_3945.rfkill_poll, 2 * HZ);
+drivers/net/wireless/iwlegacy/3945-mac.c:		queue_delayed_work(il->workqueue, pwork, msecs_to_jiffies(5));
+drivers/net/wireless/iwlegacy/4965-mac.c:		queue_delayed_work(il->workqueue, pwork, msecs_to_jiffies(5));
+drivers/net/wireless/iwlegacy/common.c:	queue_delayed_work(il->workqueue, &il->scan_check,
+drivers/net/wireless/iwlwifi/iwl-scan.c:	queue_delayed_work(priv->workqueue, &priv->scan_check,
+drivers/net/wireless/iwlwifi/iwl-scan.c:		schedule_delayed_work(&priv->hw_roc_disable_work, 10 * HZ);
+drivers/net/wireless/iwlwifi/iwl-scan.c:		schedule_delayed_work(&priv->hw_roc_disable_work, 10 * HZ);
+drivers/net/wireless/iwmc3200wifi/rx.c:		schedule_delayed_work(&iwm->ct_kill_delay, CT_KILL_DELAY);
+drivers/net/wireless/iwmc3200wifi/rx.c:	schedule_delayed_work(&iwm->disconnect, IWM_DISCONNECT_INTERVAL);
+drivers/net/wireless/iwmc3200wifi/rx.c:	schedule_delayed_work(&iwm->stats_request, IWM_STATS_UPDATE_INTERVAL);
+drivers/net/wireless/libertas/cfg.c:			queue_delayed_work(priv->work_thread, &priv->scan_work,
+drivers/net/wireless/libertas/cfg.c:	queue_delayed_work(priv->work_thread, &priv->scan_work,
+drivers/net/wireless/mac80211_hwsim.c:	ieee80211_queue_delayed_work(hw, &hsd->w, 2 * HZ);
+drivers/net/wireless/p54/led.c:		ieee80211_queue_delayed_work(priv->hw, &priv->led_work,
+drivers/net/wireless/p54/led.c:		ieee80211_queue_delayed_work(priv->hw, &priv->led_work, HZ/10);
+drivers/net/wireless/p54/main.c:	ieee80211_queue_delayed_work(dev, &priv->work, 0);
+drivers/net/wireless/p54/txrx.c:	ieee80211_queue_delayed_work(priv->hw, &priv->work,
+drivers/net/wireless/rndis_wlan.c:	queue_delayed_work(priv->workqueue, &priv->dev_poller_work,
+drivers/net/wireless/rndis_wlan.c:	queue_delayed_work(priv->workqueue, &priv->dev_poller_work,
+drivers/net/wireless/rndis_wlan.c:		queue_delayed_work(priv->workqueue, &priv->scan_work, delay);
+drivers/net/wireless/rt2x00/rt2x00config.c:		queue_delayed_work(rt2x00dev->workqueue,
+drivers/net/wireless/rt2x00/rt2x00link.c:		ieee80211_queue_delayed_work(rt2x00dev->hw,
+drivers/net/wireless/rt2x00/rt2x00link.c:		ieee80211_queue_delayed_work(rt2x00dev->hw,
+drivers/net/wireless/rt2x00/rt2x00link.c:		ieee80211_queue_delayed_work(rt2x00dev->hw,
+drivers/net/wireless/rt2x00/rt2x00link.c:		ieee80211_queue_delayed_work(rt2x00dev->hw,
+drivers/net/wireless/rt2x00/rt2x00link.c:		ieee80211_queue_delayed_work(rt2x00dev->hw,
+drivers/net/wireless/rt2x00/rt2x00link.c:		ieee80211_queue_delayed_work(rt2x00dev->hw,
+drivers/net/wireless/rt2x00/rt2x00link.c:		ieee80211_queue_delayed_work(rt2x00dev->hw,
+drivers/net/wireless/rt2x00/rt2x00link.c:		ieee80211_queue_delayed_work(rt2x00dev->hw,
+drivers/net/wireless/rtl818x/rtl8180/dev.c:	schedule_delayed_work(&vif_priv->beacon_work,
+drivers/net/wireless/rtl818x/rtl8187/dev.c:		ieee80211_queue_delayed_work(hw, &priv->work, 0);
+drivers/net/wireless/rtl818x/rtl8187/dev.c:	schedule_delayed_work(&vif_priv->beacon_work,
+drivers/net/wireless/rtl818x/rtl8187/leds.c:			ieee80211_queue_delayed_work(hw, &priv->led_off, 0);
+drivers/net/wireless/rtl818x/rtl8187/leds.c:			ieee80211_queue_delayed_work(hw, &priv->led_off, 0);
+drivers/net/wireless/rtl818x/rtl8187/leds.c:			ieee80211_queue_delayed_work(hw, &priv->led_on,
+drivers/net/wireless/rtl818x/rtl8187/leds.c:			ieee80211_queue_delayed_work(hw, &priv->led_on, 0);
+drivers/net/wireless/rtl818x/rtl8187/leds.c:			ieee80211_queue_delayed_work(hw, &priv->led_on, 0);
+drivers/net/wireless/rtlwifi/base.c:	queue_delayed_work(rtlpriv->works.rtl_wq,
+drivers/net/wireless/rtlwifi/core.c:				queue_delayed_work(rtlpriv->works.rtl_wq,
+drivers/net/wireless/rtlwifi/ps.c:	queue_delayed_work(rtlpriv->works.rtl_wq,
+drivers/net/wireless/rtlwifi/ps.c:		queue_delayed_work(rtlpriv->works.rtl_wq,
+drivers/net/wireless/rtlwifi/ps.c:	queue_delayed_work(rtlpriv->works.rtl_wq, &rtlpriv->works.ps_rfon_wq,
+drivers/net/wireless/wcnss/wcnss_wlan.c:	schedule_delayed_work(&penv->wcnss_work, msecs_to_jiffies(10000));
+drivers/net/wireless/wl1251/ps.c:		ieee80211_queue_delayed_work(wl->hw, &wl->elp_work, delay);
+drivers/net/wireless/wl12xx/main.c:	ieee80211_queue_delayed_work(wl->hw, &wl->tx_watchdog_work,
+drivers/net/wireless/wl12xx/ps.c:	ieee80211_queue_delayed_work(wl->hw, &wl->elp_work,
+drivers/net/wireless/wl12xx/scan.c:		ieee80211_queue_delayed_work(wl->hw, &wl->scan_complete_work,
+drivers/net/wireless/wl12xx/scan.c:		ieee80211_queue_delayed_work(wl->hw, &wl->scan_complete_work,
+drivers/net/wireless/wl12xx/scan.c:	ieee80211_queue_delayed_work(wl->hw, &wl->scan_complete_work,
+drivers/net/wireless/zd1211rw/zd_mac.c:	queue_delayed_work(zd_workqueue, &mac->beacon.watchdog_work,
+drivers/net/wireless/zd1211rw/zd_mac.c:	queue_delayed_work(zd_workqueue, &mac->beacon.watchdog_work,
+drivers/net/wireless/zd1211rw/zd_mac.c:	queue_delayed_work(zd_workqueue, &mac->housekeeping.link_led_work,
+drivers/net/wireless/zd1211rw/zd_mac.c:	queue_delayed_work(zd_workqueue, &mac->housekeeping.link_led_work,
+drivers/net/wireless/zd1211rw/zd_usb.c:	mod_delayed_work(zd_workqueue, &rx->idle_work, ZD_RX_IDLE_INTERVAL);
+drivers/net/wireless/zd1211rw/zd_usb.c:		queue_delayed_work(zd_workqueue, &tx->watchdog_work,
+drivers/net/wireless/zd1211rw/zd_usb.c:	queue_delayed_work(zd_workqueue, &tx->watchdog_work,
+drivers/oprofile/cpu_buffer.c: * By using schedule_delayed_work_on and then schedule_delayed_work
+drivers/oprofile/cpu_buffer.c:		schedule_delayed_work(&b->work, DEFAULT_TIMER_EXPIRE);
+drivers/oprofile/cpu_buffer.c:		schedule_delayed_work_on(i, &b->work, DEFAULT_TIMER_EXPIRE + i);
+drivers/oprofile/oprof.c:		schedule_delayed_work(&switch_work, oprofile_time_slice);
+drivers/parisc/led.c:		queue_delayed_work(led_wq, &led_task, 0);
+drivers/parisc/led.c:		queue_delayed_work(led_wq, &led_task, 0);
+drivers/parisc/led.c:	queue_delayed_work(led_wq, &led_task, 0);
+drivers/parisc/led.c:	queue_delayed_work(led_wq, &led_task, LED_UPDATE_INTERVAL);
+drivers/pci/hotplug/pciehp_ctrl.c:		queue_delayed_work(p_slot->wq, &p_slot->work, 5*HZ);
+drivers/pci/hotplug/shpchp_ctrl.c:		queue_delayed_work(p_slot->wq, &p_slot->work, 5*HZ);
+drivers/pci/pci.c:			schedule_delayed_work(&pci_pme_work,
+drivers/pci/pci.c:				schedule_delayed_work(&pci_pme_work,
+drivers/platform/msm/ipa/ipa.c:fail_schedule_delayed_work:
+drivers/platform/msm/ipa/ipa.c:			goto fail_schedule_delayed_work;
+drivers/platform/msm/ipa/ipa.c:	ret = schedule_delayed_work_on(smp_processor_id(), &ipa_ctx->poll_work,
+drivers/platform/msm/ipa/ipa.c:		   schedule_delayed_work_on(smp_processor_id(),
+drivers/platform/msm/qpnp-power-on.c:		schedule_delayed_work(&pon->bark_work, QPNP_KEY_STATUS_DELAY);
+drivers/platform/msm/qpnp-power-on.c:	schedule_delayed_work(&pon->bark_work, QPNP_KEY_STATUS_DELAY);
+drivers/platform/x86/acer-wmi.c:		schedule_delayed_work(&acer_rfkill_work,
+drivers/platform/x86/acer-wmi.c:	schedule_delayed_work(&acer_rfkill_work, round_jiffies_relative(HZ));
+drivers/platform/x86/dell-laptop.c:			schedule_delayed_work(&dell_rfkill_work,
+drivers/platform/x86/msi-laptop.c:	schedule_delayed_work(&msi_rfkill_init,
+drivers/platform/x86/msi-laptop.c:			schedule_delayed_work(&msi_rfkill_work,
+drivers/platform/x86/msi-laptop.c:			schedule_delayed_work(&msi_touchpad_work,
+drivers/platform/x86/thinkpad_acpi.c:		mod_delayed_work(tpacpi_wq, &fan_watchdog_task,
+drivers/power/ab8500_btemp.c:	queue_delayed_work(di->btemp_wq,
+drivers/power/ab8500_btemp.c:		queue_delayed_work(di->btemp_wq, &di->btemp_periodic_work, 0);
+drivers/power/ab8500_charger.c:	queue_delayed_work(di->charger_wq,
+drivers/power/ab8500_charger.c:		queue_delayed_work(di->charger_wq,
+drivers/power/ab8500_charger.c:		queue_delayed_work(di->charger_wq,
+drivers/power/ab8500_charger.c:		queue_delayed_work(di->charger_wq,
+drivers/power/ab8500_charger.c:				queue_delayed_work(di->charger_wq,
+drivers/power/ab8500_charger.c:	queue_delayed_work(di->charger_wq, &di->check_hw_failure_work, 0);
+drivers/power/ab8500_charger.c:	queue_delayed_work(di->charger_wq, &di->check_hw_failure_work, 0);
+drivers/power/ab8500_charger.c:	queue_delayed_work(di->charger_wq, &di->check_usbchgnotok_work, 0);
+drivers/power/ab8500_charger.c:		queue_delayed_work(di->charger_wq, &di->check_vbat_work, HZ);
+drivers/power/ab8500_charger.c:	queue_delayed_work(di->charger_wq, &di->check_vbat_work, t * HZ);
+drivers/power/ab8500_charger.c:			queue_delayed_work(di->charger_wq, &di->kick_wd_work,
+drivers/power/ab8500_fg.c:				queue_delayed_work(di->fg_wq,
+drivers/power/ab8500_fg.c:				queue_delayed_work(di->fg_wq,
+drivers/power/ab8500_fg.c:		queue_delayed_work(di->fg_wq, &di->fg_check_hw_failure_work,
+drivers/power/ab8500_fg.c:	queue_delayed_work(di->fg_wq, &di->fg_check_hw_failure_work, 0);
+drivers/power/ab8500_fg.c:		queue_delayed_work(di->fg_wq, &di->fg_low_bat_work,
+drivers/power/ab8500_fg.c:		queue_delayed_work(di->fg_wq, &di->fg_low_bat_work,
+drivers/power/ab8500_fg.c:		queue_delayed_work(di->fg_wq, &di->fg_periodic_work, 0);
+drivers/power/ab8500_fg.c:		queue_delayed_work(di->fg_wq, &di->fg_periodic_work, 0);
+drivers/power/ab8500_fg.c:		queue_delayed_work(di->fg_wq, &di->fg_periodic_work, 0);
+drivers/power/ab8500_fg.c:		queue_delayed_work(di->fg_wq, &di->fg_periodic_work, 0);
+drivers/power/ab8500_fg.c:		queue_delayed_work(di->fg_wq, &di->fg_periodic_work, 0);
+drivers/power/ab8500_fg.c:	queue_delayed_work(di->fg_wq, &di->fg_periodic_work, 0);
+drivers/power/ab8500_fg.c:	queue_delayed_work(di->fg_wq, &di->fg_periodic_work, 0);
+drivers/power/ab8500_fg.c:	queue_delayed_work(di->fg_wq, &di->fg_periodic_work, 0);
+drivers/power/ab8500_fg.c:		queue_delayed_work(di->fg_wq, &di->fg_reinit_work,
+drivers/power/ab8500_fg.c:		queue_delayed_work(di->fg_wq, &di->fg_reinit_work, 0);
+drivers/power/abx500_chargalg.c:	queue_delayed_work(di->chargalg_wq,
+drivers/power/abx500_chargalg.c:		queue_delayed_work(di->chargalg_wq,
+drivers/power/abx500_chargalg.c:		queue_delayed_work(di->chargalg_wq,
+drivers/power/abx500_chargalg.c:					queue_delayed_work(di->chargalg_wq,
+drivers/power/abx500_chargalg.c:					queue_delayed_work(di->chargalg_wq,
+drivers/power/abx500_chargalg.c:	queue_delayed_work(di->chargalg_wq, &di->chargalg_periodic_work, 0);
+drivers/power/abx500_chargalg.c:	queue_delayed_work(di->chargalg_wq, &di->chargalg_periodic_work, 0);
+drivers/power/abx500_chargalg.c:		queue_delayed_work(di->chargalg_wq, &di->chargalg_wd_work, 0);
+drivers/power/battery_current_limit.c:		schedule_delayed_work(&bcl->bcl_imax_work,
+drivers/power/battery_temp_ctrl.c:	schedule_delayed_work(&chip->monitor_work,
+drivers/power/battery_temp_ctrl.c:	schedule_delayed_work(&chip->monitor_work,
+drivers/power/battery_temp_ctrl.c:	schedule_delayed_work(&chip->monitor_work,
+drivers/power/bq27520_fuelgauger.c:	schedule_delayed_work(&current_battery_status.poller,
+drivers/power/bq27520_fuelgauger.c:	schedule_delayed_work(&current_battery_status.poller,
+drivers/power/bq27520_fuelgauger.c:	schedule_delayed_work(&current_battery_status.poller,
+drivers/power/bq27520_fuelgauger.c:	schedule_delayed_work(&di->hw_config, BQ27520_INIT_DELAY);
+drivers/power/bq27541_fuelgauger.c:	schedule_delayed_work(&di->hw_config, BQ27541_INIT_DELAY);
+drivers/power/bq27x00_battery.c:	 * schedule_delayed_work again after unregister (which cause OOPS).
+drivers/power/bq27x00_battery.c:	schedule_delayed_work(&di->work, 0);
+drivers/power/bq27x00_battery.c:		schedule_delayed_work(&di->work, poll_interval * HZ);
+drivers/power/charger-manager.c:		queue_delayed_work(cm_wq, &cm->fullbatt_vchk_work,
+drivers/power/charger-manager.c:	queue_delayed_work(cm_wq, &cm->fullbatt_vchk_work,
+drivers/power/charger-manager.c:		queue_delayed_work(cm_wq, &cm_monitor_work, polling_jiffy);
+drivers/power/da9030_battery.c:	schedule_delayed_work(&charger->work, charger->interval);
+drivers/power/da9030_battery.c:	schedule_delayed_work(&charger->work, charger->interval);
+drivers/power/ds2760_battery.c:	mod_delayed_work(di->monitor_wqueue, &di->monitor_work, HZ);
+drivers/power/ds2760_battery.c:	mod_delayed_work(di->monitor_wqueue, &di->monitor_work, HZ/10);
+drivers/power/ds2760_battery.c:	mod_delayed_work(di->monitor_wqueue, &di->set_charged_work, HZ * 20);
+drivers/power/ds2760_battery.c:	queue_delayed_work(di->monitor_wqueue, &di->monitor_work, HZ * 1);
+drivers/power/ds2760_battery.c:	queue_delayed_work(di->monitor_wqueue, &di->monitor_work, interval);
+drivers/power/generic-adc-battery.c:	schedule_delayed_work(&adc_bat->bat_work,
+drivers/power/generic-adc-battery.c:	schedule_delayed_work(&adc_bat->bat_work,
+drivers/power/generic-adc-battery.c:	schedule_delayed_work(&adc_bat->bat_work,
+drivers/power/generic-adc-battery.c:	schedule_delayed_work(&adc_bat->bat_work, msecs_to_jiffies(0));
+drivers/power/intel_mid_battery.c:	queue_delayed_work(pbi->monitor_wqueue, &pbi->monitor_battery, HZ * 1);
+drivers/power/intel_mid_battery.c:	queue_delayed_work(pbi->monitor_wqueue, &pbi->monitor_battery, HZ * 10);
+drivers/power/isl9519q.c:	schedule_delayed_work(&isl_chg->charge_work,
+drivers/power/isl9519q.c:	schedule_delayed_work(&isl_chg->charge_work, 1);
+drivers/power/isl9519q.c:	schedule_delayed_work(&isl_chg->charge_work, 1);
+drivers/power/jz4740-battery.c:	mod_delayed_work(system_wq, &jz_battery->work, 0);
+drivers/power/jz4740-battery.c:	mod_delayed_work(system_wq, &jz_battery->work, 0);
+drivers/power/jz4740-battery.c:	schedule_delayed_work(&jz_battery->work, 0);
+drivers/power/jz4740-battery.c:	schedule_delayed_work(&jz_battery->work, 0);
+drivers/power/jz4740-battery.c:	schedule_delayed_work(&jz_battery->work, interval);
+drivers/power/lp8727_charger.c:	queue_delayed_work(pchg->irqthread, &pchg->work, delay);
+drivers/power/max17040_battery.c:	schedule_delayed_work(&chip->work, 0);
+drivers/power/max17040_battery.c:	schedule_delayed_work(&chip->work, 0);
+drivers/power/max17040_battery.c:	schedule_delayed_work(&chip->work, msecs_to_jiffies(chip->fg_interval));
+drivers/power/msm_charger.c:	queue_delayed_work(msm_chg.event_wq_thread,
+drivers/power/msm_charger.c:	queue_delayed_work(msm_chg.event_wq_thread,
+drivers/power/msm_charger.c:	queue_delayed_work(msm_chg.event_wq_thread,
+drivers/power/msm_charger.c:		queue_delayed_work(msm_chg.event_wq_thread,
+drivers/power/msm_charger.c:				queue_delayed_work(msm_chg.event_wq_thread,
+drivers/power/pm8921-bms.c:	schedule_delayed_work(&chip->calculate_soc_delayed_work,
+drivers/power/pm8921-bms.c:	schedule_delayed_work(&chip->calculate_soc_delayed_work,
+drivers/power/pm8921-bms.c:	schedule_delayed_work(&chip->calculate_soc_delayed_work,
+drivers/power/pm8921-bms.c:	schedule_delayed_work(&the_chip->calculate_soc_delayed_work, 0);
+drivers/power/pm8921-charger.c:		schedule_delayed_work(&chip->btc_override_work,
+drivers/power/pm8921-charger.c:		schedule_delayed_work(&chip->btc_override_work,
+drivers/power/pm8921-charger.c:		schedule_delayed_work(&chip->btc_override_work,
+drivers/power/pm8921-charger.c:		schedule_delayed_work(&chip->btc_override_work,
+drivers/power/pm8921-charger.c:			schedule_delayed_work(&chip->btc_override_work,
+drivers/power/pm8921-charger.c:		schedule_delayed_work(&chip->btc_override_work, 0);
+drivers/power/pm8921-charger.c:		schedule_delayed_work(&chip->eoc_work,
+drivers/power/pm8921-charger.c:		schedule_delayed_work(&chip->eoc_work,
+drivers/power/pm8921-charger.c:	schedule_delayed_work(&chip->eoc_work, delay);
+drivers/power/pm8921-charger.c:	schedule_delayed_work(&chip->unplug_check_work,
+drivers/power/pm8921-charger.c:		schedule_delayed_work(&chip->unplug_check_work,
+drivers/power/pm8921-charger.c:		schedule_delayed_work(&chip->unplug_check_work,
+drivers/power/pm8921-charger.c:		schedule_delayed_work(&chip->unplug_check_work,
+drivers/power/pm8921-charger.c:		schedule_delayed_work(&chip->unplug_check_work,
+drivers/power/pm8921-charger.c:			schedule_delayed_work(&chip->unplug_check_work,
+drivers/power/pm8921-charger.c:			schedule_delayed_work(&chip->unplug_check_work,
+drivers/power/pm8921-charger.c:		schedule_delayed_work(&chip->update_heartbeat_work,
+drivers/power/pm8921-charger.c:		schedule_delayed_work(&chip->update_heartbeat_work,
+drivers/power/pm8921-charger.c:		schedule_delayed_work(&chip->update_heartbeat_work,
+drivers/power/pm8921-charger.c:	schedule_delayed_work(&chip->update_heartbeat_work, 0);
+drivers/power/pm8921-charger.c:		schedule_delayed_work(&the_chip->vin_collapse_check_work,
+drivers/power/pm8921-sec-charger-8930.c:		schedule_delayed_work(
+drivers/power/pm8921-sec-charger-8930.c:					schedule_delayed_work(
+drivers/power/pm8921-sec-charger-8930.c:		schedule_delayed_work(&chip->eoc_work,
+drivers/power/pm8921-sec-charger-8930.c:		schedule_delayed_work(&chip->eoc_work,
+drivers/power/pm8921-sec-charger-8930.c:	schedule_delayed_work(&chip->eoc_work, delay);
+drivers/power/pm8921-sec-charger-8930.c:	schedule_delayed_work(&chip->unplug_check_work,
+drivers/power/pm8921-sec-charger-8930.c:		schedule_delayed_work(&chip->unplug_check_work,
+drivers/power/pm8921-sec-charger-8930.c:		schedule_delayed_work(&chip->unplug_check_work,
+drivers/power/pm8921-sec-charger-8930.c:		schedule_delayed_work(&chip->unplug_check_work,
+drivers/power/pm8921-sec-charger-8930.c:		schedule_delayed_work(&chip->unplug_check_work,
+drivers/power/pm8921-sec-charger-8930.c:			schedule_delayed_work(&chip->unplug_check_work,
+drivers/power/pm8921-sec-charger-8930.c:	schedule_delayed_work(&chip->update_heartbeat_work,
+drivers/power/pm8921-sec-charger-8930.c:		schedule_delayed_work(&chip->update_heartbeat_work, 0);
+drivers/power/pm8921-sec-charger-8930.c:		schedule_delayed_work(&chip->update_heartbeat_work, 0);
+drivers/power/pm8921-sec-charger-8930.c:	schedule_delayed_work(&chip->update_heartbeat_work, 0);
+drivers/power/pm8921-sec-charger-8930.c:	schedule_delayed_work(&chip->update_heartbeat_work, 0);
+drivers/power/pm8921-sec-charger-8930.c:		schedule_delayed_work(&the_chip->vin_collapse_check_work,
+drivers/power/pm8921-sec-charger.c:		schedule_delayed_work(&chip->btc_override_work,
+drivers/power/pm8921-sec-charger.c:		schedule_delayed_work(&chip->btc_override_work,
+drivers/power/pm8921-sec-charger.c:		schedule_delayed_work(&chip->btc_override_work,
+drivers/power/pm8921-sec-charger.c:		schedule_delayed_work(&chip->btc_override_work,
+drivers/power/pm8921-sec-charger.c:			schedule_delayed_work(&chip->btc_override_work,
+drivers/power/pm8921-sec-charger.c:		schedule_delayed_work(&chip->btc_override_work, 0);
+drivers/power/pm8921-sec-charger.c:		schedule_delayed_work(&chip->eoc_work,
+drivers/power/pm8921-sec-charger.c:		schedule_delayed_work(&chip->eoc_work,
+drivers/power/pm8921-sec-charger.c:	schedule_delayed_work(&chip->eoc_work, delay);
+drivers/power/pm8921-sec-charger.c:	schedule_delayed_work(&chip->unplug_check_work,
+drivers/power/pm8921-sec-charger.c:		schedule_delayed_work(&chip->unplug_check_work,
+drivers/power/pm8921-sec-charger.c:		schedule_delayed_work(&chip->unplug_check_work,
+drivers/power/pm8921-sec-charger.c:		schedule_delayed_work(&chip->unplug_check_work,
+drivers/power/pm8921-sec-charger.c:		schedule_delayed_work(&chip->unplug_check_work,
+drivers/power/pm8921-sec-charger.c:			schedule_delayed_work(&chip->unplug_check_work,
+drivers/power/pm8921-sec-charger.c:			schedule_delayed_work(&chip->unplug_check_work,
+drivers/power/pm8921-sec-charger.c:		schedule_delayed_work(&chip->update_heartbeat_work,
+drivers/power/pm8921-sec-charger.c:		schedule_delayed_work(&chip->update_heartbeat_work,
+drivers/power/pm8921-sec-charger.c:		schedule_delayed_work(&chip->update_heartbeat_work,
+drivers/power/pm8921-sec-charger.c:	schedule_delayed_work(&chip->update_heartbeat_work, 0);
+drivers/power/pm8921-sec-charger.c:		schedule_delayed_work(&the_chip->vin_collapse_check_work,
+drivers/power/pm8xxx-ccadc.c:	schedule_delayed_work(&chip->calib_ccadc_work,
+drivers/power/pm8xxx-ccadc.c:	schedule_delayed_work(&chip->calib_ccadc_work, 0);
+drivers/power/pm8xxx-ccadc.c:			schedule_delayed_work(&the_chip->calib_ccadc_work,
+drivers/power/pm8xxx-ccadc.c:			schedule_delayed_work(&the_chip->calib_ccadc_work, 0);
+drivers/power/pmic8058-charger.c:	schedule_delayed_work(&pm8058_chg.charging_check_work,
+drivers/power/pmic8058-charger.c:		schedule_delayed_work(&pm8058_chg.check_vbat_low_work,
+drivers/power/pmic8058-charger.c:		schedule_delayed_work(&pm8058_chg.chg_done_check_work,
+drivers/power/pmic8058-charger.c:		schedule_delayed_work(&pm8058_chg.veoc_begin_work,
+drivers/power/pmic8058-charger.c:			schedule_delayed_work(&pm8058_chg.veoc_begin_work,
+drivers/power/s3c_adc_battery.c:	schedule_delayed_work(&bat_work,
+drivers/power/s3c_adc_battery.c:	schedule_delayed_work(&bat_work,
+drivers/power/s3c_adc_battery.c:	schedule_delayed_work(&bat_work,
+drivers/power/s3c_adc_battery.c:	schedule_delayed_work(&bat_work,
+drivers/power/sbs-battery.c:		schedule_delayed_work(&chip->work, HZ);
+drivers/power/sbs-battery.c:	schedule_delayed_work(&chip->work, HZ);
+drivers/power/sec_battery.c:			queue_delayed_work(info->monitor_wqueue,
+drivers/power/sec_battery.c:			queue_delayed_work(info->monitor_wqueue,
+drivers/power/sec_battery.c:			queue_delayed_work(info->monitor_wqueue,
+drivers/power/sec_battery.c:			queue_delayed_work(info->monitor_wqueue,
+drivers/power/sec_battery.c:			queue_delayed_work(info->monitor_wqueue,
+drivers/power/sec_battery.c:			queue_delayed_work(info->monitor_wqueue,
+drivers/power/sec_battery.c:			queue_delayed_work(info->monitor_wqueue,
+drivers/power/sec_battery.c:				queue_delayed_work(info->monitor_wqueue,
+drivers/power/sec_battery.c:				queue_delayed_work(info->monitor_wqueue,
+drivers/power/sec_battery.c:				queue_delayed_work(info->monitor_wqueue,
+drivers/power/sec_battery.c:					queue_delayed_work(info->monitor_wqueue,
+drivers/power/sec_battery.c:					queue_delayed_work(info->monitor_wqueue,
+drivers/power/sec_battery.c:					queue_delayed_work(info->monitor_wqueue,
+drivers/power/sec_battery.c:					queue_delayed_work(info->monitor_wqueue,
+drivers/power/sec_battery.c:		queue_delayed_work(info->monitor_wqueue, &info->measure_work,
+drivers/power/sec_battery.c:		queue_delayed_work(info->monitor_wqueue, &info->measure_work,
+drivers/power/sec_battery.c:		queue_delayed_work(info->monitor_wqueue, &info->measure_work,
+drivers/power/sec_battery.c:		queue_delayed_work(info->monitor_wqueue, &info->measure_work,
+drivers/power/sec_battery.c:		queue_delayed_work(info->monitor_wqueue, &info->measure_work,
+drivers/power/sec_battery.c:	queue_delayed_work(info->monitor_wqueue, &info->measure_work, 0);
+drivers/power/sec_battery.c:	queue_delayed_work(info->monitor_wqueue, &info->measure_work, 0);
+drivers/power/sec_battery.c:	queue_delayed_work(info->monitor_wqueue, &info->measure_work, 0);
+drivers/power/sec_battery.c:		queue_delayed_work(info->monitor_wqueue, &info->otg_work, 0);
+drivers/power/smb137b.c:	schedule_delayed_work(&smb137b_chg->charge_work,
+drivers/power/smb137b.c:	schedule_delayed_work(&smb137b_chg->charge_work, SMB137B_CHG_PERIOD);
+drivers/regulator/core.c:	ret = schedule_delayed_work(&rdev->disable_work,
+drivers/rtc/rtc-88pm860x.c:	schedule_delayed_work(&info->calib_work, VRTC_CALIB_INTERVAL);
+drivers/rtc/rtc-88pm860x.c:	schedule_delayed_work(&info->calib_work, VRTC_CALIB_INTERVAL);
+drivers/s390/block/dasd_alias.c:	schedule_delayed_work(&lcu->ruac_data.dwork, 0);
+drivers/s390/block/dasd_alias.c:		schedule_delayed_work(&lcu->ruac_data.dwork, 30*HZ);
+drivers/s390/char/tape_core.c:				schedule_delayed_work(&device->tape_dnr, 0);
+drivers/s390/char/tape_core.c:		schedule_delayed_work(&device->tape_dnr, 0);
+drivers/s390/char/tape_core.c:		schedule_delayed_work(&device->tape_dnr, HZ);
+drivers/s390/net/qeth_core_main.c:				schedule_delayed_work(
+drivers/s390/scsi/zfcp_fc.c:	schedule_delayed_work(&wka_port->work, HZ / 100);
+drivers/scsi/bnx2fc/bnx2fc_io.c:	if (queue_delayed_work(interface->timer_work_queue,
+drivers/scsi/fcoe/fcoe_sysfs.c:	return queue_delayed_work(fcoe_ctlr_devloss_work_q(ctlr), work, delay);
+drivers/scsi/imm.c:	schedule_delayed_work(&dev->imm_tq, 0);
+drivers/scsi/imm.c:		schedule_delayed_work(&dev->imm_tq, 1);
+drivers/scsi/libfc/fc_disc.c:			schedule_delayed_work(&disc->disc_work, delay);
+drivers/scsi/libfc/fc_exch.c:	if (queue_delayed_work(fc_exch_workqueue, &ep->timeout_work,
+drivers/scsi/libfc/fc_lport.c:		schedule_delayed_work(&lport->retry_work, delay);
+drivers/scsi/libfc/fc_rport.c:		schedule_delayed_work(&rdata->retry_work, delay);
+drivers/scsi/megaraid/megaraid_sas_base.c:			schedule_delayed_work(
+drivers/scsi/mpt2sas/mpt2sas_base.c:		queue_delayed_work(ioc->fault_reset_work_q,
+drivers/scsi/mpt2sas/mpt2sas_base.c:		queue_delayed_work(ioc->fault_reset_work_q,
+drivers/scsi/mpt2sas/mpt2sas_scsih.c:	queue_delayed_work(ioc->firmware_event_thread,
+drivers/scsi/mvsas/mv_sas.c:		schedule_delayed_work(&mwq->work_q, HZ * 2);
+drivers/scsi/NCR5380.c:			schedule_delayed_work(&hostdata->coroutine, 0);
+drivers/scsi/NCR5380.c:	schedule_delayed_work(&hostdata->coroutine, 0);
+drivers/scsi/NCR5380.c:	schedule_delayed_work(&hostdata->coroutine, timeout);
+drivers/scsi/ppa.c:	schedule_delayed_work(&dev->ppa_tq, 0);
+drivers/scsi/ppa.c:		schedule_delayed_work(&dev->ppa_tq, 1);
+drivers/scsi/scsi_transport_fc.c:	return queue_delayed_work(fc_host_devloss_work_q(shost), work, delay);
+drivers/scsi/scsi_transport_iscsi.c:		queue_delayed_work(iscsi_eh_timer_workq,
+drivers/sensorhub/ssp_dev.c:		schedule_delayed_work(&data->work_firmware,
+drivers/sensors/asp01.c:			schedule_delayed_work(&data->d_work,
+drivers/sensors/asp01.c:	schedule_delayed_work(&data->d_work_initdev,
+drivers/sensors/geomagnetic/yas_mag_kernel_driver.c:		schedule_delayed_work(&data->work, 0);
+drivers/sensors/geomagnetic/yas_mag_kernel_driver.c:		schedule_delayed_work(&data->work, 0);
+drivers/sensors/geomagnetic/yas_mag_kernel_driver.c:		schedule_delayed_work(&data->work, 0);
+drivers/sensors/geomagnetic/yas_mag_kernel_driver.c:		schedule_delayed_work(&data->work, msecs_to_jiffies(delay));
+drivers/sensors/k2dh.c:		schedule_delayed_work(&data->work,
+drivers/sensors/k2dh.c:			schedule_delayed_work(&data->work,
+drivers/sensors/k2dh.c:	schedule_delayed_work(&g_k2dh->work, msecs_to_jiffies(
+drivers/sensors/optical/gp2ap020.c:		schedule_delayed_work(&data->light_work,
+drivers/sensors/optical/gp2ap020.c:		schedule_delayed_work(&data->light_work,
+drivers/sensors/optical/gp2ap020.c:		schedule_delayed_work(&data->light_work, msecs_to_jiffies(100));
+drivers/sensors/optical/gp2ap020.c:		schedule_delayed_work(&gp2a->light_work, msecs_to_jiffies(100));
+drivers/sensors/yas_acc_kernel_driver.c:			schedule_delayed_work(&data->work
+drivers/sensors/yas_acc_kernel_driver.c:	schedule_delayed_work(&data->work, delay);
+drivers/sensors/yas_acc_kernel_driver.c:		schedule_delayed_work(&data->work, delay_to_jiffies(delay) + 1);
+drivers/soc/qcom/bricked_hotplug.c:		queue_delayed_work(hotplug_wq, &hotplug_work,
+drivers/soc/qcom/bricked_hotplug.c:		queue_delayed_work(hotplug_wq, &hotplug_work,
+drivers/soc/qcom/bricked_hotplug.c:		queue_delayed_work(hotplug_wq, &hotplug_work, 0);
+drivers/staging/csr/oska/kernel-compat.h:#define queue_delayed_work(wq, dw, delay) \
+drivers/staging/csr/oska/kernel-compat.h:#define schedule_delayed_work(dw, delay) \
+drivers/staging/csr/oska/kernel-compat.h:    queue_delayed_work((wq), &(dw)->work, (delay))
+drivers/staging/csr/oska/kernel-compat.h:    schedule_delayed_work(&(dw)->work, (delay))
+drivers/staging/iio/impedance-analyzer/ad5933.c:	schedule_delayed_work(&st->work,
+drivers/staging/iio/impedance-analyzer/ad5933.c:		schedule_delayed_work(&st->work, st->poll_time_jiffies);
+drivers/staging/iio/impedance-analyzer/ad5933.c:		schedule_delayed_work(&st->work, st->poll_time_jiffies);
+drivers/staging/iio/impedance-analyzer/ad5933.c:		schedule_delayed_work(&st->work, st->poll_time_jiffies);
+drivers/staging/iio/light/tsl2563.c:		schedule_delayed_work(&chip->poweroff_work, 5 * HZ);
+drivers/staging/iio/light/tsl2563.c:		schedule_delayed_work(&chip->poweroff_work, 5 * HZ);
+drivers/staging/iio/light/tsl2563.c:	schedule_delayed_work(&chip->poweroff_work, 5 * HZ);
+drivers/staging/mei/interrupt.c:	schedule_delayed_work(&dev->timer_work, 2 * HZ);
+drivers/staging/mei/main.c:	schedule_delayed_work(&dev->timer_work, HZ);
+drivers/staging/mei/main.c:	schedule_delayed_work(&dev->timer_work, HZ);
+drivers/staging/nvec/nvec_power.c:		schedule_delayed_work(&power->poller, msecs_to_jiffies(5000));
+drivers/staging/nvec/nvec_power.c:	schedule_delayed_work(to_delayed_work(work), msecs_to_jiffies(5000));
+drivers/staging/octeon/ethernet.c:		queue_delayed_work(cvm_oct_poll_queue,
+drivers/staging/octeon/ethernet.c:				queue_delayed_work(cvm_oct_poll_queue,
+drivers/staging/octeon/ethernet.c:	queue_delayed_work(cvm_oct_poll_queue, &cvm_oct_rx_refill_work, HZ);
+drivers/staging/octeon/ethernet.c:		queue_delayed_work(cvm_oct_poll_queue, &priv->port_periodic_work, HZ);
+drivers/staging/rtl8187se/ieee80211/ieee80211_softmac.c:	queue_delayed_work(ieee->wq, &ieee->associate_retry_wq,IEEE80211_SOFTMAC_ASSOC_RETRY_TIME);
+drivers/staging/rtl8187se/ieee80211/ieee80211_softmac.c:			queue_delayed_work(ieee->wq, &ieee->softmac_scan_wq,0);
+drivers/staging/rtl8187se/ieee80211/ieee80211_softmac.c:	queue_delayed_work(ieee->wq, &ieee->softmac_scan_wq, IEEE80211_SOFTMAC_SCAN_TIME);
+drivers/staging/rtl8187se/ieee80211/ieee80211_softmac.c:	queue_delayed_work(ieee->wq, &ieee->start_ibss_wq, 100);
+drivers/staging/rtl8187se/r8180_core.c:		queue_delayed_work(priv->ieee80211->wq, &priv->ieee80211->hw_wakeup_wq, tmp);
+drivers/staging/rtl8192e/rtllib.h:#define queue_delayed_work_rsl(x, y, z) queue_delayed_work(x, y, z)
+drivers/staging/rtl8192u/ieee80211/ieee80211_softmac.c:	queue_delayed_work(ieee->wq, &ieee->associate_retry_wq, \
+drivers/staging/rtl8192u/ieee80211/ieee80211_softmac.c:			queue_delayed_work(ieee->wq, &ieee->softmac_scan_wq, 0);
+drivers/staging/rtl8192u/ieee80211/ieee80211_softmac.c:	queue_delayed_work(ieee->wq, &ieee->softmac_scan_wq, IEEE80211_SOFTMAC_SCAN_TIME);
+drivers/staging/rtl8192u/ieee80211/ieee80211_softmac.c:	queue_delayed_work(ieee->wq, &ieee->start_ibss_wq, 150);
+drivers/staging/rtl8192u/r8192U_core.c:	queue_delayed_work(priv->priv_wq, &priv->update_beacon_wq, 0);
+drivers/staging/rtl8192u/r8192U_core.c:	queue_delayed_work(priv->priv_wq,&priv->watch_dog_wq, 0);
+drivers/staging/rtl8192u/r8192U_dm.c:		queue_delayed_work(priv->priv_wq,&priv->gpio_change_rf_wq,0);
+drivers/staging/rtl8192u/r8192U_dm.c:	queue_delayed_work(priv->priv_wq,&priv->rfpath_check_wq,0);
+drivers/staging/rtl8192u/r8192U_dm.c:			queue_delayed_work(priv->priv_wq,&priv->txpower_tracking_wq,0);
+drivers/staging/rtl8192u/r8192U_dm.c:				queue_delayed_work(priv->priv_wq,&priv->txpower_tracking_wq,0);
+drivers/staging/rtl8192u/r819xU_phy.c:		queue_delayed_work(priv->priv_wq,&priv->initialgain_operate_wq,0);
+drivers/staging/zcache/ramster/ramster.c:	if (!queue_delayed_work(ramster_remotify_workqueue,
+drivers/staging/zcache/ramster/ramster.c:	ramster_remotify_queue_delayed_work(HZ);
+drivers/staging/zcache/ramster/ramster.c:	ramster_remotify_queue_delayed_work(n * HZ);
+drivers/staging/zcache/ramster/ramster.c:		schedule_delayed_work(&selfshrink_worker,
+drivers/staging/zcache/ramster/ramster.c:		schedule_delayed_work(&selfshrink_worker,
+drivers/staging/zcache/ramster/ramster.c:static void ramster_remotify_queue_delayed_work(unsigned long delay)
+drivers/staging/zcache/ramster/tcp.c:	if (!queue_delayed_work(r2net_wq, work, delay))
+drivers/staging/zcache/ramster/tcp.c:		queue_delayed_work(r2net_wq, &nn->nn_connect_expired, delay);
+drivers/staging/zcache/ramster/tcp.c:		queue_delayed_work(r2net_wq, &nn->nn_connect_work, delay);
+drivers/staging/zcache/ramster/tcp.c:		queue_delayed_work(r2net_wq, &nn->nn_still_up,
+drivers/staging/zcache/ramster/tcp.c:	r2net_sc_queue_delayed_work(sc, &sc->sc_keepalive_work,
+drivers/staging/zcache/ramster/tcp.c:static void r2net_sc_queue_delayed_work(struct r2net_sock_container *sc,
+drivers/switch/hds_fsa8008.c:	queue_delayed_work(local_fsa8008_workqueue,
+drivers/switch/hds_fsa8008.c:		queue_delayed_work(local_fsa8008_workqueue,
+drivers/switch/hds_fsa8008.c:		queue_delayed_work(local_fsa8008_workqueue,
+drivers/switch/hds_fsa8008.c:	queue_delayed_work(local_fsa8008_workqueue, &(hi->work),
+drivers/switch/hds_fsa8008.c:		queue_delayed_work(local_fsa8008_workqueue, &(hi->work), 0);
+drivers/switch/hds_fsa8008.c:	schedule_delayed_work(&(hi->work),
+drivers/switch/hds_fsa8008.c:		schedule_delayed_work(&(hi->work), 0);
+drivers/switch/hds_fsa8008.c:		schedule_delayed_work(&(hi->work_for_key_pressed),
+drivers/switch/hds_fsa8008.c:	schedule_delayed_work(&(hi->work_for_key_released),
+drivers/switch/hds_fsa8008.c:		schedule_delayed_work(&(hi->work_for_key_released),
+drivers/thermal/franco_thermal.c:	schedule_delayed_work_on(0, &check_temp_work, 0);
+drivers/thermal/franco_thermal.c:	schedule_delayed_work_on(0, &check_temp_work, msecs_to_jiffies(250));
+drivers/thermal/machinex_thermal.c:		mod_delayed_work_on(0, intellithermal_wq, &check_temp_work,
+drivers/thermal/machinex_thermal.c:		mod_delayed_work_on(0, intellithermal_wq, &check_temp_work, 0);
+drivers/thermal/msm_thermal_backup.c:		mod_delayed_work_on(0, intellithermal_wq, &check_temp_work,
+drivers/thermal/msm_thermal_backup.c:		mod_delayed_work_on(0, intellithermal_wq, &check_temp_work, 0);
+drivers/thermal/msm_thermal.c:		mod_delayed_work(intellithermal_wq, &check_temp_work, 0);
+drivers/thermal/msm_thermal.c:		queue_delayed_work(intellithermal_wq, &check_temp_work,
+drivers/thermal/msm_thermal.c:		queue_delayed_work(intellithermal_wq, &check_temp_work, 0);
+drivers/thermal/msm_thermal-last-working.c:		mod_delayed_work_on(0, intellithermal_wq, &check_temp_work,
+drivers/thermal/msm_thermal-last-working.c:		mod_delayed_work_on(0, intellithermal_wq, &check_temp_work, 0);
+drivers/thermal/msm_thermal_wip.c:		mod_delayed_work_on(0, intellithermal_wq, &check_temp_work,
+drivers/thermal/msm_thermal_wip.c:		mod_delayed_work_on(0, intellithermal_wq, &check_temp_work, 0);
+drivers/thermal/pm8xxx-tm.c:	schedule_delayed_work(&chip->irq_work,
+drivers/thermal/thermal_core.c:		mod_delayed_work(system_freezable_wq, &tz->poll_queue,
+drivers/thermal/thermal_core.c:		mod_delayed_work(system_freezable_wq, &tz->poll_queue,
+drivers/tty/hvc/hvc_iucv.c:	schedule_delayed_work(&priv->sndbuf_work, 5);
+drivers/tty/hvc/hvc_iucv.c:		schedule_delayed_work(&priv->sndbuf_work, QUEUE_SNDBUF_DELAY);
+drivers/tty/hvc/hvsi.c:		schedule_delayed_work(&hp->writer, 10);
+drivers/tty/hvc/hvsi.c:		schedule_delayed_work(&hp->writer, 10);
+drivers/tty/hvc/hvsi.c:		schedule_delayed_work(&hp->writer, HZ);
+drivers/tty/n_smux.c:			queue_delayed_work(smux_rx_wq, &ch->rx_retry_work,
+drivers/tty/n_smux.c:			queue_delayed_work(smux_rx_wq, &ch->rx_retry_work,
+drivers/tty/n_smux.c:			queue_delayed_work(smux_rx_wq, &ch->rx_retry_work, 0);
+drivers/tty/n_smux.c:			queue_delayed_work(smux_rx_wq, &ch->rx_retry_work, 0);
+drivers/tty/n_smux.c:			queue_delayed_work(smux_rx_wq, &ch->rx_retry_work, 0);
+drivers/tty/n_smux.c:			queue_delayed_work(smux_tx_wq,
+drivers/tty/n_smux.c:		queue_delayed_work(smux_tx_wq, &smux_delayed_inactivity_work,
+drivers/tty/n_smux.c:		queue_delayed_work(smux_tx_wq, &smux_delayed_inactivity_work,
+drivers/tty/n_smux.c:		queue_delayed_work(smux_tx_wq, &smux_delayed_inactivity_work,
+drivers/tty/serial/msm_serial_hs.c:		schedule_delayed_work(&msm_uport->rx.flip_insert_work
+drivers/tty/serial/msm_serial_hs.c:		schedule_delayed_work(&msm_uport->rx.flip_insert_work,
+drivers/usb/atm/cxacru.c:		schedule_delayed_work(&instance->poll_work,
+drivers/usb/core/driver.c:	schedule_delayed_work(&bus->hnp_polling,
+drivers/usb/core/hub.c:			schedule_delayed_work(&hub->init_work,
+drivers/usb/core/hub.c:			schedule_delayed_work(&hub->init_work,
+drivers/usb/core/hub.c:					schedule_delayed_work (&hub->leds, 0);
+drivers/usb/core/hub.c:			schedule_delayed_work (&hub->leds, 0);
+drivers/usb/core/hub.c:		schedule_delayed_work(&hub->leds, LED_CYCLE_PERIOD);
+drivers/usb/core/hub.c:		schedule_delayed_work(&hub->leds, LED_CYCLE_PERIOD);
+drivers/usb/core/hub.c:			schedule_delayed_work(&udev->bus->hnp_polling,
+drivers/usb/core/hub.c:			schedule_delayed_work(&udev->bus->hnp_polling,
+drivers/usb/dwc3/dwc3-msm.c:	queue_delayed_work(system_wq, &mdwc->chg_work, 0);
+drivers/usb/dwc3/dwc3-msm.c:	queue_delayed_work(system_wq, &mdwc->chg_work, delay);
+drivers/usb/gadget/ci13xxx_udc.c:		schedule_delayed_work(&udc->rw_work, REMOTE_WAKEUP_DELAY);
+drivers/usb/gadget/f_accessory.c:			schedule_delayed_work(
+drivers/usb/gadget/f_rmnet_sdio.c:		queue_delayed_work(dev->wq, &dev->sdio_open_work,
+drivers/usb/gadget/f_rmnet_sdio.c:		queue_delayed_work(dev->wq, &dev->sdio_open_work, 0);
+drivers/usb/gadget/f_rmnet_sdio.c:	queue_delayed_work(dev->wq, &dev->sdio_open_work, 0);
+drivers/usb/gadget/f_rmnet_smd_sdio.c:		queue_delayed_work(dev->wq, &sdio_dev->open_work,
+drivers/usb/gadget/f_rmnet_smd_sdio.c:	queue_delayed_work(dev->wq, &sdio_dev->open_work, 0);
+drivers/usb/gadget/msm72k_udc.c:					schedule_delayed_work(
+drivers/usb/gadget/msm72k_udc.c:					schedule_delayed_work(
+drivers/usb/gadget/msm72k_udc.c:		schedule_delayed_work(&ui->chg_det, USB_CHG_DET_DELAY);
+drivers/usb/gadget/msm72k_udc.c:		schedule_delayed_work(&ui->chg_det, USB_CHG_DET_DELAY);
+drivers/usb/gadget/msm72k_udc.c:			schedule_delayed_work(&ui->chg_stop, 0);
+drivers/usb/gadget/msm72k_udc.c:		schedule_delayed_work(&ui->rw_work, REMOTE_WAKEUP_DELAY);
+drivers/usb/gadget/u_rmnet_ctrl_smd.c:				queue_delayed_work(grmnet_ctrl_wq,
+drivers/usb/gadget/u_rmnet_ctrl_smd.c:			queue_delayed_work(grmnet_ctrl_wq, &port->connect_w,
+drivers/usb/gadget/u_rmnet_ctrl_smd.c:	queue_delayed_work(grmnet_ctrl_wq, &port->connect_w, 0);
+drivers/usb/gadget/u_rmnet_ctrl_smd.c:	queue_delayed_work(grmnet_ctrl_wq, &port->disconnect_w, 0);
+drivers/usb/gadget/u_sdio.c:			queue_delayed_work(gsdio_wq,
+drivers/usb/gadget/u_smd.c:				queue_delayed_work(gsmd_wq, &port->connect_work,
+drivers/usb/gadget/u_smd.c:			queue_delayed_work(gsmd_wq, &port->connect_work,
+drivers/usb/gadget/u_smd.c:	queue_delayed_work(gsmd_wq, &port->connect_work, msecs_to_jiffies(0));
+drivers/usb/host/u132-hcd.c:	} else if (queue_delayed_work(workqueue, &ring->scheduler, 0))
+drivers/usb/host/u132-hcd.c:	if (queue_delayed_work(workqueue, &endp->scheduler, delta))
+drivers/usb/host/u132-hcd.c:		if (queue_delayed_work(workqueue, &ring->scheduler, delta))
+drivers/usb/host/u132-hcd.c:	if (!queue_delayed_work(workqueue, &u132->monitor, delta))
+drivers/usb/host/u132-hcd.c:	if (queue_delayed_work(workqueue, &u132->monitor, delta))
+drivers/usb/misc/appledisplay.c:		queue_delayed_work(wq, &pdata->work, 0);
+drivers/usb/misc/appledisplay.c:		schedule_delayed_work(&pdata->work, HZ / 8);
+drivers/usb/misc/ftdi-elan.c:	if (!queue_delayed_work(command_queue, &ftdi->command_work, delta))
+drivers/usb/misc/ftdi-elan.c:	if (queue_delayed_work(command_queue, &ftdi->command_work, delta))
+drivers/usb/misc/ftdi-elan.c:	if (!queue_delayed_work(respond_queue, &ftdi->respond_work, delta))
+drivers/usb/misc/ftdi-elan.c:	if (queue_delayed_work(respond_queue, &ftdi->respond_work, delta))
+drivers/usb/misc/ftdi-elan.c:	if (!queue_delayed_work(status_queue, &ftdi->status_work, delta))
+drivers/usb/misc/ftdi-elan.c:	if (queue_delayed_work(status_queue, &ftdi->status_work, delta))
+drivers/usb/otg/ab8500-usb.c:		schedule_delayed_work(&ab->dwork, ab->link_status_wait);
+drivers/usb/otg/ab8500-usb.c:		schedule_delayed_work(&ab->dwork, ab->link_status_wait);
+drivers/usb/otg/ab8500-usb.c:	schedule_delayed_work(&ab->dwork, ab->link_status_wait);
+drivers/usb/otg/ab8500-usb.c:	schedule_delayed_work(&ab->dwork, ab->link_status_wait);
+drivers/usb/otg/fsl_otg.c:				schedule_delayed_work(
+drivers/usb/otg/fsl_otg.c:		schedule_delayed_work(&otg_dev->otg_event, 100);
+drivers/usb/otg/gpio_vbus.c:		schedule_delayed_work(&gpio_vbus->work, msecs_to_jiffies(100));
+drivers/usb/otg/msm_otg_8930.c:	queue_delayed_work(system_wq, &motg->chg_work, delay);
+drivers/usb/otg/msm_otg_8930.c:		queue_delayed_work(system_wq, &motg->pmic_id_status_work,
+drivers/usb/otg/msm_otg_8930.c:					schedule_delayed_work(&motg->check_ta_work,
+drivers/usb/otg/msm_otg_8930.c:	schedule_delayed_work(&motg->check_ta_work, MSM_CHECK_TA_DELAY);
+drivers/usb/otg/msm_otg_8930.c:				schedule_delayed_work(&motg->late_power_work,
+drivers/usb/otg/msm_otg.c:	queue_delayed_work(system_wq, &motg->chg_work, delay);
+drivers/usb/otg/msm_otg.c:		queue_delayed_work(system_wq, &motg->pmic_id_status_work,
+drivers/usb/otg/msm_otg.c:	schedule_delayed_work(&motg->check_ta_work, MSM_CHECK_TA_DELAY);
+drivers/usb/otg/msm_otg.c:				schedule_delayed_work(&motg->late_power_work,
+drivers/usb/otg/mv_otg.c:	queue_delayed_work(mvotg->qwork, &mvotg->work, delay);
+drivers/usb/renesas_usbhs/common.c:	schedule_delayed_work(&priv->notify_hotplug_work,
+drivers/usb/serial/oti6858.c:		schedule_delayed_work(&priv->delayed_setup_work,
+drivers/usb/serial/oti6858.c:		schedule_delayed_work(&priv->delayed_setup_work,
+drivers/usb/serial/oti6858.c:					schedule_delayed_work(&priv->delayed_setup_work, 0);
+drivers/usb/serial/oti6858.c:					schedule_delayed_work(&priv->delayed_setup_work, 0);
+drivers/usb/serial/oti6858.c:		schedule_delayed_work(&priv->delayed_write_work,
+drivers/usb/serial/oti6858.c:			schedule_delayed_work(&priv->delayed_write_work, 0);
+drivers/usb/storage/usb.c:	queue_delayed_work(system_freezable_wq, &us->scan_dwork,
+drivers/usb/wusbcore/devconnect.c:	queue_delayed_work(wusbd, &wusbhc->keep_alive_timer,
+drivers/usb/wusbcore/devconnect.c:	queue_delayed_work(wusbd, &wusbhc->keep_alive_timer,
+drivers/usb/wusbcore/wusbhc.c:	queue_delayed_work(wusbd, &wusbhc->keep_alive_timer,
+drivers/uwb/drp.c:	queue_delayed_work(rc->rsv_workq, &rc->rsv_alien_bp_work, usecs_to_jiffies(delay_us));
+drivers/uwb/drp.c:	queue_delayed_work(rc->rsv_workq, &rc->rsv_alien_bp_work, usecs_to_jiffies(delay_us));
+drivers/uwb/rsv.c:	queue_delayed_work(rc->rsv_workq, &rc->rsv_update_work, usecs_to_jiffies(delay_us));
+drivers/video/fb_defio.c:	err = schedule_delayed_work(&info->deferred_work, 0);
+drivers/video/fb_defio.c:	schedule_delayed_work(&info->deferred_work, fbdefio->delay);
+drivers/video/hyperv_fb.c:			schedule_delayed_work(&par->dwork, HVFB_UPDATE_DELAY);
+drivers/video/hyperv_fb.c:		schedule_delayed_work(&par->dwork, HVFB_UPDATE_DELAY);
+drivers/video/msm/mdp.c:				mod_delayed_work(mdp_pipe_ctrl_wq,
+drivers/video/msm/mdp.c:				mod_delayed_work(mdp_pipe_ctrl_wq,
+drivers/video/msm/mdp.c:			 * queue_delayed_work(mdp_timer_duration = 0)
+drivers/video/msm/mdss/mdss_mdp.c:			queue_delayed_work(mdss_res->clk_ctrl_wq,
+drivers/video/msm/mdss/mdss_mdp.c:				queue_delayed_work(mdss_res->clk_ctrl_wq,
+drivers/video/msm/mipi_ql_dsi2lvds.c:	schedule_delayed_work(&auto_brightness_delayed_work, msecs_to_jiffies(1000));
+drivers/video/msm/mipi_samsung_esd_refresh-8960.c:	schedule_delayed_work(&esd_enable->esd_enable_delay,\
+drivers/video/msm/mipi_samsung_esd_refresh.c:	schedule_delayed_work(&esd_enable->esd_enable_delay,\
+drivers/video/msm/mipi_samsung_esd_refresh.c:	schedule_delayed_work(&esd_enable->esd_enable_delay,\
+drivers/video/msm/mipi_samsung_oled-8960.c:	queue_delayed_work(msd.mpd->esd_workqueue,
+drivers/video/msm/mipi_samsung_oled-8960.c:		queue_delayed_work(msd.mpd->esd_workqueue,
+drivers/video/msm/mipi_samsung_oled-8960.c:		queue_delayed_work(msd.mpd->esd_workqueue,
+drivers/video/omap2/displays/panel-taal.c:		queue_delayed_work(td->workqueue, &td->esd_work,
+drivers/video/omap2/displays/panel-taal.c:		queue_delayed_work(td->workqueue, &td->ulps_work,
+drivers/video/omap2/displays/panel-taal.c:		schedule_delayed_work(&td->te_timeout_work,
+drivers/video/omap2/dss/dsi.c:	r = schedule_delayed_work(&dsi->framedone_timeout_work,
+drivers/video/omap2/omapfb/omapfb-main.c:	queue_delayed_work(fbdev->auto_update_wq,
+drivers/video/omap/lcd_mipid.c:		queue_delayed_work(md->esd_wq, &md->esd_work,
+drivers/video/sh_mobile_hdmi.c:				schedule_delayed_work(&hdmi->edid_work, 0);
+drivers/video/sh_mobile_hdmi.c:		schedule_delayed_work(&hdmi->edid_work, msecs_to_jiffies(10));
+drivers/video/sh_mobile_lcdcfb.c:			schedule_delayed_work(&ch->info->deferred_work, 0);
+drivers/video/sh_mobile_lcdcfb.c:		schedule_delayed_work(&info->deferred_work, fbdefio->delay);
+drivers/video/smscufx.c:		schedule_delayed_work(&dev->free_framebuffer_work, 0);
+drivers/video/smscufx.c:		schedule_delayed_work(&dev->free_framebuffer_work, HZ);
+drivers/video/smscufx.c:		schedule_delayed_work(&unode->release_urb_work, 0);
+drivers/video/udlfb.c:		schedule_delayed_work(&dev->free_framebuffer_work, 0);
+drivers/video/udlfb.c:		schedule_delayed_work(&dev->free_framebuffer_work, HZ);
+drivers/video/udlfb.c:	schedule_delayed_work(&dev->init_framebuffer_work, 0);
+drivers/video/udlfb.c:		schedule_delayed_work(&unode->release_urb_work, 0);
+drivers/xen/balloon.c:		schedule_delayed_work(&balloon_worker, 0);
+drivers/xen/balloon.c:		schedule_delayed_work(&balloon_worker, 0);
+drivers/xen/balloon.c:	schedule_delayed_work(&balloon_worker, 0);
+drivers/xen/balloon.c:	schedule_delayed_work(&balloon_worker, 0);
+drivers/xen/balloon.c:		schedule_delayed_work(&balloon_worker, balloon_stats.schedule_delay * HZ);
+drivers/xen/xen-selfballoon.c:		schedule_delayed_work(&selfballoon_worker,
+drivers/xen/xen-selfballoon.c:		schedule_delayed_work(&selfballoon_worker,
+drivers/xen/xen-selfballoon.c:		schedule_delayed_work(&selfballoon_worker,
+drivers/xen/xen-selfballoon.c:	schedule_delayed_work(&selfballoon_worker, selfballoon_interval * HZ);
+fs/affs/super.c:	       queue_delayed_work(system_long_wq, &sbi->sb_work, delay);
+fs/afs/callback.c:	mod_delayed_work(afs_callback_update_worker, &server->cb_break_work, 0);
+fs/afs/callback.c:		queue_delayed_work(afs_callback_update_worker,
+fs/afs/callback.c:	queue_delayed_work(afs_vnode_update_worker,
+fs/afs/callback.c:		queue_delayed_work(afs_vnode_update_worker,
+fs/afs/flock.c:			queue_delayed_work(afs_lock_manager, &vnode->lock_work,
+fs/afs/flock.c:	queue_delayed_work(afs_lock_manager, &vnode->lock_work,
+fs/afs/flock.c:	queue_delayed_work(afs_lock_manager, &vnode->lock_work, 0);
+fs/afs/mntpt.c:		queue_delayed_work(afs_wq, &afs_mntpt_expiry_timer,
+fs/afs/mntpt.c:	queue_delayed_work(afs_wq, &afs_mntpt_expiry_timer,
+fs/afs/server.c:	mod_delayed_work(afs_wq, &afs_server_reaper, 0);
+fs/afs/server.c:			mod_delayed_work(afs_wq, &afs_server_reaper, delay);
+fs/afs/server.c:		queue_delayed_work(afs_wq, &afs_server_reaper,
+fs/afs/vlocation.c:	mod_delayed_work(afs_vlocation_update_worker, &afs_vlocation_update, 0);
+fs/afs/vlocation.c:	mod_delayed_work(afs_wq, &afs_vlocation_reap, 0);
+fs/afs/vlocation.c:			mod_delayed_work(afs_wq, &afs_vlocation_reap, delay);
+fs/afs/vlocation.c:	queue_delayed_work(afs_vlocation_update_worker,
+fs/afs/vlocation.c:		queue_delayed_work(afs_vlocation_update_worker,
+fs/afs/vlocation.c:		queue_delayed_work(afs_vlocation_update_worker,
+fs/afs/vlocation.c:		queue_delayed_work(afs_wq, &afs_vlocation_reap,
+fs/btrfs/transaction.c:	schedule_delayed_work(&ac->work, 0);
+fs/ceph/mds_client.c:	schedule_delayed_work(&mdsc->delayed_work, hz);
+fs/cifs/cifs_dfs_ref.c:	schedule_delayed_work(&cifs_dfs_automount_task,
+fs/cifs/cifs_dfs_ref.c:		schedule_delayed_work(&cifs_dfs_automount_task,
+fs/cifs/connect.c:	queue_delayed_work(cifsiod_wq, &cifs_sb->prune_tlinks,
+fs/cifs/connect.c:	queue_delayed_work(cifsiod_wq, &cifs_sb->prune_tlinks,
+fs/cifs/connect.c:	queue_delayed_work(cifsiod_wq, &server->echo, SMB_ECHO_INTERVAL);
+fs/cifs/connect.c:	queue_delayed_work(cifsiod_wq, &tcp_ses->echo, SMB_ECHO_INTERVAL);
+fs/fs-writeback.c:		mod_delayed_work(bdi_wq, &bdi->wb.dwork, 0);
+fs/fs-writeback.c:	mod_delayed_work(bdi_wq, &bdi->wb.dwork, 0);
+fs/fs-writeback.c:		mod_delayed_work(bdi_wq, &wb->dwork, 0);
+fs/gfs2/glock.c:			if (queue_delayed_work(glock_workqueue, &gl->gl_work, 0) == 0)
+fs/gfs2/glock.c:		if (queue_delayed_work(glock_workqueue, &gl->gl_work, 0) == 0)
+fs/gfs2/glock.c:	if (queue_delayed_work(glock_workqueue, &gl->gl_work, 0) == 0)
+fs/gfs2/glock.c:	if (queue_delayed_work(glock_workqueue, &gl->gl_work, 0) == 0)
+fs/gfs2/glock.c:	if (queue_delayed_work(glock_workqueue, &gl->gl_work, 0) == 0)
+fs/gfs2/glock.c:	if (queue_delayed_work(glock_workqueue, &gl->gl_work, 0) == 0)
+fs/gfs2/glock.c:		if (queue_delayed_work(glock_workqueue, &gl->gl_work, delay) == 0)
+fs/gfs2/glock.c:	if (queue_delayed_work(glock_workqueue, &gl->gl_work, delay) == 0)
+fs/gfs2/glock.c:	if (queue_delayed_work(glock_workqueue, &gl->gl_work, delay) == 0)
+fs/gfs2/lock_dlm.c:		queue_delayed_work(gfs2_control_wq, &sdp->sd_control_work,
+fs/gfs2/lock_dlm.c:		queue_delayed_work(gfs2_control_wq, &sdp->sd_control_work, 0);
+fs/jffs2/wbuf.c:	if (queue_delayed_work(system_long_wq, &c->wbuf_dwork, delay))
+fs/lockd/svc.c:	schedule_delayed_work(&ln->grace_period_end, grace_period);
+fs/namespace.c:			schedule_delayed_work(&delayed_mntput_work, 1);
+fs/nfsd/nfs4state.c:	queue_delayed_work(laundry_wq, &laundromat_work, nfsd4_grace * HZ);
+fs/nfsd/nfs4state.c:	queue_delayed_work(laundry_wq, &laundromat_work, t*HZ);
+fs/nfs/namespace.c:		schedule_delayed_work(&nfs_automount_task, nfs_mountpoint_expiry_timeout);
+fs/nfs/namespace.c:	schedule_delayed_work(&nfs_automount_task, nfs_mountpoint_expiry_timeout);
+fs/nfs/nfs4renewd.c:	queue_delayed_work(system_wq, &clp->cl_renewd, timeout);
+fs/ocfs2/alloc.c:		queue_delayed_work(ocfs2_wq, &osb->osb_truncate_log_wq,
+fs/ocfs2/cluster/heartbeat.c:	schedule_delayed_work(&reg->hr_write_timeout_work,
+fs/ocfs2/cluster/tcp.c:	if (!queue_delayed_work(o2net_wq, work, delay))
+fs/ocfs2/cluster/tcp.c:	o2net_sc_queue_delayed_work(sc, &sc->sc_keepalive_work,
+fs/ocfs2/cluster/tcp.c:		queue_delayed_work(o2net_wq, &nn->nn_connect_expired, delay);
+fs/ocfs2/cluster/tcp.c:		queue_delayed_work(o2net_wq, &nn->nn_connect_work, delay);
+fs/ocfs2/cluster/tcp.c:		queue_delayed_work(o2net_wq, &nn->nn_still_up,
+fs/ocfs2/cluster/tcp.c:static void o2net_sc_queue_delayed_work(struct o2net_sock_container *sc,
+fs/ocfs2/journal.c:		queue_delayed_work(ocfs2_wq, &os->os_orphan_scan_work,
+fs/ocfs2/journal.c:		queue_delayed_work(ocfs2_wq, &os->os_orphan_scan_work,
+fs/ocfs2/localalloc.c:		queue_delayed_work(ocfs2_wq, &osb->la_enable_wq,
+fs/ocfs2/quota_global.c:	schedule_delayed_work(&oinfo->dqi_sync_work,
+fs/ocfs2/quota_global.c:	schedule_delayed_work(&oinfo->dqi_sync_work,
+fs/reiserfs/journal.c:		queue_delayed_work(commit_wq, &journal->j_work, HZ / 10);
+fs/ufs/super.c:		queue_delayed_work(system_long_wq, &sbi->sync_work, delay);
+fs/xfs/xfs_mru_cache.c:			queue_delayed_work(xfs_mru_reap_wq, &mru->work,
+fs/xfs/xfs_mru_cache.c:		queue_delayed_work(xfs_mru_reap_wq, &mru->work, next);
+fs/xfs/xfs_sync.c:		queue_delayed_work(xfs_syncd_wq, &mp->m_reclaim_work,
+fs/xfs/xfs_sync.c:	queue_delayed_work(xfs_syncd_wq, &mp->m_sync_work,
+include/linux/blkdev.h:int kblockd_schedule_delayed_work_on(int cpu, struct delayed_work *dwork, unsigned long delay);
+include/linux/blkdev.h:int kblockd_schedule_delayed_work(struct delayed_work *dwork, unsigned long delay);
+include/linux/kthread.h:bool kthread_mod_delayed_work(struct kthread_worker *worker,
+include/linux/kthread.h:bool kthread_queue_delayed_work(struct kthread_worker *worker,
+include/linux/libata.h:extern void ata_sff_queue_delayed_work(struct delayed_work *dwork,
+include/linux/workqueue.h:extern bool mod_delayed_work_on(int cpu, struct workqueue_struct *wq,
+include/linux/workqueue.h: * mod_delayed_work - modify delay of or queue a delayed work
+include/linux/workqueue.h: * mod_delayed_work_on() on local CPU.
+include/linux/workqueue.h:	return mod_delayed_work_on(WORK_CPU_UNBOUND, wq, dwork, delay);
+include/linux/workqueue.h:	return mod_delayed_work(system_wq, dwork, delay);
+include/linux/workqueue.h:	return queue_delayed_work(system_wq, dwork, delay);
+include/linux/workqueue.h: * schedule_delayed_work_on - queue work in global workqueue on CPU after delay
+include/linux/workqueue.h: * schedule_delayed_work - put work task in global workqueue after delay
+include/linux/workqueue.h:static inline bool mod_delayed_work(struct workqueue_struct *wq,
+include/linux/workqueue.h:static inline bool mod_scheduled_work(struct delayed_work *dwork,
+include/linux/workqueue.h:static inline bool queue_delayed_work(struct workqueue_struct *wq,
+include/linux/workqueue.h:static inline bool schedule_delayed_work_on(int cpu, struct delayed_work *dwork,
+include/linux/workqueue.h:static inline bool schedule_delayed_work(struct delayed_work *dwork,
+include/net/mac80211.h:void ieee80211_queue_delayed_work(struct ieee80211_hw *hw,
+kernel/cgroup.c:		mod_delayed_work(cgroup_pidlist_destroy_wq, &l->destroy_dwork,
+kernel/cgroup.c:		mod_delayed_work(cgroup_pidlist_destroy_wq, &l->destroy_dwork, 0);
+kernel/jump_label.c:		schedule_delayed_work(work, rate_limit);
+kernel/kprobes.c:	schedule_delayed_work(&optimizing_work, OPTIMIZE_DELAY);
+kernel/kthread.c:bool kthread_mod_delayed_work(struct kthread_worker *worker,
+kernel/kthread.c:bool kthread_queue_delayed_work(struct kthread_worker *worker,
+kernel/kthread.c:EXPORT_SYMBOL_GPL(kthread_mod_delayed_work);
+kernel/kthread.c: * If @dwork is idle, equivalent to kthread_queue_delayed_work(). Otherwise,
+kernel/kthread.c: * kthread_mod_delayed_work - modify delay of or queue a kthread delayed work
+kernel/kthread.c:		__kthread_queue_delayed_work(worker, dwork, delay);
+kernel/kthread.c:	__kthread_queue_delayed_work(worker, dwork, delay);
+kernel/kthread.c: * or yet another kthread_mod_delayed_work() call. We let the other command
+kernel/kthread.c:void __kthread_queue_delayed_work(struct kthread_worker *worker,
+kernel/power/qos.c:	schedule_delayed_work(&req->work, usecs_to_jiffies(timeout_us));
+kernel/power/state_notifier.c:		queue_delayed_work(susp_wq, &resume_work,
+kernel/power/state_notifier.c:	queue_delayed_work(susp_wq, &suspend_work,
+kernel/rcu/srcutree.c:		queue_delayed_work(system_power_efficient_wq, &sp->work,
+kernel/rcu/srcutree.c:		queue_delayed_work(system_power_efficient_wq, &sp->work, delay);
+kernel/rcu/srcutree.c:		ret = queue_delayed_work(wq, dwork, delay);
+kernel/time/ntp.c:	queue_delayed_work(system_power_efficient_wq, &sync_work,
+kernel/time/ntp.c:		queue_delayed_work(system_power_efficient_wq, &sync_work, 0);
+kernel/workqueue.c:bool mod_delayed_work_on(int cpu, struct workqueue_struct *wq,
+kernel/workqueue.c:EXPORT_SYMBOL(mod_delayed_work_on);
+kernel/workqueue.c: * mod_delayed_work_on - modify delay of or queue a delayed work on specific CPU
+kernel/workqueue.c:		__queue_delayed_work(cpu, wq, dwork, delay);
+kernel/workqueue.c:		__queue_delayed_work(cpu, wq, dwork, delay);
+kernel/workqueue.c:static void __queue_delayed_work(int cpu, struct workqueue_struct *wq,
+MachinexChangeLog:	is just a wrapper for mod_delayed_work on the system wq
+mm/backing-dev.c: * earlier. Thus we use queue_delayed_work().
+mm/backing-dev.c:	mod_delayed_work(bdi_wq, &bdi->wb.dwork, 0);
+mm/backing-dev.c:		queue_delayed_work(bdi_wq, &bdi->wb.dwork, timeout);
+mm/slab.c:		schedule_delayed_work_on(cpu, reap_work,
+mm/slab.c:	schedule_delayed_work(work, round_jiffies_relative(REAPTIMEOUT_AC));
+mm/vmstat.c:	queue_delayed_work(vmstat_wq, this_cpu_ptr(&vmstat_work),
+mm/vmstat.c:	schedule_delayed_work_on(cpu, work, __round_jiffies_relative(HZ, cpu));
+net/atm/lec.c:	schedule_delayed_work(&priv->lec_arp_work, LEC_ARP_REFRESH_INTERVAL);
+net/atm/lec.c:	schedule_delayed_work(&priv->lec_arp_work, LEC_ARP_REFRESH_INTERVAL);
+net/batman-adv/bat_iv_ogm.c:	queue_delayed_work(bat_event_workqueue,
+net/batman-adv/originator.c:	queue_delayed_work(bat_event_workqueue, &bat_priv->orig_work, 1 * HZ);
+net/batman-adv/send.c:	queue_delayed_work(bat_event_workqueue, &forw_packet->delayed_work,
+net/batman-adv/translation-table.c:	queue_delayed_work(bat_event_workqueue, &bat_priv->tt_work,
+net/batman-adv/vis.c:	queue_delayed_work(bat_event_workqueue, &bat_priv->vis_work,
+net/bluetooth/hci_conn.c:		queue_delayed_work(hdev->workqueue, &conn->rssi_update_work,
+net/bluetooth/l2cap_core.c:		queue_delayed_work(_l2cap_wq, &pi->ack_work,
+net/bluetooth/l2cap_core.c:		queue_delayed_work(_l2cap_wq, &pi->monitor_work,
+net/bluetooth/l2cap_core.c:		queue_delayed_work(_l2cap_wq, &pi->retrans_work,
+net/ceph/messenger.c:	if (!queue_delayed_work(ceph_msgr_wq, &con->work, delay)) {
+net/ceph/mon_client.c:	schedule_delayed_work(&monc->delayed_work, delay);
+net/ceph/osd_client.c:	schedule_delayed_work(&osdc->osds_timeout_work,
+net/ceph/osd_client.c:	schedule_delayed_work(&osdc->osds_timeout_work,
+net/ceph/osd_client.c:	schedule_delayed_work(&osdc->timeout_work,
+net/core/dst.c:		queue_delayed_work(system_wq, &dst_gc_work,
+net/core/dst.c:		queue_delayed_work(system_wq, &dst_gc_work, expires);
+net/core/link_watch.c:		mod_delayed_work(system_wq, &linkwatch_work, 0);
+net/core/link_watch.c:		schedule_delayed_work(&linkwatch_work, delay);
+net/core/neighbour.c:	queue_delayed_work(system_wq, &tbl->gc_work,
+net/core/neighbour.c:	queue_delayed_work(system_wq, &tbl->gc_work,
+net/core/netpoll.c:		schedule_delayed_work(&npinfo->tx_work,0);
+net/core/netpoll.c:			schedule_delayed_work(&npinfo->tx_work, HZ/10);
+net/ipv4/inetpeer.c:	schedule_delayed_work(&gc_work, gc_delay);
+net/ipv4/inetpeer.c:	schedule_delayed_work(&gc_work, gc_delay);
+net/ipv4/route.c:	schedule_delayed_work(&expires_work,
+net/ipv4/route.c:	schedule_delayed_work(&expires_work, ip_rt_gc_interval);
+net/mac80211/scan.c:	ieee80211_queue_delayed_work(&local->hw,
+net/mac80211/scan.c:	ieee80211_queue_delayed_work(&local->hw, &local->scan_work, 0);
+net/mac80211/scan.c:	ieee80211_queue_delayed_work(&local->hw, &local->scan_work, next_delay);
+net/mac80211/util.c:	queue_delayed_work(local->workqueue, dwork, delay);
+net/mac80211/util.c:void ieee80211_queue_delayed_work(struct ieee80211_hw *hw,
+net/mac80211/work.c:		ieee80211_queue_delayed_work(&local->hw,
+net/netfilter/ipvs/ip_vs_ctl.c:	schedule_delayed_work(&ipvs->defense_work, DEFENSE_TIMER_PERIOD);
+net/netfilter/ipvs/ip_vs_ctl.c:	schedule_delayed_work(&ipvs->defense_work, DEFENSE_TIMER_PERIOD);
+net/netfilter/ipvs/ip_vs_sync.c:			schedule_delayed_work(&ipvs->master_wakeup_work,
+net/openvswitch/datapath.c:	schedule_delayed_work(&rehash_flow_wq, REHASH_FLOW_INTERVAL);
+net/openvswitch/datapath.c:	schedule_delayed_work(&rehash_flow_wq, REHASH_FLOW_INTERVAL);
+net/rds/connection.c:		queue_delayed_work(rds_wq, &conn->c_conn_w, 0);
+net/rds/ib_rdma.c:			schedule_delayed_work(&pool->flush_worker, 10);
+net/rds/ib_rdma.c:		schedule_delayed_work(&pool->flush_worker, 10);
+net/rds/ib_rdma.c:		schedule_delayed_work(&pool->flush_worker, 10);
+net/rds/ib_send.c:			queue_delayed_work(rds_wq, &conn->c_send_w, 0);
+net/rds/ib_send.c:		queue_delayed_work(rds_wq, &conn->c_send_w, 0);
+net/rds/iw_recv.c:		queue_delayed_work(rds_wq, &conn->c_recv_w, 0);
+net/rds/iw_send.c:			queue_delayed_work(rds_wq, &conn->c_send_w, 0);
+net/rds/iw_send.c:		queue_delayed_work(rds_wq, &conn->c_send_w, 0);
+net/rds/send.c:		queue_delayed_work(rds_wq, &conn->c_send_w, 0);
+net/rds/tcp_recv.c:		queue_delayed_work(rds_wq, &conn->c_recv_w, 0);
+net/rds/tcp_send.c:		queue_delayed_work(rds_wq, &conn->c_send_w, 0);
+net/rds/threads.c:	queue_delayed_work(rds_wq, &conn->c_conn_w,
+net/rds/threads.c:		queue_delayed_work(rds_wq, &conn->c_conn_w, 0);
+net/rds/threads.c:			queue_delayed_work(rds_wq, &conn->c_recv_w, 0);
+net/rds/threads.c:	queue_delayed_work(rds_wq, &conn->c_recv_w, 0);
+net/rds/threads.c:			queue_delayed_work(rds_wq, &conn->c_recv_w, 2);
+net/rds/threads.c:			queue_delayed_work(rds_wq, &conn->c_send_w, 0);
+net/rds/threads.c:	queue_delayed_work(rds_wq, &conn->c_send_w, 0);
+net/rds/threads.c:			queue_delayed_work(rds_wq, &conn->c_send_w, 2);
+net/rfkill/core.c:	queue_delayed_work(system_power_efficient_wq,
+net/rfkill/core.c:	queue_delayed_work(system_power_efficient_wq,
+net/rfkill/core.c:		queue_delayed_work(system_power_efficient_wq,
+net/rfkill/core.c:		queue_delayed_work(system_power_efficient_wq,
+net/rfkill/input.c:	if (schedule_delayed_work(&rfkill_op_work,
+net/rfkill/input.c:		mod_delayed_work(system_wq, &rfkill_op_work, 0);
+net/rxrpc/ar-connection.c:		rxrpc_queue_delayed_work(&rxrpc_connection_reap,
+net/rxrpc/ar-connection.c:		rxrpc_queue_delayed_work(&rxrpc_connection_reap, 0);
+net/rxrpc/ar-connection.c:	rxrpc_queue_delayed_work(&rxrpc_connection_reap, 0);
+net/rxrpc/ar-internal.h:#define rxrpc_queue_delayed_work(WS,D)	\
+net/rxrpc/ar-internal.h:	queue_delayed_work(rxrpc_workqueue, (WS), (D))
+net/rxrpc/ar-transport.c:		rxrpc_queue_delayed_work(&rxrpc_transport_reap,
+net/rxrpc/ar-transport.c:		rxrpc_queue_delayed_work(&rxrpc_transport_reap, 0);
+net/rxrpc/ar-transport.c:	rxrpc_queue_delayed_work(&rxrpc_transport_reap, 0);
+net/sunrpc/cache.c:	schedule_delayed_work(&cache_cleaner, 0);
+net/sunrpc/cache.c:		schedule_delayed_work(&cache_cleaner, delay);
+net/sunrpc/rpc_pipe.c:			queue_delayed_work(rpciod_workqueue,
+net/sunrpc/xprtrdma/transport.c:		schedule_delayed_work(&r_xprt->rdma_connect,
+net/sunrpc/xprtrdma/transport.c:		schedule_delayed_work(&r_xprt->rdma_connect, 0);
+net/sunrpc/xprtsock.c:		queue_delayed_work(rpciod_workqueue,
+net/sunrpc/xprtsock.c:		queue_delayed_work(rpciod_workqueue,
+net/sunrpc/xprtsock.c:	queue_delayed_work(rpciod_workqueue, &transport->connect_worker,
+net/wireless/reg.c:		schedule_delayed_work(&reg_timeout, 0);
+net/wireless/reg.c:		schedule_delayed_work(&reg_timeout, msecs_to_jiffies(3142));
+patches-all/allpatches.txt:/root/machinex/patches-all/patches0-8000/2037-workqueue-use-mod_delayed_work-instead-of-__cancel-a.patch
+patches-all/allpatches.txt:/root/machinex/patches-all/patches0-8000/2038-workqueue-use-mod_delayed_work-instead-of-cancel-and.patch
+patches-all/allpatches.txt:/root/machinex/patches-all/patches0-8000/3471-massive-conversion-to-mod_delayed_work.patch
+patches-all/allpatches.txt:/root/machinex/patches-all/patches0-8000/3679-replace-mod_delayed_work-with-queue-in-some-choice-a.patch
+patches-all/allpatches.txt:/root/machinex/patches-all/patches0-8000/3837-cpu_boost-use-mod_delayed_work-instead-of-queue.patch
+patches-all/allpatches.txt:/root/machinex/patches-all/patches0-8000/6160-mod_delayed_work-in-some-smart-places.patch
+patches-all/allpatches.txt:/root/machinex/patches-all/patches0-8000/7042-workqueue-mod_delayed_work_on-shouldn-t-queue-timer.patch
+patches-all/allpatches.txt:/root/machinex/patches-all/patches24001-32000/0642-change-mod_delayed_work-back-to-queue_delayed_work-w.patch
+patches-all/allpatches.txt:/root/machinex/patches-all/patches32001-40000/1409-massive-conversion-to-mod_delayed_work.patch
+patches-all/allpatches.txt:/root/machinex/patches-all/patches32001-40000/1617-replace-mod_delayed_work-with-queue-in-some-choice-a.patch
+patches-all/allpatches.txt:/root/machinex/patches-all/patches32001-40000/1775-cpu_boost-use-mod_delayed_work-instead-of-queue.patch
+patches-all/allpatches.txt:/root/machinex/patches-all/patches32001-40000/4098-mod_delayed_work-in-some-smart-places.patch
+patches-all/allpatches.txt:/root/machinex/patches-all/patches32001-40000/4980-workqueue-mod_delayed_work_on-shouldn-t-queue-timer.patch
+patches-all/allpatches.txt:/root/machinex/patches-all/patches40001-42063/2037-workqueue-use-mod_delayed_work-instead-of-__cancel-a.patch
+patches-all/allpatches.txt:/root/machinex/patches-all/patches40001-42063/2038-workqueue-use-mod_delayed_work-instead-of-cancel-and.patch
+patches-all/allpatches.txt:/root/machinex/patches-all/patches8001-16000/7105-blk-throttle-relocate-throtl_schedule_delayed_work.patch
+patches-all/allpatches.txt:/root/machinex/patches-all/patches8001-16000/7425-oops-add-kblockd_schedule_delayed_work_on.patch
+sound/aoa/core/gpio-feature.c:	schedule_delayed_work(&notif->work, 0);
+sound/aoa/core/gpio-pmf.c:	schedule_delayed_work(&notif->work, 0);
+sound/i2c/other/ak4113.c:	schedule_delayed_work(&ak4113->work, HZ / 10);
+sound/i2c/other/ak4113.c:		schedule_delayed_work(&chip->work, HZ / 10);
+sound/i2c/other/ak4113.c:		schedule_delayed_work(&chip->work, HZ / 10);
+sound/i2c/other/ak4114.c:	schedule_delayed_work(&ak4114->work, HZ / 10);
+sound/i2c/other/ak4114.c:		schedule_delayed_work(&chip->work, HZ / 10);
+sound/i2c/other/ak4114.c:		schedule_delayed_work(&chip->work, HZ / 10);
+sound/pci/ac97/ac97_codec.c:		schedule_delayed_work(&ac97->power_work,
+sound/pci/hda/hda_beep.c:				schedule_delayed_work(&beep->unregister_work,
+sound/pci/hda/hda_codec.c:		queue_delayed_work(codec->bus->workq, &codec->power_work,
+sound/pci/hda/patch_hdmi.c:			queue_delayed_work(codec->bus->workq,
+sound/pci/hda/patch_via.c:		schedule_delayed_work(&spec->vt1708_hp_work,
+sound/pci/hda/patch_via.c:			schedule_delayed_work(&spec->vt1708_hp_work,
+sound/soc/codecs/audience/es325.c:			schedule_delayed_work(&es325->sleep_work,
+sound/soc/codecs/audience/es705.c:				schedule_delayed_work(&es705->reroute_work,
+sound/soc/codecs/audience/es705.c:				schedule_delayed_work(&es705->reroute_work,
+sound/soc/codecs/audience/es705.c:				schedule_delayed_work(&es705->reroute_work,
+sound/soc/codecs/audience/es705.c:				schedule_delayed_work(&es705->reroute_work,
+sound/soc/codecs/audience/es705.c:		schedule_delayed_work(&es705->sleep_work,
+sound/soc/codecs/es325.c:	rc = queue_delayed_work(es325_workqueue, &es325_work, ES325_SLEEP_TIME);
+sound/soc/codecs/sta32x.c:		schedule_delayed_work(&sta32x->watchdog_work,
+sound/soc/codecs/sta32x.c:		schedule_delayed_work(&sta32x->watchdog_work,
+sound/soc/codecs/twl6040.c:	queue_delayed_work(priv->workqueue, &priv->hs_jack.work,
+sound/soc/codecs/twl6040.c:		queue_delayed_work(priv->workqueue, work, msecs_to_jiffies(1));
+sound/soc/codecs/twl6040.c:		queue_delayed_work(priv->workqueue, work, msecs_to_jiffies(1));
+sound/soc/codecs/wcd9304.c:		if (schedule_delayed_work(&priv->mbhc_btn_dwork,
+sound/soc/codecs/wcd9304.c:		schedule_delayed_work(&sitar->mbhc_firmware_dwork,
+sound/soc/codecs/wcd9304.c:			schedule_delayed_work(&tx_hpf_work[decimator - 1].dwork,
+sound/soc/codecs/wcd9306.c:			schedule_delayed_work(&tx_hpf_work[decimator - 1].dwork,
+sound/soc/codecs/wcd9310.c:		if (schedule_delayed_work(&priv->mbhc_btn_dwork,
+sound/soc/codecs/wcd9310.c:		if (schedule_delayed_work(&priv->mbhc_insert_dwork,
+sound/soc/codecs/wcd9310.c:		schedule_delayed_work(
+sound/soc/codecs/wcd9310.c:		schedule_delayed_work(&tabla->mbhc_firmware_dwork,
+sound/soc/codecs/wcd9310.c:			schedule_delayed_work(&tx_hpf_work[decimator - 1].dwork,
+sound/soc/codecs/wcd9320.c:		if (schedule_delayed_work(&priv->mbhc_btn_dwork,
+sound/soc/codecs/wcd9320.c:		if (schedule_delayed_work(&priv->mbhc_insert_dwork,
+sound/soc/codecs/wcd9320.c:		schedule_delayed_work(&taiko->mbhc_firmware_dwork,
+sound/soc/codecs/wcd9320.c:			schedule_delayed_work(&tx_hpf_work[decimator - 1].dwork,
+sound/soc/codecs/wcd9335.c:			schedule_delayed_work(
+sound/soc/codecs/wcd9335.c:			schedule_delayed_work(&tasha->power_gate_work,
+sound/soc/codecs/wcd9335.c:		schedule_delayed_work(&tasha->tx_mute_dwork[decimator].dwork,
+sound/soc/codecs/wcd9xxx-mbhc.c:		if (schedule_delayed_work(&mbhc->mbhc_btn_dwork,
+sound/soc/codecs/wcd9xxx-mbhc.c:		schedule_delayed_work(&mbhc->mbhc_firmware_dwork,
+sound/soc/codecs/wm8350.c:			schedule_delayed_work(&codec->dapm.delayed_work,
+sound/soc/codecs/wm8350.c:			schedule_delayed_work(&codec->dapm.delayed_work,
+sound/soc/codecs/wm8350.c:	schedule_delayed_work(&jack->work, 200);
+sound/soc/codecs/wm8753.c:	schedule_delayed_work(&codec->dapm.delayed_work,
+sound/soc/codecs/wm8753.c:		schedule_delayed_work(&codec->dapm.delayed_work,
+sound/soc/codecs/wm8962.c:		schedule_delayed_work(&wm8962->mic_work,
+sound/soc/codecs/wm8971.c:		queue_delayed_work(wm8971_workq, &codec->dapm.delayed_work,
+sound/soc/codecs/wm8971.c:	queue_delayed_work(wm8971_workq, &codec->dapm.delayed_work,
+sound/soc/msm/msm8230.c:			schedule_delayed_work(
+sound/soc/msm/msm8930.c:			schedule_delayed_work(
+sound/soc/msm/msm8960-d2.c:			schedule_delayed_work(
+sound/soc/msm/msm8960-d2.c:			schedule_delayed_work(
+sound/soc/msm/msm8960-jaguar.c:			schedule_delayed_work(
+sound/soc/soc-jack.c:	schedule_delayed_work(&gpio->work,
+sound/soc/soc-pcm.c:			schedule_delayed_work(&rtd->delayed_work,

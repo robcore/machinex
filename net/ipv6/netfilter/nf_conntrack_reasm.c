@@ -142,11 +142,12 @@ static void nf_ct_frag6_evictor(void)
 
 static void nf_ct_frag6_expire(struct timer_list *t)
 {
-	struct inet_frag_queue *mxq = from_timer(mxq, t, frag_expire);
+	struct inet_frags *mxq = from_timer(mxq, t, frag_expire);
+	
 	struct nf_ct_frag6_queue *fq;
 
-	fq = container_of(mxq,
-			struct nf_ct_frag6_queue, q);
+	fq = container_of(fq,
+			struct nf_ct_frag6_queue, fq);
 
 	spin_lock(&fq->q.lock);
 
