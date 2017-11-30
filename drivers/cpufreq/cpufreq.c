@@ -65,6 +65,12 @@ module_param(input_boost_ms, uint, 0644);
 static struct delayed_work input_boost_rem;
 static u64 last_input_time;
 
+static cpumask_t throttled_mask;
+bool thermal_is_throttling(void)
+{
+	return cpumask_empty(&throttled_mask) ? false : true;
+}
+
 static LIST_HEAD(cpufreq_policy_list);
 
 static inline bool policy_is_inactive(struct cpufreq_policy *policy)
@@ -356,11 +362,13 @@ static void reapply_hard_limits(unsigned int cpu, bool update_policy)
 	switch(current_screen_state) {
 		case CPUFREQ_HARDLIMIT_SCREEN_ON:
 			if (limited_max_freq_thermal[cpu] >= DEFAULT_HARD_MIN &&
-				limited_max_freq_thermal[cpu] < hpolicy->hardlimit_max_screen_on)
+				limited_max_freq_thermal[cpu] < hpolicy->hardlimit_max_screen_on) {
 				hpolicy->current_limit_max = limited_max_freq_thermal[cpu];
-			else
+				cpumask_set_cpu(cpu, &throttled_mask);
+			} else {
 				hpolicy->current_limit_max = hpolicy->hardlimit_max_screen_on;
-
+				cpumask_clear_cpu(cpu, &throttled_mask);
+			}
 			if (thermal_disables_boost) {
 				if (hpolicy->input_boost_limit > hpolicy->hardlimit_min_screen_on &&
 					hpolicy->input_boost_limit <= hpolicy->current_limit_max &&
@@ -375,18 +383,20 @@ static void reapply_hard_limits(unsigned int cpu, bool update_policy)
 				else
 					hpolicy->current_limit_min = hpolicy->hardlimit_min_screen_on;
 			}
-		break;
+			break;
 		case CPUFREQ_HARDLIMIT_SCREEN_OFF:
-		if (limited_max_freq_thermal[cpu] >= DEFAULT_HARD_MIN &&
-			limited_max_freq_thermal[cpu] < hpolicy->hardlimit_max_screen_off)
-			hpolicy->current_limit_max = limited_max_freq_thermal[cpu];
-		else
-			hpolicy->current_limit_max = hpolicy->hardlimit_max_screen_off;
-
-		hpolicy->current_limit_min = hpolicy->hardlimit_min_screen_off;
-		break;
+			if (limited_max_freq_thermal[cpu] >= DEFAULT_HARD_MIN &&
+				limited_max_freq_thermal[cpu] < hpolicy->hardlimit_max_screen_off) {
+				hpolicy->current_limit_max = limited_max_freq_thermal[cpu];
+				cpumask_set_cpu(cpu, &throttled_mask);
+			} else {
+				hpolicy->current_limit_max = hpolicy->hardlimit_max_screen_off;
+				cpumask_clear_cpu(cpu, &throttled_mask);
+			}
+			hpolicy->current_limit_min = hpolicy->hardlimit_min_screen_off;
+			break;
 		default:
-		break;
+			break;
 	}
 	if (!cpu_online(cpu))
 		return;
@@ -2966,7 +2976,8 @@ static int __init cpufreq_core_init(void)
 #ifdef CONFIG_CPU_VOLTAGE_TABLE
 	rc = sysfs_create_group(cpufreq_global_kobject, &vddtbl_attr_group);
 #endif	/* CONFIG_CPU_VOLTAGE_TABLE */
-
+	cpumask_copy(&throttled_mask, cpu_possible_mask);
+	cpumask_clear(&throttled_mask);
 	cpu_boost_wq = alloc_workqueue("cpuboost_wq", WQ_HIGHPRI | WQ_FREEZABLE, 0);
 	if (!cpu_boost_wq)
 		return -EFAULT;

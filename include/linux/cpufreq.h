@@ -161,7 +161,7 @@ struct cpufreq_policy {
 #define CPUFREQ_HARDLIMIT_SCREEN_ON	0		/* default, consider we boot with screen on */
 #define CPUFREQ_HARDLIMIT_SCREEN_OFF	1
 extern unsigned int limited_max_freq_thermal[NR_CPUS];
-
+extern bool thermal_is_throttling(void);
 void cpu_boost_event(void);
 void intelli_boost(void);
 #ifdef CONFIG_AUTOSMP
