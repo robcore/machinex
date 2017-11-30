@@ -225,7 +225,7 @@ static ssize_t store_##object		\
 	if (input == object) {			\
 		return count;			\
 	}					\
-	object = INTELLI_MS(input);				\
+	object = input;				\
 	return count;				\
 }
 
