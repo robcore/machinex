@@ -140,11 +140,12 @@ static void nf_ct_frag6_evictor(void)
 	local_bh_enable();
 }
 
-static void nf_ct_frag6_expire(unsigned long data)
+static void nf_ct_frag6_expire(struct timer_list *t)
 {
+	struct inet_frag_queue *mxq = from_timer(mxq, t, frag_expire);
 	struct nf_ct_frag6_queue *fq;
 
-	fq = container_of((struct inet_frag_queue *)data,
+	fq = container_of(mxq,
 			struct nf_ct_frag6_queue, q);
 
 	spin_lock(&fq->q.lock);

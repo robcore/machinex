@@ -185,13 +185,14 @@ static void ip6_evictor(struct net *net, struct inet6_dev *idev)
 		IP6_ADD_STATS_BH(net, idev, IPSTATS_MIB_REASMFAILS, evicted);
 }
 
-static void ip6_frag_expire(unsigned long data)
+static void ip6_frag_expire(struct timer_list *t)
 {
+	struct inet_frag_queue *mxq = from_timer(mxq, t, timer);
 	struct frag_queue *fq;
 	struct net_device *dev = NULL;
 	struct net *net;
 
-	fq = container_of((struct inet_frag_queue *)data, struct frag_queue, q);
+	fq = container_of(mxq, struct frag_queue, q);
 
 	spin_lock(&fq->q.lock);
 

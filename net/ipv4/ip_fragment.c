@@ -224,12 +224,13 @@ static void ip_evictor(struct net *net)
 /*
  * Oops, a fragment queue timed out.  Kill it and send an ICMP reply.
  */
-static void ip_expire(unsigned long arg)
+static void ip_expire(struct timer_list *t)
 {
+	struct inet_frag_queue *fq = from_timer(fq, t, timer);
 	struct ipq *qp;
 	struct net *net;
 
-	qp = container_of((struct inet_frag_queue *) arg, struct ipq, q);
+	qp = container_of(fq, struct ipq, q);
 	net = container_of(qp->q.net, struct net, ipv4.frags);
 
 	spin_lock(&qp->q.lock);
