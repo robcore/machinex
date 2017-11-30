@@ -204,56 +204,57 @@ err:
 	return res;
 }
 
-static int __init msm_dt_timer_init(struct device_node *np)
+static int __init msm_timer_map(phys_addr_t addr, u32 event, u32 source,
+				u32 sts)
 {
-	u32 freq;
-	int irq, ret;
-	struct resource res;
-	u32 percpu_offset;
 	void __iomem *base;
-	void __iomem *cpu0_base;
-
-	base = of_iomap(np, 0);
+ 
+	base = ioremap(addr, SZ_256);
 	if (!base) {
-		pr_err("Failed to map event base\n");
-		return -ENXIO;
+		pr_err("Failed to map timer base\n");
+		return -ENOMEM;
 	}
-
-	/* We use GPT0 for the clockevent */
-	irq = irq_of_parse_and_map(np, 1);
-	if (irq <= 0) {
-		pr_err("Can't get irq\n");
-		return -EINVAL;
-	}
-
-	/* We use CPU0's DGT for the clocksource */
-	if (of_property_read_u32(np, "cpu-offset", &percpu_offset))
-		percpu_offset = 0;
-
-	ret = of_address_to_resource(np, 0, &res);
-	if (ret) {
-		pr_err("Failed to parse DGT resource\n");
-		return ret;
-	}
-
-	cpu0_base = ioremap(res.start + percpu_offset, resource_size(&res));
-	if (!cpu0_base) {
-		pr_err("Failed to map source base\n");
-		return -EINVAL;
-	}
-
-	if (of_property_read_u32(np, "clock-frequency", &freq)) {
-		pr_err("Unknown frequency\n");
-		return -EINVAL;
-	}
-
-	event_base = base + 0x4;
-	sts_base = base + 0x88;
-	source_base = cpu0_base + 0x24;
-	freq /= 4;
-	writel_relaxed(DGT_CLK_CTL_DIV_4, source_base + DGT_CLK_CTL);
-
-	return msm_timer_init(freq, 32, irq, !!percpu_offset);
+	event_base = base + event;
+	source_base = base + source;
+	if (sts)
+		sts_base = base + sts;
+ 
+	return 0;
 }
-TIMER_OF_DECLARE(kpss_timer, "qcom,kpss-timer", msm_dt_timer_init);
-TIMER_OF_DECLARE(scss_timer, "qcom,scss-timer", msm_dt_timer_init);
+ 
+static notrace cycle_t msm_read_timer_count_shift(struct clocksource *cs)
+{
+	/*
+	 * Shift timer count down by a constant due to unreliable lower bits
+	 * on some targets.
+	 */
+	return msm_read_timer_count(cs) >> MSM_DGT_SHIFT;
+}
+ 
+void __init msm7x01_timer_init(void)
+{
+	struct clocksource *cs = &msm_clocksource;
+ 
+	if (msm_timer_map(0xc0100000, 0x0, 0x10, 0x0))
+		return;
+	cs->read = msm_read_timer_count_shift;
+	cs->mask = CLOCKSOURCE_MASK((32 - MSM_DGT_SHIFT));
+	/* 600 KHz */
+	msm_timer_init(19200000 >> MSM_DGT_SHIFT, 32 - MSM_DGT_SHIFT, 7,
+			false);
+}
+ 
+void __init msm7x30_timer_init(void)
+{
+	if (msm_timer_map(0xc0100000, 0x4, 0x24, 0x80))
+		return;
+	msm_timer_init(24576000 / 4, 32, 1, false);
+}
+ 
+void __init qsd8x50_timer_init(void)
+{
+	if (msm_timer_map(0xAC100000, 0x0, 0x10, 0x34))
+		return;
+	msm_timer_init(19200000 / 4, 32, 7, false);
+}
+
