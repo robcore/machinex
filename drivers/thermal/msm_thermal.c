@@ -402,7 +402,6 @@ static int __ref mitigation_control(void *data)
 	int ret = 0;
 	unsigned int cpu = smp_processor_id();
 	long freq_temp, core_temp, delta;
-	unsigned int hotplug_check_needed = 0;
 	unsigned int resolve_max_freq[NR_CPUS];
 
 top:
@@ -425,7 +424,6 @@ top:
 			break;
 		freq_temp = evaluate_temp(cpu);
 		if (freq_temp <= 0) {
-			hotplug_check_needed++;
 			continue;
 		}
 		resolve_max_freq[cpu] = limited_max_freq_thermal[cpu];
@@ -434,7 +432,6 @@ top:
 					limit_idx[cpu] = thermal_limit_low[cpu];
 					if (unlikely(limited_max_freq_thermal[cpu] > resolve_max_freq[cpu]))
 						set_thermal_policy(cpu, resolve_max_freq[cpu]);
-					hotplug_check_needed++;
 					continue;
 				}
 				if (limit_idx[cpu] >= thermal_limit_low[cpu] + msm_thermal_info.freq_step)
@@ -442,7 +439,6 @@ top:
 				if (limit_idx[cpu] <= thermal_limit_low[cpu])
 					limit_idx[cpu] = thermal_limit_low[cpu];
 				resolve_max_freq[cpu] = therm_table[limit_idx[cpu]].frequency;
-				hotplug_check_needed++;
 		} else if (freq_temp < delta) {
 				if (limit_idx[cpu] >= MAX_IDX) {
 					limit_idx[cpu] = MAX_IDX;
@@ -461,7 +457,6 @@ top:
 					resolve_max_freq[cpu] = get_hardlimit_max(cpu);
 				} else {
 					resolve_max_freq[cpu] = therm_table[limit_idx[cpu]].frequency;
-					hotplug_check_needed++;
 				}
 		}
 
@@ -469,10 +464,8 @@ top:
 			set_thermal_policy(cpu, resolve_max_freq[cpu]);
 	}
 
-	clamp_val(hotplug_check_needed, 0, 1);
-
 	if (!core_control_enabled || intelli_init() ||
-		 thermal_suspended || !hotplug_check_needed ||
+		 thermal_suspended || !thermal_is_throttling() ||
 		 cpumask_empty(&core_control_mask)) {
 		goto top;
 	}
