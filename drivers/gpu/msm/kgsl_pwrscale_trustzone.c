@@ -21,6 +21,7 @@
 #include <linux/module.h>
 #include <linux/jiffies.h>
 #include <asm/div64.h>
+#include <linux/cpufreq.h>
 
 #include "kgsl.h"
 #include "kgsl_pwrscale.h"
@@ -63,7 +64,43 @@ spinlock_t tz_lock;
 #define MIN_POLL_INTERVAL	10000
 #define POLL_INTERVAL		100000
 #define MAX_POLL_INTERVAL	1000000
+/*
+static unsigned int thermal_powerlevel = 320000000;
+static unsigned int gpu_boost_freq = 200000000;
 
+static int set_gpu_boost_freq(const char *buf, const struct kernel_param *kp)
+{
+	unsigned int val, cpu = 0;
+	int i, temp_low = -1;
+
+	if (!sscanf(buf, "%u", &val))
+		return -EINVAL;
+
+	if (val != 450000000 && val != 320000000 &&
+		val != 200000000 && val != 128000000)
+		return -EINVAL;
+	
+	gpu_boost_freq = val;
+	return 0;
+}
+
+static int get_gpu_boost_freq(char *buf, const struct kernel_param *kp)
+{
+	ssize_t ret;
+	unsigned int cpu = 0;
+
+	ret = sprintf(buf, "%u", gpu_boost_freq);
+
+	return ret;
+}
+
+static const struct kernel_param_ops param_ops_gpu_boost_freq = {
+	.set = set_gpu_boost_freq,
+	.get = get_gpu_boost_freq
+};
+
+module_param_cb(gpu_boost_freq, &param_ops_gpu_boost_freq, NULL, 0644);
+*/
 static unsigned long polling_interval = POLL_INTERVAL;
 
 static unsigned long walltime_total;
@@ -320,12 +357,13 @@ static struct attribute_group tz_attr_group = {
 
 static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 {
-	struct tz_priv *priv = pwrscale->priv;
-
 	if (device->state == KGSL_STATE_NAP)
 		return;
-
-	kgsl_pwrctrl_pwrlevel_change(device, device->pwrctrl.max_pwrlevel);
+/*	if (thermal_is_throttling())
+		kgsl_pwrctrl_pwrlevel_change(device, thermal_powerlevel);
+	else
+*/
+		kgsl_pwrctrl_pwrlevel_change(device, device->pwrctrl.max_pwrlevel);
 }
 
 #define MIN_STEP 3
@@ -371,11 +409,11 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 
 			if (val) {
 				sanitize_min_max(level, pwr->max_pwrlevel, pwr->min_pwrlevel);
-			} else
+			} else {
 				level += 1;
-			kgsl_pwrctrl_pwrlevel_change(device,
-						     level);
-
+				kgsl_pwrctrl_pwrlevel_change(device,
+							     level);
+			}
 			break;
 		case TZ_GOVERNOR_INTERACTIVE:
 			level = pwr->active_pwrlevel;

@@ -84,7 +84,7 @@ unsigned int kgsl_cff_dump_enable;
 
 static const struct kgsl_functable adreno_functable;
 
-static unsigned int adreno_touchboost;
+unsigned int adreno_touchboost;
 module_param(adreno_touchboost, uint, 0644);
 bool wakeboost_active;
 
@@ -243,43 +243,6 @@ static unsigned int adreno_isidle(struct kgsl_device *device);
 /* Number of milliseconds to stay active active after a wake on touch */
 static unsigned int _wake_timeout = 100;
 module_param(_wake_timeout, uint, 0644);
-static bool gpu_freq_boost;
-module_param(gpu_freq_boost, bool, 0644);
-static unsigned int current_gpu_freq;
-static unsigned int gpu_boost_freq = 320000000;
-
-static int set_gpu_boost_freq(const char *buf, const struct kernel_param *kp)
-{
-	unsigned int val, cpu = 0;
-	int i, temp_low = -1;
-
-	if (!sscanf(buf, "%u", &val))
-		return -EINVAL;
-
-	if (val != 450000000 && val != 320000000 &&
-		val != 200000000 && val != 128000000)
-		return -EINVAL;
-	
-	gpu_boost_freq = val;
-	return 0;
-}
-
-static int get_gpu_boost_freq(char *buf, const struct kernel_param *kp)
-{
-	ssize_t ret;
-	unsigned int cpu = 0;
-
-	ret = sprintf(buf, "%u", gpu_boost_freq);
-
-	return ret;
-}
-
-static const struct kernel_param_ops param_ops_gpu_boost_freq = {
-	.set = set_gpu_boost_freq,
-	.get = get_gpu_boost_freq
-};
-
-module_param_cb(gpu_boost_freq, &param_ops_gpu_boost_freq, NULL, 0644);
 
 /*
  * A workqueue callback responsible for actually turning on the GPU after a
@@ -321,10 +284,6 @@ static void adreno_input_work(struct work_struct *work)
 		jiffies + msecs_to_jiffies(_wake_timeout));
 	wakeboost_active = false;
 
-	if (current_gpu_freq) {
-		kgsl_pwrctrl_pwrlevel_change(device, current_gpu_freq);
-		current_gpu_freq = 0;
-	}
 	mutex_unlock(&device->mutex);
 }
 
@@ -373,13 +332,6 @@ static void adreno_input_event(struct input_handle *handle, unsigned int type,
 	} else if (device->state == KGSL_STATE_SLUMBER ||
 			   device->state == KGSL_STATE_SLEEP) {
 		wakeboost_active = true;
-
-		mutex_lock(&device->mutex);
-		if (gpu_freq_boost && gpu_boost_freq > pwr->active_pwrlevel) {
-			current_gpu_freq = pwr->active_pwrlevel;
-			kgsl_pwrctrl_pwrlevel_change(device, gpu_boost_freq);
-		}
-		mutex_unlock(&device->mutex);
 
 		schedule_work(&adreno_dev->input_work);
 	}
