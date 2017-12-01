@@ -160,7 +160,7 @@ static struct msm_clock msm_clocks[] = {
 			.set_next_event = msm_timer_set_next_event,
 			.set_state_shutdown = msm_timer_shutdown,
 			.set_state_oneshot = msm_timer_oneshot,
-			.tick_resume = msm_timer_shutdown,
+			.tick_resume = msm_timer_resume,
 		},
 		.clocksource = {
 			.name           = "gp_timer",
@@ -184,7 +184,7 @@ static struct msm_clock msm_clocks[] = {
 			.set_next_event = msm_timer_set_next_event,
 			.set_state_shutdown = msm_timer_shutdown,
 			.set_state_oneshot = msm_timer_oneshot,
-			.tick_resume = msm_timer_shutdown,
+			.tick_resume = msm_timer_resume,
 		},
 		.clocksource = {
 			.name           = "dg_timer",
@@ -323,7 +323,17 @@ static int msm_timer_set_next_event(unsigned long cycles,
 	return 0;
 }
 
-static int msm_timer_shutdown(struct clock_event_device *evt)
+/* Clock event mode commands */
+enum msm_clock_event_mode {
+	CLOCK_EVT_MODE_UNUSED = 0,
+	CLOCK_EVT_MODE_SHUTDOWN,
+	CLOCK_EVT_MODE_PERIODIC,
+	CLOCK_EVT_MODE_ONESHOT,
+	CLOCK_EVT_MODE_RESUME,
+};
+
+static void msm_timer_set_mode(enum clock_event_mode mode,
+			       struct clock_event_device *evt)
 {
 	struct msm_clock *clock;
 	struct msm_clock **cur_clock;
@@ -332,71 +342,83 @@ static int msm_timer_shutdown(struct clock_event_device *evt)
 	struct irq_chip *chip;
 
 	clock = clockevent_to_clock(evt);
-	clock_state = raw_cpu_ptr(&msm_clocks_percpu)[clock->index];
-	gpt_state = raw_cpu_ptr(&msm_clocks_percpu)[MSM_CLOCK_GPT];
+	clock_state = &__get_cpu_var(msm_clocks_percpu)[clock->index];
+	gpt_state = &__get_cpu_var(msm_clocks_percpu)[MSM_CLOCK_GPT];
 
 	local_irq_save(irq_flags);
 
-	cur_clock = &get_cpu_var(msm_active_clock);
-	if (*cur_clock == clock)
-		*cur_clock = NULL;
-	put_cpu_var(msm_active_clock);
-	clock_state->in_sync = 0;
-	clock_state->stopped = 1;
-	clock_state->stopped_tick =
-		msm_read_timer_count(clock, LOCAL_TIMER) +
-		clock_state->sleep_offset;
-	__raw_writel(0, clock->regbase + TIMER_MATCH_VAL);
-	chip = irq_get_chip(clock->irq);
-	if (chip && chip->irq_mask)
-		chip->irq_mask(irq_get_irq_data(clock->irq));
+	switch (mode) {
+	case CLOCK_EVT_MODE_RESUME:
+	case CLOCK_EVT_MODE_PERIODIC:
+		break;
+	case CLOCK_EVT_MODE_ONESHOT:
+		clock_state->stopped = 0;
+		clock_state->sleep_offset =
+			-msm_read_timer_count(clock, LOCAL_TIMER) +
+			clock_state->stopped_tick;
+		get_cpu_var(msm_active_clock) = clock;
+		put_cpu_var(msm_active_clock);
+		__raw_writel(TIMER_ENABLE_EN, clock->regbase + TIMER_ENABLE);
+		chip = irq_get_chip(clock->irq);
+		if (chip && chip->irq_unmask)
+			chip->irq_unmask(irq_get_irq_data(clock->irq));
+		if (clock != &msm_clocks[MSM_CLOCK_GPT])
+			__raw_writel(TIMER_ENABLE_EN,
+				msm_clocks[MSM_CLOCK_GPT].regbase +
+			       TIMER_ENABLE);
+		break;
+	case CLOCK_EVT_MODE_UNUSED:
+	case CLOCK_EVT_MODE_SHUTDOWN:
+		cur_clock = &get_cpu_var(msm_active_clock);
+		if (*cur_clock == clock)
+			*cur_clock = NULL;
+		put_cpu_var(msm_active_clock);
+		clock_state->in_sync = 0;
+		clock_state->stopped = 1;
+		clock_state->stopped_tick =
+			msm_read_timer_count(clock, LOCAL_TIMER) +
+			clock_state->sleep_offset;
+		__raw_writel(0, clock->regbase + TIMER_MATCH_VAL);
+		chip = irq_get_chip(clock->irq);
+		if (chip && chip->irq_mask)
+			chip->irq_mask(irq_get_irq_data(clock->irq));
 
-	if (!is_smp() || clock != &msm_clocks[MSM_CLOCK_DGT]
-			|| smp_processor_id() > 0)
-	__raw_writel(0, clock->regbase + TIMER_ENABLE);
+		if (!is_smp() || clock != &msm_clocks[MSM_CLOCK_DGT]
+				|| smp_processor_id())
+			__raw_writel(0, clock->regbase + TIMER_ENABLE);
 
-	if (msm_global_timer == MSM_CLOCK_DGT &&
-	    clock != &msm_clocks[MSM_CLOCK_GPT]) {
-		gpt_state->in_sync = 0;
-		__raw_writel(0, msm_clocks[MSM_CLOCK_GPT].regbase +
-		       TIMER_ENABLE);
+		if (msm_global_timer == MSM_CLOCK_DGT &&
+		    clock != &msm_clocks[MSM_CLOCK_GPT]) {
+			gpt_state->in_sync = 0;
+			__raw_writel(0, msm_clocks[MSM_CLOCK_GPT].regbase +
+			       TIMER_ENABLE);
+		}
+		break;
 	}
-
 	wmb();
 	local_irq_restore(irq_flags);
+}
+
+static int msm_timer_shutdown(struct clock_event_device *evt)
+{
+	msm_timer_set_mode(CLOCK_EVT_MODE_SHUTDOWN, evt);
 	return 0;
 }
 
 static int msm_timer_oneshot(struct clock_event_device *evt)
 {
-	struct msm_clock *clock;
-	struct msm_clock **cur_clock;
-	struct msm_clock_percpu_data *clock_state, *gpt_state;
-	unsigned long irq_flags;
-	struct irq_chip *chip;
+	msm_timer_set_mode(CLOCK_EVT_MODE_SHUTDOWN, evt);
+}
 
-	clock = clockevent_to_clock(evt);
-	clock_state = raw_cpu_ptr(&msm_clocks_percpu)[clock->index];
-	gpt_state = raw_cpu_ptr(&msm_clocks_percpu)[MSM_CLOCK_GPT];
-
-	local_irq_save(irq_flags);
-	clock_state->stopped = 0;
-	clock_state->sleep_offset =
-		-msm_read_timer_count(clock, LOCAL_TIMER) +
-		clock_state->stopped_tick;
-	get_cpu_var(msm_active_clock) = clock;
-	put_cpu_var(msm_active_clock);
-	__raw_writel(TIMER_ENABLE_EN, clock->regbase + TIMER_ENABLE);
-	chip = irq_get_chip(clock->irq);
-	if (chip && chip->irq_unmask)
-		chip->irq_unmask(irq_get_irq_data(clock->irq));
-	if (clock != &msm_clocks[MSM_CLOCK_GPT])
-		__raw_writel(TIMER_ENABLE_EN,
-			msm_clocks[MSM_CLOCK_GPT].regbase +
-		       TIMER_ENABLE);
-	wmb();
-	local_irq_restore(irq_flags);
+static int msm_timer_shutdown(struct clock_event_device *evt)
+{
+	msm_timer_set_mode(CLOCK_EVT_MODE_SHUTDOWN, evt);
 	return 0;
+}
+
+static int msm_timer_resume(struct clock_event_device *evt)
+{
+	msm_timer_set_mode(CLOCK_EVT_MODE_RESUME, evt);
 }
 
 void __iomem *msm_timer_get_timer0_base(void)
@@ -824,7 +846,7 @@ static int msm_local_timer_starting_cpu(unsigned int cpu)
 	evt->rating = clock->clockevent.rating;
 	evt->set_state_shutdown = msm_timer_shutdown;
 	evt->set_state_oneshot = msm_timer_oneshot;
-	evt->tick_resume = msm_timer_shutdown;
+	evt->tick_resume = msm_timer_resume;
 	evt->set_next_event = msm_timer_set_next_event;
 	evt->shift = clock->clockevent.shift;
 	evt->mult = div_sc(clock->freq, NSEC_PER_SEC, evt->shift);
