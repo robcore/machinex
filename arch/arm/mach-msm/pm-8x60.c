@@ -514,7 +514,7 @@ static bool __ref msm_pm_spm_power_collapse(
 	bool collapsed = 0;
 	int ret;
 	unsigned int saved_gic_cpu_ctrl;
-	bool save_cpu_regs = (cpu == 0 || from_idle)
+	bool save_cpu_regs = (cpu == 0 || from_idle);
 
 	saved_gic_cpu_ctrl = readl_relaxed(MSM_QGIC_CPU_BASE + GIC_CPU_CTRL);
 	mb();
