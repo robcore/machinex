@@ -790,7 +790,28 @@ static void __init msm_sched_clock_init(void)
 
 	sched_clock_register(msm_read_sched_clock, 32 - clock->shift, clock->freq);
 }
+/*
+static void broadcast_timer_setup(struct clock_event_device *evt, unsigned int cpu)
+{
+	int res;
+	msm_evt = alloc_percpu(struct clock_event_device);
+	if (!msm_evt) {
+		pr_err("memory allocation failed for clockevents\n");
+		return;
+	}
 
+	evt = per_cpu_ptr(msm_evt, cpu);
+	evt->name	= "dummy_timer";
+	evt->features	= CLOCK_EVT_FEAT_ONESHOT |
+			  CLOCK_EVT_FEAT_PERIODIC |
+			  CLOCK_EVT_FEAT_DUMMY;
+	evt->rating	= 100;
+	evt->mult	= 1;
+	evt->cpumask = cpumask_of(cpu);
+
+	clockevents_register_device(evt);
+}
+*/
 /*
  * Timer (local or broadcast) support
  */
@@ -867,34 +888,6 @@ void read_persistent_clock(struct timespec *ts)
 
 	timespec_add_ns(tsp, delta);
 	*ts = *tsp;
-}
-
-static void broadcast_timer_setup(void)
-{
-	struct clock_event_device *evt;
-	unsigned int cpu = smp_processor_id();
-	int res;
-	msm_evt = alloc_percpu(struct clock_event_device);
-	if (!msm_evt) {
-		pr_err("memory allocation failed for clockevents\n");
-		return;
-	}
-
-	evt = per_cpu_ptr(msm_evt, cpu);
-	evt->name	= "dummy_timer";
-	evt->features	= CLOCK_EVT_FEAT_ONESHOT |
-			  CLOCK_EVT_FEAT_PERIODIC |
-			  CLOCK_EVT_FEAT_DUMMY;
-	evt->rating	= 100;
-	evt->mult	= 1;
-	evt->cpumask = cpumask_of(cpu);
-
-	clockevents_register_device(evt);
-	res = cpuhp_setup_state(CPUHP_AP_QCOM_TIMER_STARTING,
-				"clockevents/qcom/timer:starting",
-				msm_local_timer_starting_cpu,
-				msm_local_timer_dying_cpu);
-	BUG_ON(res);
 }
 
 void __init msm_timer_init(void)
@@ -1031,4 +1024,10 @@ void __init msm_timer_init(void)
 	msm_delay_timer.freq = dgt->freq;
 	msm_delay_timer.read_current_timer = &msm_read_current_timer;
 	register_current_timer_delay(&msm_delay_timer);
+
+	res = cpuhp_setup_state(CPUHP_AP_QCOM_TIMER_STARTING,
+				"clockevents/qcom/timer:starting",
+				msm_local_timer_starting_cpu,
+				msm_local_timer_dying_cpu);
+	BUG_ON(res);
 }
