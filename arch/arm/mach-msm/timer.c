@@ -409,6 +409,7 @@ static int msm_timer_shutdown(struct clock_event_device *evt)
 static int msm_timer_oneshot(struct clock_event_device *evt)
 {
 	msm_timer_set_mode(CLOCK_EVT_MODE_SHUTDOWN, evt);
+	return 0;
 }
 
 static int msm_timer_shutdown(struct clock_event_device *evt)
@@ -420,6 +421,7 @@ static int msm_timer_shutdown(struct clock_event_device *evt)
 static int msm_timer_resume(struct clock_event_device *evt)
 {
 	msm_timer_set_mode(CLOCK_EVT_MODE_RESUME, evt);
+	return 0;
 }
 
 void __iomem *msm_timer_get_timer0_base(void)
