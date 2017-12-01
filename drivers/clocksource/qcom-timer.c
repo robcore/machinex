@@ -230,6 +230,19 @@ static notrace cycle_t msm_read_timer_count_shift(struct clocksource *cs)
 	 */
 	return msm_read_timer_count(cs) >> MSM_DGT_SHIFT;
 }
+
+void __init jf_timer_init(void)
+{
+	struct clocksource *cs = &msm_clocksource;
+ 
+	if (msm_timer_map(0x200a000, 0x0, 0x10, 0x0))
+		return;
+	cs->read = msm_read_timer_count_shift;
+	cs->mask = CLOCKSOURCE_MASK((32 - MSM_DGT_SHIFT));
+	/* 600 KHz */
+	msm_timer_init(19200000 >> MSM_DGT_SHIFT, 32 - MSM_DGT_SHIFT, 7,
+			false);
+}
  
 void __init msm7x01_timer_init(void)
 {

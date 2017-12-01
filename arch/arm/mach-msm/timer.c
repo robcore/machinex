@@ -159,7 +159,7 @@ static struct msm_clock msm_clocks[] = {
 			.rating         = 200,
 			.set_next_event = msm_timer_set_next_event,
 			.set_state_shutdown = msm_timer_shutdown,
-			.set_state_oneshot = msm_timer_oneshot,
+			.set_state_oneshot = msm_timer_shutdown,
 			.tick_resume = msm_timer_shutdown,
 		},
 		.clocksource = {
@@ -183,7 +183,7 @@ static struct msm_clock msm_clocks[] = {
 			.rating         = DG_TIMER_RATING,
 			.set_next_event = msm_timer_set_next_event,
 			.set_state_shutdown = msm_timer_shutdown,
-			.set_state_oneshot = msm_timer_oneshot,
+			.set_state_oneshot = msm_timer_shutdown,
 			.tick_resume = msm_timer_shutdown,
 		},
 		.clocksource = {
@@ -822,7 +822,7 @@ static int msm_local_timer_starting_cpu(unsigned int cpu)
 	evt->features = CLOCK_EVT_FEAT_ONESHOT;
 	evt->rating = clock->clockevent.rating;
 	evt->set_state_shutdown = msm_timer_shutdown;
-	evt->set_state_oneshot = msm_timer_oneshot;
+	evt->set_state_oneshot = msm_timer_shutdown;
 	evt->tick_resume = msm_timer_shutdown;
 	evt->set_next_event = msm_timer_set_next_event;
 	evt->shift = clock->clockevent.shift;
