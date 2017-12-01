@@ -1018,16 +1018,14 @@ void __init msm_timer_init(void)
 		set_user_accessible_timer_flag(true);
 	}
 #ifdef CONFIG_LOCAL_TIMERS
-	broadcast_timer_setup();
-#endif
-	msm_sched_clock_init();
-	msm_delay_timer.freq = dgt->freq;
-	msm_delay_timer.read_current_timer = &msm_read_current_timer;
-	register_current_timer_delay(&msm_delay_timer);
-
 	res = cpuhp_setup_state(CPUHP_AP_QCOM_TIMER_STARTING,
 				"clockevents/qcom/timer:starting",
 				msm_local_timer_starting_cpu,
 				msm_local_timer_dying_cpu);
 	BUG_ON(res);
+#endif
+	msm_sched_clock_init();
+	msm_delay_timer.freq = dgt->freq;
+	msm_delay_timer.read_current_timer = &msm_read_current_timer;
+	register_current_timer_delay(&msm_delay_timer);
 }
