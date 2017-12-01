@@ -236,6 +236,9 @@ static ssize_t msm_pm_mode_attr_show(
 	return ret;
 }
 
+/*
+ * Read in the new attribute value.
+ */
 static ssize_t msm_pm_mode_attr_store(struct kobject *kobj,
 	struct kobj_attribute *attr, const char *buf, size_t count)
 {
@@ -511,7 +514,7 @@ static bool __ref msm_pm_spm_power_collapse(
 	bool collapsed = 0;
 	int ret;
 	unsigned int saved_gic_cpu_ctrl;
-	bool save_cpu_regs = !cpu || from_idle;
+	bool save_cpu_regs = (cpu == 0 || from_idle)
 
 	saved_gic_cpu_ctrl = readl_relaxed(MSM_QGIC_CPU_BASE + GIC_CPU_CTRL);
 	mb();
@@ -616,9 +619,6 @@ static bool msm_pm_power_collapse(bool from_idle)
 		msm_pm_restore_cpu_reg();
 
 	if (cpu_online(cpu)) {
-		if (MSM_PM_DEBUG_CLOCK & msm_pm_debug_mask)
-			pr_info("CPU%u: %s: restore clock rate to %lu\n",
-				cpu, __func__, saved_acpuclk_rate);
 		if (acpuclk_set_rate(cpu, saved_acpuclk_rate, SETRATE_PC) < 0)
 			pr_err("CPU%u: %s: failed to restore clock rate(%lu)\n",
 				cpu, __func__, saved_acpuclk_rate);
@@ -641,11 +641,7 @@ static bool msm_pm_power_collapse(bool from_idle)
 	avs_set_avsdscr(avsdscr);
 	avs_set_avscsr(avscsr);
 	msm_pm_config_hw_after_power_up();
-	if (MSM_PM_DEBUG_POWER_COLLAPSE & msm_pm_debug_mask)
-		pr_info("CPU%u: %s: post power up\n", cpu, __func__);
 
-	if (MSM_PM_DEBUG_POWER_COLLAPSE & msm_pm_debug_mask)
-		pr_info("CPU%u: %s: return\n", cpu, __func__);
 	return collapsed;
 }
 
@@ -1044,7 +1040,7 @@ static int msm_pm_enter(suspend_state_t state)
 #endif /* CONFIG_MSM_SLEEP_TIME_OVERRIDE */
 		if (pm_sleep_ops.lowest_limits)
 			rs_limits = pm_sleep_ops.lowest_limits(false,
-		MSM_PM_SLEEP_MODE_POWER_COLLAPSE, &time_param, &power);
+			MSM_PM_SLEEP_MODE_POWER_COLLAPSE, &time_param, &power);
 
 		if (rs_limits) {
 			if (pm_sleep_ops.enter_sleep)

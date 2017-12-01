@@ -25,8 +25,6 @@
 
 #include "core.h"
 
-static cpumask_t cpu_dying_mask;
-
 static DEFINE_PER_CPU(unsigned int, warm_boot_flag);
 
 static inline void cpu_enter_lowpower(void)
@@ -66,8 +64,7 @@ int msm_cpu_kill(unsigned int cpu)
 {
 	int ret = 0;
 
-	if (cpumask_test_and_clear_cpu(cpu, &cpu_dying_mask))
-		ret = msm_pm_wait_cpu_shutdown(cpu);
+	ret = msm_pm_wait_cpu_shutdown(cpu);
 
 	return ret ? 0 : 1;
 }
@@ -91,10 +88,7 @@ void __ref msm_cpu_die(unsigned int cpu)
 	 */
 	cpu_enter_lowpower();
 	platform_do_lowpower(cpu, &spurious);
-
-	pr_debug("CPU%u: %s: normal wakeup\n", cpu, __func__);
 	cpu_leave_lowpower();
-
 	if (spurious)
 		pr_warn("CPU%u: %u spurious wakeup calls\n", cpu, spurious);
 }
