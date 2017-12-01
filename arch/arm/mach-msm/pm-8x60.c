@@ -272,6 +272,9 @@ static ssize_t msm_pm_mode_attr_store(struct kobject *kobj,
 	return ret ? ret : count;
 }
 
+/*
+ * Add sysfs entries for one cpu.
+ */
 static int __init msm_pm_mode_sysfs_add_cpu(
 	unsigned int cpu, struct kobject *modes_kobj)
 {
@@ -391,6 +394,10 @@ static int __init msm_pm_mode_sysfs_add(void)
 mode_sysfs_add_exit:
 	return ret;
 }
+
+/******************************************************************************
+ * Configure Hardware before/after Low Power Mode
+ *****************************************************************************/
 
 /*
  * Configure hardware registers in preparation for Apps power down.
@@ -858,18 +865,13 @@ int msm_pm_idle_enter(enum msm_pm_sleep_mode sleep_mode)
 
 	case MSM_PM_SLEEP_MODE_POWER_COLLAPSE: {
 		bool timer_halted = false;
-		uint32_t sleep_delay = 1;
 		int ret = -ENODEV;
 		int notify_rpm =
 			(sleep_mode == MSM_PM_SLEEP_MODE_POWER_COLLAPSE);
 		int collapsed = 0;
 
-		sleep_delay = (uint32_t)msm_pm_timer_enter_idle();
-		if (sleep_delay == 0) /* 0 would mean infinite time */
-			sleep_delay = 1;
-
 		if (pm_sleep_ops.enter_sleep)
-			ret = pm_sleep_ops.enter_sleep(sleep_delay,
+			ret = pm_sleep_ops.enter_sleep(1,
 					msm_pm_idle_rs_limits,
 					true, notify_rpm);
 		if (!ret) {
