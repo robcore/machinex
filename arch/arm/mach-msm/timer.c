@@ -206,7 +206,7 @@ static DEFINE_PER_CPU(struct msm_clock *, msm_active_clock);
 
 static irqreturn_t msm_timer_interrupt(int irq, void *dev_id)
 {
-	struct clock_event_device *evt = dev_id;
+	struct clock_event_device *evt = *(struct clock_event_device **)dev_id;
 	if (evt->event_handler == NULL)
 		return IRQ_HANDLED;
 	evt->event_handler(evt);
@@ -904,14 +904,42 @@ void __init msm_timer_init(void)
 	struct msm_clock *dgt = &msm_clocks[MSM_CLOCK_DGT];
 	struct msm_clock *gpt = &msm_clocks[MSM_CLOCK_GPT];
 
-	global_timer_offset = MSM_TMR0_BASE - MSM_TMR_BASE;
-	dgt->freq = 6750000;
-	__raw_writel(DGT_CLK_CTL_DIV_4, MSM_TMR_BASE + DGT_CLK_CTL);
-	gpt->status_mask = BIT(10);
-	dgt->status_mask = BIT(2);
-	if (!soc_class_is_msm8930() && !cpu_is_msm8960ab()) {
+	if (cpu_is_msm8x60()) {
+		global_timer_offset = MSM_TMR0_BASE - MSM_TMR_BASE;
+		gpt->status_mask = BIT(10);
+		dgt->status_mask = BIT(2);
+		dgt->freq = 6750000;
+		__raw_writel(DGT_CLK_CTL_DIV_4, MSM_TMR_BASE + DGT_CLK_CTL);
+	} else if (cpu_is_msm9615()) {
+		dgt->freq = 6750000;
+		__raw_writel(DGT_CLK_CTL_DIV_4, MSM_TMR_BASE + DGT_CLK_CTL);
+		gpt->status_mask = BIT(10);
+		dgt->status_mask = BIT(2);
+		gpt->freq = 32765;
+		gpt_hz = 32765;
+		sclk_hz = 32765;
 		gpt->flags |= MSM_CLOCK_FLAGS_UNSTABLE_COUNT;
 		dgt->flags |= MSM_CLOCK_FLAGS_UNSTABLE_COUNT;
+	} else if (soc_class_is_msm8960() || soc_class_is_apq8064() ||
+		   soc_class_is_msm8930()) {
+		global_timer_offset = MSM_TMR0_BASE - MSM_TMR_BASE;
+		dgt->freq = 6750000;
+		__raw_writel(DGT_CLK_CTL_DIV_4, MSM_TMR_BASE + DGT_CLK_CTL);
+		gpt->status_mask = BIT(10);
+		dgt->status_mask = BIT(2);
+		if (!soc_class_is_apq8064()) {
+			gpt->freq = 32765;
+			gpt_hz = 32765;
+			sclk_hz = 32765;
+		}
+		if (!soc_class_is_msm8930() && !cpu_is_msm8960ab()) {
+			gpt->flags |= MSM_CLOCK_FLAGS_UNSTABLE_COUNT;
+			dgt->flags |= MSM_CLOCK_FLAGS_UNSTABLE_COUNT;
+		}
+	} else {
+		WARN(1, "Timer running on unknown hardware. Configure this! "
+			"Assuming default configuration.\n");
+		dgt->freq = 6750000;
 	}
 
 	if (msm_clocks[MSM_CLOCK_GPT].clocksource.rating > DG_TIMER_RATING)
