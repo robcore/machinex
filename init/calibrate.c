@@ -167,7 +167,10 @@ static unsigned long calibrate_delay_direct(void)
 	return 0;
 }
 #else
-static unsigned long calibrate_delay_direct(void) {return 0;}
+static unsigned long calibrate_delay_direct(void)
+{
+	return 0;
+}
 #endif
 
 /*
