@@ -1,0 +1,14 @@
+arch/openrisc/include/asm/timex.h
+arch/avr32/include/asm/timex.h
+arch/arm/mach-msm/include/mach/timex.h
+arch/arm/include/asm/delay.h
+arch/x86/include/asm/timex.h
+init/calibrate.c
+include/asm-generic/timex.h
+arch/arm/include/asm/delay.h:#define ARCH_HAS_READ_CURRENT_TIMER
+arch/arm/mach-msm/include/mach/timex.h:#define ARCH_HAS_READ_CURRENT_TIMER
+arch/avr32/include/asm/timex.h:#define ARCH_HAS_READ_CURRENT_TIMER
+arch/openrisc/include/asm/timex.h:#define ARCH_HAS_READ_CURRENT_TIMER
+arch/x86/include/asm/timex.h:#define ARCH_HAS_READ_CURRENT_TIMER
+include/asm-generic/timex.h:#undef ARCH_HAS_READ_CURRENT_TIMER
+init/calibrate.c:#ifdef ARCH_HAS_READ_CURRENT_TIMER
