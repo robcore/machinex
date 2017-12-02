@@ -603,7 +603,7 @@ static sec_bat_adc_region_t cable_adc_value_table[] = {
 };
 
 static int polling_time_table[] = {
-	15,	/* BASIC */
+	10,	/* BASIC */
 	30,	/* CHARGING */
 	30,	/* DISCHARGING */
 	30,	/* NOT_CHARGING */
