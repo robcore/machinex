@@ -41,40 +41,32 @@
 #endif
 #include "timer.h"
 
-enum {
-	MSM_TIMER_DEBUG_SYNC = 1U << 0,
-};
-
-#ifdef CONFIG_MSM7X00A_USE_GP_TIMER
-	#define DG_TIMER_RATING 100
-#else
-	#define DG_TIMER_RATING 300
-#endif
-
-#ifndef MSM_TMR0_BASE
-#define MSM_TMR0_BASE MSM_TMR_BASE
-#endif
-
+#define DG_TIMER_RATING 300
 #define MSM_DGT_SHIFT (5)
-
 #define TIMER_MATCH_VAL         0x0000
 #define TIMER_COUNT_VAL         0x0004
 #define TIMER_ENABLE            0x0008
 #define TIMER_CLEAR             0x000C
 #define DGT_CLK_CTL             0x0034
-enum {
-	DGT_CLK_CTL_DIV_1 = 0,
-	DGT_CLK_CTL_DIV_2 = 1,
-	DGT_CLK_CTL_DIV_3 = 2,
-	DGT_CLK_CTL_DIV_4 = 3,
-};
-#define TIMER_STATUS            0x0088
 #define TIMER_ENABLE_EN              1
 #define TIMER_ENABLE_CLR_ON_MATCH_EN 2
 
 #define LOCAL_TIMER 0
 #define GLOBAL_TIMER 1
 
+#define MACHINEX_TIMER_DEBUG
+#ifdef MACHINEX_TIMER_DEBUG
+#define print_timer(msg...)		\
+do { 				\
+		pr_info(msg);	\
+} while (0)
+#else
+#define print_timer(msg...) do { } while (0)
+#endif
+#if 0
+#define MSM_TMR_BASE		IOMEM(0xFA000000)	/*  4K	*/
+#define MSM_TMR0_BASE		IOMEM(0xFA001000)	/*  4K	*/
+#endif
 /*
  * global_timer_offset is added to the regbase of a timer to force the memory
  * access to come from the CPU0 region.
@@ -159,7 +151,7 @@ static struct msm_clock msm_clocks[] = {
 			.rating         = 200,
 			.set_next_event = msm_timer_set_next_event,
 			.set_state_shutdown = msm_timer_shutdown,
-			.set_state_oneshot = msm_timer_shutdown,
+			.set_state_oneshot = msm_timer_oneshot,
 			.tick_resume = msm_timer_shutdown,
 		},
 		.clocksource = {
@@ -170,7 +162,7 @@ static struct msm_clock msm_clocks[] = {
 			.flags          = CLOCK_SOURCE_IS_CONTINUOUS,
 		},
 		.irq = INT_GP_TIMER_EXP,
-		.regbase = MSM_TMR_BASE + 0x4,
+		.regbase = IOMEM(0xFA000000) + 0x4,
 		.freq = 32768,
 		.index = MSM_CLOCK_GPT,
 		.write_delay = 9,
@@ -183,7 +175,7 @@ static struct msm_clock msm_clocks[] = {
 			.rating         = DG_TIMER_RATING,
 			.set_next_event = msm_timer_set_next_event,
 			.set_state_shutdown = msm_timer_shutdown,
-			.set_state_oneshot = msm_timer_shutdown,
+			.set_state_oneshot = msm_timer_oneshot,
 			.tick_resume = msm_timer_shutdown,
 		},
 		.clocksource = {
@@ -194,7 +186,7 @@ static struct msm_clock msm_clocks[] = {
 			.flags          = CLOCK_SOURCE_IS_CONTINUOUS,
 		},
 		.irq = INT_DEBUG_TIMER_EXP,
-		.regbase = MSM_TMR_BASE + 0x24,
+		.regbase = IOMEM(0xFA000000) + 0x24,
 		.index = MSM_CLOCK_DGT,
 		.write_delay = 9,
 	}
@@ -401,7 +393,7 @@ static int msm_timer_oneshot(struct clock_event_device *evt)
 
 void __iomem *msm_timer_get_timer0_base(void)
 {
-	return MSM_TMR_BASE + global_timer_offset;
+	return IOMEM(0xFA000000) + global_timer_offset;
 }
 
 #define MPM_SCLK_COUNT_VAL    0x0024
@@ -805,7 +797,7 @@ static int msm_local_timer_starting_cpu(unsigned int cpu)
 	if (cpu == 0)
 		return 0;
 
-	__raw_writel(DGT_CLK_CTL_DIV_4, MSM_TMR_BASE + DGT_CLK_CTL);
+	__raw_writel(3, IOMEM(0xFA000000) + DGT_CLK_CTL);
 
 	if (*raw_cpu_ptr(&first_boot)) {
 		__raw_writel(0, clock->regbase  + TIMER_ENABLE);
@@ -813,7 +805,7 @@ static int msm_local_timer_starting_cpu(unsigned int cpu)
 		__raw_writel(~0, clock->regbase + TIMER_MATCH_VAL);
 		*raw_cpu_ptr(&first_boot) = false;
 		if (clock->status_mask)
-			while (__raw_readl(MSM_TMR_BASE + TIMER_STATUS) &
+			while (__raw_readl(IOMEM(0xFA000000) + 0x0088) &
 			       clock->status_mask)
 				;
 	}
@@ -822,7 +814,7 @@ static int msm_local_timer_starting_cpu(unsigned int cpu)
 	evt->features = CLOCK_EVT_FEAT_ONESHOT;
 	evt->rating = clock->clockevent.rating;
 	evt->set_state_shutdown = msm_timer_shutdown;
-	evt->set_state_oneshot = msm_timer_shutdown;
+	evt->set_state_oneshot = msm_timer_oneshot;
 	evt->tick_resume = msm_timer_shutdown;
 	evt->set_next_event = msm_timer_set_next_event;
 	evt->shift = clock->clockevent.shift;
@@ -906,14 +898,14 @@ void __init msm_timer_init(void)
 	struct msm_clock *gpt = &msm_clocks[MSM_CLOCK_GPT];
 
 	if (cpu_is_msm8x60()) {
-		global_timer_offset = MSM_TMR0_BASE - MSM_TMR_BASE;
+		global_timer_offset = IOMEM(0xFA001000) - IOMEM(0xFA000000);
 		gpt->status_mask = BIT(10);
 		dgt->status_mask = BIT(2);
 		dgt->freq = 6750000;
-		__raw_writel(DGT_CLK_CTL_DIV_4, MSM_TMR_BASE + DGT_CLK_CTL);
+		__raw_writel(3, IOMEM(0xFA000000) + DGT_CLK_CTL);
 	} else if (cpu_is_msm9615()) {
 		dgt->freq = 6750000;
-		__raw_writel(DGT_CLK_CTL_DIV_4, MSM_TMR_BASE + DGT_CLK_CTL);
+		__raw_writel(3, IOMEM(0xFA000000) + DGT_CLK_CTL);
 		gpt->status_mask = BIT(10);
 		dgt->status_mask = BIT(2);
 		gpt->freq = 32765;
@@ -923,20 +915,23 @@ void __init msm_timer_init(void)
 		dgt->flags |= MSM_CLOCK_FLAGS_UNSTABLE_COUNT;
 	} else if (soc_class_is_msm8960() || soc_class_is_apq8064() ||
 		   soc_class_is_msm8930()) {
-		global_timer_offset = MSM_TMR0_BASE - MSM_TMR_BASE;
+		global_timer_offset = IOMEM(0xFA001000) - IOMEM(0xFA000000);
 		dgt->freq = 6750000;
-		__raw_writel(DGT_CLK_CTL_DIV_4, MSM_TMR_BASE + DGT_CLK_CTL);
+		__raw_writel(3, IOMEM(0xFA000000) + DGT_CLK_CTL);
 		gpt->status_mask = BIT(10);
 		dgt->status_mask = BIT(2);
 		if (!soc_class_is_apq8064()) {
 			gpt->freq = 32765;
 			gpt_hz = 32765;
 			sclk_hz = 32765;
-		}
+		} else
+			print_timer("%s: Skipping setting of gpt freq, hz, and sclk_hz\n", __func__);
 		if (!soc_class_is_msm8930() && !cpu_is_msm8960ab()) {
 			gpt->flags |= MSM_CLOCK_FLAGS_UNSTABLE_COUNT;
 			dgt->flags |= MSM_CLOCK_FLAGS_UNSTABLE_COUNT;
-		}
+			print_timer("%s: Setting unstable count flags for gpt and dgt\n", __func__);
+		} else
+			print_timer("%s: Skipping setting of unstable count flags for gpt and dgt\n", __func__);
 	} else {
 		WARN(1, "Timer running on unknown hardware. Configure this! "
 			"Assuming default configuration.\n");
@@ -967,6 +962,8 @@ void __init msm_timer_init(void)
 
 			clock->rollover_offset = (uint32_t) temp;
 		}
+
+		print_timer("%s: Clock Rollover offset is %d\n", __func__, clock->rollover_offset);
 
 		ce->mult = div_sc(clock->freq, NSEC_PER_SEC, ce->shift);
 		/* allow at least 10 seconds to notice that the timer wrapped */
@@ -1008,7 +1005,7 @@ void __init msm_timer_init(void)
 			chip->irq_mask(irq_get_irq_data(clock->irq));
 
 		if (clock->status_mask)
-			while (__raw_readl(MSM_TMR_BASE + TIMER_STATUS) &
+			while (__raw_readl(IOMEM(0xFA000000) + 0x0088) &
 			       clock->status_mask)
 				;
 
@@ -1031,4 +1028,8 @@ void __init msm_timer_init(void)
 	msm_delay_timer.freq = dgt->freq;
 	msm_delay_timer.read_current_timer = &msm_read_current_timer;
 	register_current_timer_delay(&msm_delay_timer);
+	int IOMEM(0xFA000000) + 0x4
 }
+
+/*Debugging */
+
