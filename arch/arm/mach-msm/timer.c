@@ -121,7 +121,7 @@ struct msm_clock {
 	uint32_t		    status_mask;
 	union {
 		struct clock_event_device		*evt;
-		struct clock_event_device * __percpu *percpu_evt;
+		struct clock_event_device __percpu	**percpu_evt;
 	};
 };
 
