@@ -359,7 +359,7 @@ static int mx_thermal_notifier(struct notifier_block *self, unsigned long val,
 		void *v)
 {
 	struct sched_param defparam = { .sched_priority = DEFAULT_PRIO };
-	struct sched_param rtparam = { .sched_priority = MAX_USER_RT_PRIO / 2 };
+	struct sched_param rtparam = { .sched_priority = ((MAX_USER_RT_PRIO / 2) - 1)};
 
 	switch (val) {
 	case THROTTLING_ON:
