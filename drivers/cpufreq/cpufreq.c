@@ -91,7 +91,7 @@ static int thermal_notifier_call_chain(unsigned long val)
 	void *v = NULL;
 	return raw_notifier_call_chain(&thermal_notifier_chain, val, v);
 }
-
+#if 0
 static void thermal_notifier_update(void)
 {
 	bool state_changed = true;
@@ -108,7 +108,7 @@ static void thermal_notifier_update(void)
 	if (state_changed)
 		thermal_notifier_call_chain(throttle_state);
 }
-
+#endif
 static LIST_HEAD(cpufreq_policy_list);
 
 static inline bool policy_is_inactive(struct cpufreq_policy *policy)
@@ -436,7 +436,9 @@ static void reapply_hard_limits(unsigned int cpu, bool update_policy)
 		default:
 			break;
 	}
+#if 0
 	thermal_notifier_update();
+#endif
 	if (!cpu_online(cpu))
 		return;
 

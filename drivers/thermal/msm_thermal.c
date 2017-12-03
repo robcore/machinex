@@ -535,7 +535,7 @@ reschedule:
 		queue_delayed_work(intellithermal_wq, &check_temp_work,
 				msecs_to_jiffies(msm_thermal_info.poll_ms));
 }
-
+#if 0
 static int msm_thermal_notifier(struct notifier_block *self, unsigned long val,
 		void *v)
 {
@@ -558,7 +558,7 @@ static int msm_thermal_notifier(struct notifier_block *self, unsigned long val,
 static struct notifier_block msm_therm_nb = {
 	.notifier_call = msm_thermal_notifier,
 };
-
+#endif
 static int setup_mitigator(void)
 {
 	mitigator = kthread_create(mitigation_control,
@@ -571,7 +571,9 @@ static int setup_mitigator(void)
 	get_task_struct(mitigator);
 	wake_up_process(mitigator);
 	last_tempcheck = ktime_get();
+#if 0
 	register_thermal_notifier(&msm_therm_nb);
+#endif
 	return 0;
 }
 

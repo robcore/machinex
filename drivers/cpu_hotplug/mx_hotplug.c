@@ -354,7 +354,7 @@ static int mx_omniboost_notifier(struct notifier_block *self, unsigned long val,
 static struct notifier_block mx_nb = {
 	.notifier_call = mx_omniboost_notifier,
 };
-
+#if 0
 static int mx_thermal_notifier(struct notifier_block *self, unsigned long val,
 		void *v)
 {
@@ -377,7 +377,7 @@ static int mx_thermal_notifier(struct notifier_block *self, unsigned long val,
 static struct notifier_block mxtherm_nb = {
 	.notifier_call = mx_thermal_notifier,
 };
-
+#endif
 void ignition(unsigned int status)
 {
 	if (status) {
@@ -405,10 +405,14 @@ void ignition(unsigned int status)
 		queue_delayed_work_on(0, mx_hp_engine, &motor, msecs_to_jiffies(sampling_rate));
 		register_power_suspend(&mx_suspend_data);
 		register_omniboost(&mx_nb);
+#if 0
 		register_thermal_notifier(&mxtherm_nb);
+#endif
 	} else {
 		mxput();
+#if 0
 		unregister_thermal_notifier(&mxtherm_nb);
+#endif
 		unregister_omniboost(&mx_nb);
 		unregister_power_suspend(&mx_suspend_data);
 		cancel_delayed_work_sync(&motor);
