@@ -550,8 +550,33 @@ static int setup_mitigator(void)
 	get_task_struct(mitigator);
 	wake_up_process(mitigator);
 	last_tempcheck = ktime_get();
+	register_thermal_notifier(&msm_therm_nb);
 	return 0;
 }
+
+static int msm_thermal_notifier(struct notifier_block *self, unsigned long val,
+		void *v)
+{
+	struct sched_param;
+
+	switch (val) {
+	case THROTTLING_ON:
+		param = { .sched_priority = DEFAULT_PRIO };
+		sched_setscheduler_nocheck(mitigator, SCHED_NORMAL, &param);
+		break;
+	case THROTTLING_OFF:
+		param = { .sched_priority = MAX_USER_RT_PRIO / 2 };
+		sched_setscheduler_nocheck(mitigator, SCHED_FIFO, &param);
+		break;
+	default:
+		break;
+	}
+	return NOTIFY_OK;
+}
+
+static struct notifier_block msm_therm_nb = {
+	.notifier_call = msm_thermal_notifier,
+};
 
 static void __ref get_table(struct work_struct *work)
 {
