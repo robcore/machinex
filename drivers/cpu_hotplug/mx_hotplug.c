@@ -358,7 +358,7 @@ static struct notifier_block mx_nb = {
 static int mx_thermal_notifier(struct notifier_block *self, unsigned long val,
 		void *v)
 {
-	struct sched_param;
+	struct sched_param param;
 
 	switch (val) {
 	case THROTTLING_ON:

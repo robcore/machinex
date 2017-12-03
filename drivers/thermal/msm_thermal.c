@@ -538,7 +538,6 @@ reschedule:
 
 static int setup_mitigator(void)
 {
-	//struct sched_param param = { .sched_priority = MAX_USER_RT_PRIO / 2};
 	mitigator = kthread_create(mitigation_control,
 						  NULL, "mx_thermal");
 	if (IS_ERR(mitigator)) {
@@ -546,7 +545,6 @@ static int setup_mitigator(void)
 		return -ENOMEM;
 	}
 	kthread_bind(mitigator, 0);
-	//sched_setscheduler_nocheck(mitigator, SCHED_FIFO, &param);
 	get_task_struct(mitigator);
 	wake_up_process(mitigator);
 	last_tempcheck = ktime_get();
@@ -557,7 +555,7 @@ static int setup_mitigator(void)
 static int msm_thermal_notifier(struct notifier_block *self, unsigned long val,
 		void *v)
 {
-	struct sched_param;
+	struct sched_param param;
 
 	switch (val) {
 	case THROTTLING_ON:
