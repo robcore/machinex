@@ -358,15 +358,13 @@ static struct notifier_block mx_nb = {
 static int mx_thermal_notifier(struct notifier_block *self, unsigned long val,
 		void *v)
 {
-	struct sched_param param;
-
 	switch (val) {
 	case THROTTLING_ON:
-		param = { .sched_priority = DEFAULT_PRIO };
+		struct sched_param param = { .sched_priority = DEFAULT_PRIO };
 		sched_setscheduler_nocheck(transmission, SCHED_NORMAL, &param);
 		break;
 	case THROTTLING_OFF:
-		param = { .sched_priority = MAX_USER_RT_PRIO / 2 };
+		struct sched_param param = { .sched_priority = MAX_USER_RT_PRIO / 2 };
 		sched_setscheduler_nocheck(transmission, SCHED_FIFO, &param);
 		break;
 	default:
