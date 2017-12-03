@@ -536,22 +536,6 @@ reschedule:
 				msecs_to_jiffies(msm_thermal_info.poll_ms));
 }
 
-static int setup_mitigator(void)
-{
-	mitigator = kthread_create(mitigation_control,
-						  NULL, "mx_thermal");
-	if (IS_ERR(mitigator)) {
-		pr_err("MSM THERMAL: Failed to create kthread! Driver is broken!\n");
-		return -ENOMEM;
-	}
-	kthread_bind(mitigator, 0);
-	get_task_struct(mitigator);
-	wake_up_process(mitigator);
-	last_tempcheck = ktime_get();
-	register_thermal_notifier(&msm_therm_nb);
-	return 0;
-}
-
 static int msm_thermal_notifier(struct notifier_block *self, unsigned long val,
 		void *v)
 {
@@ -574,6 +558,22 @@ static int msm_thermal_notifier(struct notifier_block *self, unsigned long val,
 static struct notifier_block msm_therm_nb = {
 	.notifier_call = msm_thermal_notifier,
 };
+
+static int setup_mitigator(void)
+{
+	mitigator = kthread_create(mitigation_control,
+						  NULL, "mx_thermal");
+	if (IS_ERR(mitigator)) {
+		pr_err("MSM THERMAL: Failed to create kthread! Driver is broken!\n");
+		return -ENOMEM;
+	}
+	kthread_bind(mitigator, 0);
+	get_task_struct(mitigator);
+	wake_up_process(mitigator);
+	last_tempcheck = ktime_get();
+	register_thermal_notifier(&msm_therm_nb);
+	return 0;
+}
 
 static void __ref get_table(struct work_struct *work)
 {
