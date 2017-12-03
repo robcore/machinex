@@ -416,10 +416,10 @@ static ssize_t store_external_fuel_injection(struct kobject *kobj,
 	return count;
 }
 
-mx_store_one_long(sixthgear, 100, 10000);
-mx_store_one_long(thirdgear, 100, 10000);
-mx_store_one_long(secondgear, 100, 10000);
-mx_store_one_long(firstgear, 100, 10000);
+mx_store_one_long(sixthgear, 25, 10000);
+mx_store_one_long(thirdgear, 25, 10000);
+mx_store_one_long(secondgear, 25, 10000);
+mx_store_one_long(firstgear, 25, 10000);
 mx_store_one_long(sixthgear_rpm, 5, 100);
 mx_store_one_long(thirdgear_rpm, 5, 100);
 mx_store_one_long(secondgear_rpm, 5, 100);
