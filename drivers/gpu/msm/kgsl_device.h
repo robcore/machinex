@@ -616,4 +616,7 @@ static inline int kgsl_sysfs_store(const char *buf, unsigned int *ptr)
 
 	return 0;
 }
+
+extern unsigned int adreno_touchboost;
+extern bool wakeboost_active;
 #endif  /* __KGSL_DEVICE_H */
