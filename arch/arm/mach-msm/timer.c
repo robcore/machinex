@@ -81,11 +81,11 @@ enum {
  */
 static int global_timer_offset;
 static int msm_global_timer;
-
+#if 0
 static struct timespec persistent_ts;
 static u64 persistent_ns;
 static u64 last_persistent_ns;
-
+#endif
 #define NR_TIMERS ARRAY_SIZE(msm_clocks)
 
 unsigned int gpt_hz = 32768;
@@ -850,7 +850,7 @@ static int msm_local_timer_dying_cpu(unsigned int cpu)
 	disable_percpu_irq(evt->irq);
 	return 0;
 }
-
+#if 0
 void read_persistent_clock(struct timespec *ts)
 {
 	int64_t delta;
@@ -868,6 +868,7 @@ void read_persistent_clock(struct timespec *ts)
 	timespec_add_ns(tsp, delta);
 	*ts = *tsp;
 }
+#endif
 
 static void broadcast_timer_setup(void)
 {
