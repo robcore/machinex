@@ -555,14 +555,15 @@ static int setup_mitigator(void)
 static int msm_thermal_notifier(struct notifier_block *self, unsigned long val,
 		void *v)
 {
+	struct sched_param defparam = { .sched_priority = DEFAULT_PRIO };
+	struct sched_param rtparam = { .sched_priority = MAX_USER_RT_PRIO / 2 };
+
 	switch (val) {
 	case THROTTLING_ON:
-		struct sched_param param = { .sched_priority = DEFAULT_PRIO };
-		sched_setscheduler_nocheck(mitigator, SCHED_NORMAL, &param);
+		sched_setscheduler_nocheck(mitigator, SCHED_NORMAL, &defparam);
 		break;
 	case THROTTLING_OFF:
-		struct sched_param param = { .sched_priority = MAX_USER_RT_PRIO / 2 };
-		sched_setscheduler_nocheck(mitigator, SCHED_FIFO, &param);
+		sched_setscheduler_nocheck(mitigator, SCHED_FIFO, &rtparam);
 		break;
 	default:
 		break;
