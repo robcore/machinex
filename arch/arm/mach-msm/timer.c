@@ -948,7 +948,7 @@ void __init msm_timer_init(void)
 	else
 		msm_global_timer = MSM_CLOCK_DGT;
 
-	for (i = 0; i < ARRAY_SIZE(msm_clocks); i++) {
+	for (i = 0; i < NR_TIMERS; i++) {
 		struct msm_clock *clock = &msm_clocks[i];
 		struct clock_event_device *ce = &clock->clockevent;
 		struct clocksource *cs = &clock->clocksource;
@@ -1014,8 +1014,6 @@ void __init msm_timer_init(void)
 
 		clockevents_register_device(ce);
 	}
-	__raw_writel(1,
-	msm_clocks[MSM_CLOCK_DGT].regbase + TIMER_ENABLE);
 
 	if (use_user_accessible_timers()) {
 		struct msm_clock *gtclock = &msm_clocks[MSM_CLOCK_GPT];
@@ -1028,6 +1026,10 @@ void __init msm_timer_init(void)
 	broadcast_timer_setup();
 #endif
 	msm_sched_clock_init();
+#ifdef ARCH_HAS_READ_CURRENT_TIMER
+	__raw_writel(1,
+	msm_clocks[MSM_CLOCK_DGT].regbase + TIMER_ENABLE);
+#endif
 	msm_delay_timer.freq = dgt->freq;
 	msm_delay_timer.read_current_timer = &msm_read_current_timer;
 	register_current_timer_delay(&msm_delay_timer);
