@@ -573,5 +573,6 @@ static inline void adreno_set_protected_registers(struct kgsl_device *device,
 	kgsl_regwrite(device, protect_reg_offset + *index, val);
 	*index = *index + 1;
 }
-
+extern unsigned int adreno_touchboost;
+extern bool wakeboost_active;
 #endif /*__ADRENO_H */

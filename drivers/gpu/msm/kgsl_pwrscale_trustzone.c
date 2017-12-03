@@ -64,66 +64,23 @@ spinlock_t tz_lock;
 #define MIN_POLL_INTERVAL	10000
 #define POLL_INTERVAL		100000
 #define MAX_POLL_INTERVAL	1000000
-
-static unsigned int thermal_level = 1;
-static unsigned int gpu_boost_level = 2;
-
-static int freq_to_level(unsigned int freq)
-{
-	unsigned int level;
-
-	switch (freq) {
-	case 450000000:
-		level = 0;
-		break;
-	case 320000000:
-		level = 1;
-		break;
-	case 200000000:
-		level = 2;
-		break;
-	case 128000000:
-		level = 3;
-		break;
-	default:
-		return -EINVAL;
-	}
-	return level;
-}
-
-static unsigned int level_to_freq(unsigned int level)
-{
-	unsigned int freq;
-
-	switch (level) {
-	case 0:
-		freq = 450000000;
-		break;
-	case 1:
-		freq = 320000000;
-		break;
-	case 2:
-		freq = 200000000;
-		break;
-	case 3:
-		freq = 128000000;
-		break;
-	default:
-		return -EINVAL;
-	}
-	return freq;
-}
+/*
+static unsigned int thermal_powerlevel = 320000000;
+static unsigned int gpu_boost_freq = 200000000;
 
 static int set_gpu_boost_freq(const char *buf, const struct kernel_param *kp)
 {
-	unsigned int val;
+	unsigned int val, cpu = 0;
+	int i, temp_low = -1;
 
 	if (!sscanf(buf, "%u", &val))
 		return -EINVAL;
 
-	if (freq_to_level(val) >= 0)
-		gpu_boost_level = freq_to_level(val);
-
+	if (val != 450000000 && val != 320000000 &&
+		val != 200000000 && val != 128000000)
+		return -EINVAL;
+	
+	gpu_boost_freq = val;
 	return 0;
 }
 
@@ -132,7 +89,7 @@ static int get_gpu_boost_freq(char *buf, const struct kernel_param *kp)
 	ssize_t ret;
 	unsigned int cpu = 0;
 
-	ret = sprintf(buf, "%u", level_to_freq(gpu_boost_level));
+	ret = sprintf(buf, "%u", gpu_boost_freq);
 
 	return ret;
 }
@@ -143,7 +100,7 @@ static const struct kernel_param_ops param_ops_gpu_boost_freq = {
 };
 
 module_param_cb(gpu_boost_freq, &param_ops_gpu_boost_freq, NULL, 0644);
-
+*/
 static unsigned long polling_interval = POLL_INTERVAL;
 
 static unsigned long walltime_total;
@@ -398,27 +355,15 @@ static struct attribute_group tz_attr_group = {
 	.name = "trustzone",
 };
 
-unsigned int get_thermal_level(struct kgsl_device *device)
-{
-		if (thermal_is_throttling() && thermal_level > device->pwrctrl.max_pwrlevel)
-			return thermal_level;
-
-		return device->pwrctrl.max_pwrlevel;
-}
-
-unsigned int get_boost_level(struct kgsl_device *device)
-{
-	if (adreno_touchboost && wakeboost_active && gpu_boost_level < device->pwrctrl.min_pwrlevel)
-		return gpu_boost_level;
-
-	return device->pwrctrl.min_pwrlevel;
-}
-
 static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 {
 	if (device->state == KGSL_STATE_NAP)
 		return;
-	kgsl_pwrctrl_pwrlevel_change(device, get_thermal_level(device));
+/*	if (thermal_is_throttling())
+		kgsl_pwrctrl_pwrlevel_change(device, thermal_powerlevel);
+	else
+*/
+		kgsl_pwrctrl_pwrlevel_change(device, device->pwrctrl.max_pwrlevel);
 }
 
 #define MIN_STEP 3
@@ -463,7 +408,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 			}
 
 			if (val) {
-				sanitize_min_max(level, get_thermal_level(device), get_boost_level(device));
+				sanitize_min_max(level, pwr->max_pwrlevel, pwr->min_pwrlevel);
 			} else {
 				level += 1;
 				kgsl_pwrctrl_pwrlevel_change(device,
@@ -480,26 +425,18 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 			gpu_stats.load = (priv->bin.busy_time*5243)>>19;
 
 			if (level <= MIN_STEP && level > MAX_STEP) {
-				if (gpu_stats.load >= i_up_threshold) {
-					level -= 1;
-					sanitize_min_max(level, 
-						get_thermal_level(device),
-						get_boost_level(device));
-					kgsl_pwrctrl_pwrlevel_change(device,
-							     level);
-				}
+					if (gpu_stats.load >= i_up_threshold)
+						kgsl_pwrctrl_pwrlevel_change(device,
+								     level - 1);
+
 			} else if (level == MAX_STEP) {
 				if (gpu_stats.load < i_down_threshold) {
 					__secure_tz_entry3(TZ_UPDATE_ID,
 						level,
 						priv->bin.total_time,
 						priv->bin.busy_time);
-					level += 1;
-					sanitize_min_max(level, 
-						get_thermal_level(device),
-						get_boost_level(device));
 					kgsl_pwrctrl_pwrlevel_change(device,
-							     level);
+							     level + 1);
 				}
 			}
 			break;
@@ -522,15 +459,9 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 				} else if (load_hist >
 					thresholds[level].m_up_threshold)
 					val = -1;
-
-				if (val) {
-					level += val;
-					sanitize_min_max(level, 
-						get_thermal_level(device),
-						get_boost_level(device));
+				if (val)
 					kgsl_pwrctrl_pwrlevel_change(device,
-								level);
-				}
+								level + val);
 			}
 			break;
 	}
