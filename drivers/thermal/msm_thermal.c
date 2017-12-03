@@ -544,10 +544,10 @@ static int msm_thermal_notifier(struct notifier_block *self, unsigned long val,
 
 	switch (val) {
 	case THROTTLING_ON:
-		sched_setscheduler_nocheck(mitigator, SCHED_NORMAL, &defparam);
+		sched_setscheduler_nocheck(mitigator, SCHED_FIFO, &rtparam);
 		break;
 	case THROTTLING_OFF:
-		sched_setscheduler_nocheck(mitigator, SCHED_FIFO, &rtparam);
+		sched_setscheduler_nocheck(mitigator, SCHED_NORMAL, &defparam);
 		break;
 	default:
 		break;
