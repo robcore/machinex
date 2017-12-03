@@ -159,7 +159,7 @@ struct cpufreq_policy {
 #define DEFAULT_THERMIN 810000U
 
 #define CPUFREQ_HARDLIMIT_SCREEN_ON	0		/* default, consider we boot with screen on */
-#define CPUFREQ_HARDLIMIT_SCREEN_OFF	1
+#define CPUFREQ_HARDLIMIT_SCREEN_OFF 1
 extern unsigned int limited_max_freq_thermal[NR_CPUS];
 extern bool thermal_is_throttling(void);
 void cpu_boost_event(void);
@@ -172,6 +172,13 @@ extern int mx_update_policy(unsigned int cpu);
 
 unsigned int check_cpufreq_hardlimit(unsigned int cpu, unsigned int freq);
 unsigned int get_hardlimit_max(unsigned int cpu);
+enum {
+	THROTTLING_OFF,
+	THROTTLING_ON,
+};
+extern int register_thermal_notifier(struct notifier_block *nb);
+extern int unregister_thermal_notifier(struct notifier_block *nb);
+
 #endif /* CONFIG_CPUFREQ_HARDLIMIT*/
 
 /* Only for ACPI */

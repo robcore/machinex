@@ -8,6 +8,4 @@
 
 int register_omniboost(struct notifier_block *nb);
 int unregister_omniboost(struct notifier_block *nb);
-int omniboost_call_chain(unsigned long val, void *v);
-
 #endif /* _LINUX_OMNIBOOST_H */

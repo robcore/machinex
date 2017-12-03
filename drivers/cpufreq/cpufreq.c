@@ -65,10 +65,48 @@ module_param(input_boost_ms, uint, 0644);
 static struct delayed_work input_boost_rem;
 static u64 last_input_time;
 
+static unsigned int throttle_state;
 static cpumask_t throttled_mask;
 bool thermal_is_throttling(void)
 {
-	return cpumask_empty(&throttled_mask);
+	return !cpumask_empty(&throttled_mask);
+}
+
+static RAW_NOTIFIER_HEAD(thermal_notifier_chain);
+
+int register_thermal_notifier(struct notifier_block *nb)
+{
+	return raw_notifier_chain_register(&thermal_notifier_chain, nb);
+}
+EXPORT_SYMBOL(register_thermal_notifier);
+
+int unregister_thermal_notifier(struct notifier_block *nb)
+{
+	return raw_notifier_chain_unregister(&thermal_notifier_chain, nb);
+}
+EXPORT_SYMBOL(unregister_thermal_notifier);
+
+static int thermal_notifier_call_chain(unsigned long val)
+{
+	void *v = NULL;
+	return raw_notifier_call_chain(&thermal_notifier_chain, val, v);
+}
+
+static void thermal_notifier_update(void)
+{
+	bool state_changed = true;
+	if (!is_display_on())
+		return;
+
+	if (thermal_is_throttling() && throttle_state == THROTTLING_OFF)
+		throttle_state = THROTTLING_ON;
+	else if (!thermal_is_throttling() && throttle_state == THROTTLING_ON)
+		throttle_state = THROTTLING_OFF;
+	else
+		state_changed = false;
+
+	if (state_changed)
+		thermal_notifier_call_chain(throttle_state);
 }
 
 static LIST_HEAD(cpufreq_policy_list);
@@ -398,6 +436,7 @@ static void reapply_hard_limits(unsigned int cpu, bool update_policy)
 		default:
 			break;
 	}
+	thermal_notifier_update();
 	if (!cpu_online(cpu))
 		return;
 

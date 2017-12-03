@@ -40,11 +40,11 @@ int unregister_omniboost(struct notifier_block *nb)
 }
 EXPORT_SYMBOL(unregister_omniboost);
 
-int omniboost_call_chain(unsigned long val, void *v)
+static int omniboost_call_chain(unsigned long val)
 {
+	void *v = NULL;
 	return raw_notifier_call_chain(&omniboost_chain, val, v);
 }
-EXPORT_SYMBOL_GPL(omniboost_call_chain);
 
 static void omniboost_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
@@ -52,10 +52,10 @@ static void omniboost_input_event(struct input_handle *handle,
 	if (!is_display_on())
 		return;
 	/* Input Event has been passed to us */
-	omniboost_call_chain(BOOST_ON, NULL);
+	omniboost_call_chain(BOOST_ON);
 	cpu_boost_event();
 	/* Exists only to provide callers with an "off" switch */
-	omniboost_call_chain(BOOST_OFF, NULL);
+	omniboost_call_chain(BOOST_OFF);
 }
 
 static int input_dev_filter(struct input_dev *dev) {
