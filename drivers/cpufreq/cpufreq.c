@@ -68,7 +68,7 @@ static u64 last_input_time;
 static cpumask_t throttled_mask;
 bool thermal_is_throttling(void)
 {
-	return cpumask_empty(&throttled_mask) ? false : true;
+	return cpumask_empty(&throttled_mask);
 }
 
 static LIST_HEAD(cpufreq_policy_list);
@@ -364,10 +364,10 @@ static void reapply_hard_limits(unsigned int cpu, bool update_policy)
 			if (limited_max_freq_thermal[cpu] >= DEFAULT_HARD_MIN &&
 				limited_max_freq_thermal[cpu] < hpolicy->hardlimit_max_screen_on) {
 				hpolicy->current_limit_max = limited_max_freq_thermal[cpu];
-				cpumask_set_cpu(cpu, &throttled_mask);
+				cpumask_test_and_set_cpu(cpu, &throttled_mask);
 			} else {
 				hpolicy->current_limit_max = hpolicy->hardlimit_max_screen_on;
-				cpumask_clear_cpu(cpu, &throttled_mask);
+				cpumask_test_and_clear_cpu(cpu, &throttled_mask);
 			}
 			if (thermal_disables_boost) {
 				if (hpolicy->input_boost_limit > hpolicy->hardlimit_min_screen_on &&
@@ -388,10 +388,10 @@ static void reapply_hard_limits(unsigned int cpu, bool update_policy)
 			if (limited_max_freq_thermal[cpu] >= DEFAULT_HARD_MIN &&
 				limited_max_freq_thermal[cpu] < hpolicy->hardlimit_max_screen_off) {
 				hpolicy->current_limit_max = limited_max_freq_thermal[cpu];
-				cpumask_set_cpu(cpu, &throttled_mask);
+				cpumask_test_and_set_cpu(cpu, &throttled_mask);
 			} else {
 				hpolicy->current_limit_max = hpolicy->hardlimit_max_screen_off;
-				cpumask_clear_cpu(cpu, &throttled_mask);
+				cpumask_test_and_clear_cpu(cpu, &throttled_mask);
 			}
 			hpolicy->current_limit_min = hpolicy->hardlimit_min_screen_off;
 			break;
