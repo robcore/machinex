@@ -240,8 +240,7 @@ static void msm_rpm_err_fatal(void)
 {
 	/* Tell RPM that we're handling the interrupt */
 	__raw_writel(0x1, msm_rpm_data.ipc_rpm_reg);
-	pr_err("RPM error fataled");
-	BUG();
+	panic("RPM error fataled");
 }
 
 static irqreturn_t msm_rpm_err_interrupt(int irq, void *dev_id)
