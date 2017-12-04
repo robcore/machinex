@@ -271,7 +271,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 {
 	struct cpufreq_policy *policy = icpu->ipolicy->policy;
 	struct cpufreq_frequency_table *freq_table = policy->freq_table;
-	unsigned int prevfreq, freqmin = 0, freqmax = UINT_MAX, tl;
+	unsigned int prevfreq, freqmin = 0, freqmax = policy->max, tl;
 	unsigned int freq = policy->cur;
 	int index;
 
