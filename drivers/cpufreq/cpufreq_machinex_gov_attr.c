@@ -32,7 +32,7 @@ unsigned int su_rate_limit_us[NR_CPUS] = { 1000, 1000, 1000, 1000 };
 /*Machinex Interactive tunables */
 unsigned int iactive_hispeed_freq[NR_CPUS] = {1782000, 1782000, 1782000, 1782000};
 unsigned long iactive_go_hispeed_load[NR_CPUS] = {99, 99, 99, 99};
-int iactive_target_load[NR_CPUS] = {90, 90, 90, 90};
+int iactive_target_load[NR_CPUS] = {95, 95, 95, 95};
 
 /*Machinex Intelliactive tunable*/
 unsigned int two_phase_freq[NR_CPUS] = {1674000, 1674000, 1674000, 1674000};
@@ -66,10 +66,10 @@ store_one_cpu_clamp(dbs_down_threshold, 1, 99);
 store_one_cpu_clamp(dbs_freq_step, 1, 5);
 store_one_cpu_clamp(su_rate_limit_us, 1000, 10000);
 store_one_cpu_clamp(iactive_hispeed_freq, 384000, 1890000);
-store_one_long_cpu_clamp(iactive_go_hispeed_load, 1, 99);
-store_one_cpu_clamp(iactive_target_load, 1, 95);
+store_one_long_cpu_clamp(iactive_go_hispeed_load, 1, 100);
+store_one_cpu_clamp(iactive_target_load, 1, 100);
 store_one_cpu_clamp(two_phase_freq, 0, 1890000);
-store_one_cpu_clamp(up_threshold_any_cpu_load, 1, 80);
+store_one_cpu_clamp(up_threshold_any_cpu_load, 1, 99);
 store_one_cpu_clamp(sync_freq, 0, 1890000);
 store_one_cpu_clamp(up_threshold_any_cpu_freq, 0, 1890000);
 
