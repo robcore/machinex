@@ -46,10 +46,10 @@ __ATTR(_name, 0200, NULL, store_##_name)
 static struct governor_attr _name =					\
 __ATTR(_name, 0644, show_##_name, store_##_name)
 
-#define DEFAULT_SAMPLING_RATE (20 * USEC_PER_MSEC)
+#define DEFAULT_SAMPLING_RATE 40 * USEC_PER_MSEC)
 #define DEFAULT_ABOVE_HISPEED_DELAY DEFAULT_SAMPLING_RATE
 #define DEFAULT_TIMER_SLACK (2 * DEFAULT_SAMPLING_RATE)
-#define DEFAULT_MIN_SAMPLE_TIME (10 * USEC_PER_MSEC)
+#define DEFAULT_MIN_SAMPLE_TIME (40 * USEC_PER_MSEC)
 
 /* Separate instance required for each 'interactive' directory in sysfs */
 struct interactive_tunables {
@@ -285,7 +285,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 		 */
 
 		index = cpufreq_frequency_table_target(policy, loadadjfreq / tl,
-						       CPUFREQ_RELATION_C);
+						       CPUFREQ_RELATION_L);
 
 		freq = freq_table[index].frequency;
 
@@ -1046,8 +1046,7 @@ static void update_util_handler(struct update_util_data *data, u64 time,
 	delta_ns = time - icpu->last_sample_time;
 	if (is_display_on() && (s64)delta_ns < tunables->sampling_rate * NSEC_PER_USEC)
 		return;
-	else
-	if ((s64)delta_ns < 80 * USEC_PER_MSEC * NSEC_PER_USEC)
+	else if ((s64)delta_ns < 80 * USEC_PER_MSEC * NSEC_PER_USEC)
 
 	icpu->last_sample_time = time;
 	icpu->next_sample_jiffies = usecs_to_jiffies(tunables->sampling_rate) +
@@ -1065,6 +1064,7 @@ static void gov_set_update_util(struct interactive_policy *ipolicy)
 
 	for_each_cpu(cpu, policy->cpus) {
 		icpu = &per_cpu(interactive_cpu, cpu);
+
 		icpu->last_sample_time = 0;
 		icpu->next_sample_jiffies = 0;
 		cpufreq_add_update_util_hook(cpu, &icpu->update_util,
