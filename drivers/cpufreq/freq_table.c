@@ -13,7 +13,7 @@
 
 #include <linux/cpufreq.h>
 #include <linux/module.h>
-
+static int mx_ascending = 0;
 /*********************************************************************
  *                     FREQUENCY TABLE HELPERS                       *
  *********************************************************************/
@@ -332,6 +332,31 @@ struct freq_attr *cpufreq_generic_attr[] = {
 };
 EXPORT_SYMBOL_GPL(cpufreq_generic_attr);
 
+static int get_mx_sort_order(char *buf, const struct kernel_param *kp)
+{
+	ssize_t ret = 0;
+
+	ret = sprintf(buf, "Freq table is sorted in %s order\n",
+		 mx_ascending > 0 ? "ascending" : "descending");
+
+	return ret;
+}
+
+static const struct kernel_param_ops param_ops_mx_sort_order = {
+	.set = NULL,
+	.get = get_mx_sort_order,
+};
+module_param_cb(mx_sort_order, &param_ops_mx_sort_order, NULL, 0444);
+
+unsigned int is_set = 0;
+static void set_mx_sorted(int ascend)
+{
+	if (is_set)
+		return;
+
+	mx_ascending = ascend;
+}
+
 static int set_freq_table_sorted(struct cpufreq_policy *policy)
 {
 	struct cpufreq_frequency_table *pos, *table = policy->freq_table;
@@ -381,8 +406,7 @@ static int set_freq_table_sorted(struct cpufreq_policy *policy)
 	else
 		policy->freq_table_sorted = CPUFREQ_TABLE_SORTED_DESCENDING;
 
-	pr_debug("Freq table is sorted in %s order\n",
-		 ascending > 0 ? "ascending" : "descending");
+	set_mx_sorted(ascending);
 
 	return 0;
 }
