@@ -347,10 +347,11 @@ static u64 update_load(struct interactive_cpu *icpu, unsigned int cpu)
 
 	now_idle = get_cpu_idle_time(cpu, &now);
 	delta_idle = (now_idle - icpu->time_in_idle);
+	now = ktime_to_us(ktime_get());
 	delta_time = (now - icpu->time_in_idle_timestamp);
 
 	if (delta_time <= delta_idle)
-		active_time = 0;
+		active_time = 2;
 	else
 		active_time = delta_time - delta_idle;
 
