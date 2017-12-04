@@ -46,7 +46,7 @@ __ATTR(_name, 0200, NULL, store_##_name)
 static struct governor_attr _name =					\
 __ATTR(_name, 0644, show_##_name, store_##_name)
 
-#define DEFAULT_SAMPLING_RATE 40 * USEC_PER_MSEC)
+#define DEFAULT_SAMPLING_RATE (40 * USEC_PER_MSEC)
 #define DEFAULT_ABOVE_HISPEED_DELAY DEFAULT_SAMPLING_RATE
 #define DEFAULT_TIMER_SLACK (2 * DEFAULT_SAMPLING_RATE)
 #define DEFAULT_MIN_SAMPLE_TIME (40 * USEC_PER_MSEC)
