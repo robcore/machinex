@@ -450,8 +450,8 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	}
 
 	if (icpu->target_freq == new_freq &&
-//	    icpu->target_freq <= policy->cur) {
-	    icpu->target_freq <= floor_freq) {
+	    (icpu->target_freq <= policy->cur ||
+	    icpu->target_freq <= floor_freq)) {
 		goto exit;
 	}
 
