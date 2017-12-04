@@ -288,7 +288,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 		index = cpufreq_frequency_table_target(policy, loadadjfreq / tl,
 						       CPUFREQ_RELATION_L);
 		freq = freq_table[index].frequency;
-		pr_info_ratelimited("%s - loadadjfreq / targetload: %u freq: %u\n", __func__, (loadadjfreq / tl), freq);
+		//pr_info_ratelimited("%s - loadadjfreq / targetload: %u freq: %u\n", __func__, (loadadjfreq / tl), freq);
 
 		if (freq > prevfreq) {
 			/* The previous frequency is too low */
@@ -386,9 +386,9 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	spin_lock_irqsave(&icpu->target_freq_lock, flags);
 	do_div(cputime_speedadj, delta_time);
 	loadadjfreq = (unsigned int)cputime_speedadj * 100;
-	pr_info_ratelimited("%s - raw loadadjfreq: %u\n", __func__, loadadjfreq);
+	//pr_info_ratelimited("%s - raw loadadjfreq: %u\n", __func__, loadadjfreq);
 	iactive_current_load[cpu] = cpu_load = DIV_ROUND_CLOSEST(loadadjfreq, policy->cur);
-	pr_info_ratelimited("%s - cpuload: %d loadadjfreq: %u freq: %u\n", __func__, cpu_load, loadadjfreq, policy->cur);
+	//pr_info_ratelimited("%s - cpuload: %d loadadjfreq: %u freq: %u\n", __func__, cpu_load, loadadjfreq, policy->cur);
 	tunables->boosted = tunables->boost ||
 			    now < tunables->boostpulse_endtime;
 
