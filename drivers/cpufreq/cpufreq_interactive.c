@@ -144,6 +144,7 @@ static struct task_struct *speedchange_task;
 static cpumask_t speedchange_cpumask;
 static spinlock_t speedchange_cpumask_lock;
 
+int iactive_current_load[NR_CPUS];
 /* Target load. Lower values result in higher CPU speeds. */
 #define DEFAULT_TARGET_LOAD 95
 static unsigned int default_target_loads[] = {DEFAULT_TARGET_LOAD};
@@ -374,7 +375,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	int cpu = smp_processor_id();
 
 	spin_lock_irqsave(&icpu->load_lock, flags);
-	now = update_load(icpu, smp_processor_id());
+	now = update_load(icpu, cpu);
 	delta_time = (unsigned int)(now - icpu->cputime_speedadj_timestamp);
 	cputime_speedadj = icpu->cputime_speedadj;
 	spin_unlock_irqrestore(&icpu->load_lock, flags);
@@ -385,7 +386,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	spin_lock_irqsave(&icpu->target_freq_lock, flags);
 	do_div(cputime_speedadj, delta_time);
 	loadadjfreq = (unsigned int)cputime_speedadj * 100;
-	cpu_load = loadadjfreq / policy->cur;
+	iactive_current_load[cpu] = cpu_load = loadadjfreq / policy->cur;
 	tunables->boosted = tunables->boost ||
 			    now < tunables->boostpulse_endtime;
 

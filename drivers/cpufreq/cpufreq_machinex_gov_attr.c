@@ -39,6 +39,7 @@ unsigned int two_phase_freq[NR_CPUS] = {1674000, 1674000, 1674000, 1674000};
 unsigned int up_threshold_any_cpu_load[NR_CPUS] = {80, 80, 80, 80};
 unsigned int sync_freq[NR_CPUS] = {1026000, 1026000, 1026000, 1026000};
 unsigned int up_threshold_any_cpu_freq[NR_CPUS] = {702000, 702000, 702000, 702000};
+extern int iactive_current_load[NR_CPUS];
 
 show_one_cpu(dbs_cpu_sampling_rate);
 show_one_cpu(dbs_up_threshold);
@@ -56,6 +57,7 @@ show_one_cpu(up_threshold_any_cpu_load);
 show_one_cpu(sync_freq);
 show_one_cpu(up_threshold_any_cpu_freq);
 show_one_cpu(mx_cpufreq_governor);
+show_one_cpu(iactive_current_load);
 
 store_one_cpu_clamp(dbs_cpu_sampling_rate, 1000, 10000);
 store_one_cpu_clamp(dbs_up_threshold, 1, 99);
@@ -114,6 +116,7 @@ DEVICE_ATTR_RW(up_threshold_any_cpu_load);
 DEVICE_ATTR_RW(sync_freq);
 DEVICE_ATTR_RW(up_threshold_any_cpu_freq);
 DEVICE_ATTR_RW(mx_cpufreq_governor);
+DEVICE_ATTR_RO(iactive_current_load);
 
 static struct attribute *mx_cpu_attrs[] = {
 	&dev_attr_dbs_cpu_sampling_rate.attr,
@@ -132,6 +135,7 @@ static struct attribute *mx_cpu_attrs[] = {
 	&dev_attr_sync_freq.attr,
 	&dev_attr_up_threshold_any_cpu_freq.attr,
 	&dev_attr_mx_cpufreq_governor.attr,
+	&dev_attr_iactive_current_load.attr,
 	NULL,
 };
 
