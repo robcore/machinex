@@ -350,12 +350,13 @@ static u64 update_load(struct interactive_cpu *icpu, unsigned int cpu)
 	now = ktime_to_us(ktime_get());
 	delta_time = (now - icpu->time_in_idle_timestamp);
 
-	if (delta_time <= delta_idle)
-		active_time = 2;
-	else
+	if (delta_time <= delta_idle) {
+		active_time = 0;
+		icpu->cputime_speedadj += icpu->ipolicy->policy->max;
+	} else {
 		active_time = delta_time - delta_idle;
-
-	icpu->cputime_speedadj += active_time * icpu->ipolicy->policy->cur;
+		icpu->cputime_speedadj += active_time * icpu->ipolicy->policy->cur;
+	}
 
 	icpu->time_in_idle = now_idle;
 	icpu->time_in_idle_timestamp = now;
