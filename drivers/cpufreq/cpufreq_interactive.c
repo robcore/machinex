@@ -52,6 +52,7 @@ __ATTR(_name, 0644, show_##_name, store_##_name)
 #define DEFAULT_MIN_SAMPLE_TIME (40 * USEC_PER_MSEC)
 
 static bool mx_iload_debug = false;
+module_param(mx_iload_debug, bool, 0644);
 /* Separate instance required for each 'interactive' directory in sysfs */
 struct interactive_tunables {
 	struct gov_attr_set attr_set;
