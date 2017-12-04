@@ -51,6 +51,7 @@ __ATTR(_name, 0644, show_##_name, store_##_name)
 #define DEFAULT_TIMER_SLACK (2 * DEFAULT_SAMPLING_RATE)
 #define DEFAULT_MIN_SAMPLE_TIME (40 * USEC_PER_MSEC)
 
+static bool mx_iload_debug = false;
 /* Separate instance required for each 'interactive' directory in sysfs */
 struct interactive_tunables {
 	struct gov_attr_set attr_set;
@@ -284,12 +285,13 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 		 * Find the lowest frequency where the computed load is less
 		 * than or equal to the target load.
 		 */
-		loadfreq = loadadjfreq / tl;
+		loadfreq = DIV_ROUND_CLOSEST(loadadjfreq, tl);
 		clamp_val(loadfreq, 384000, 1890000);
 		index = cpufreq_frequency_table_target(policy, loadfreq,
 						       CPUFREQ_RELATION_L);
 		freq = freq_table[index].frequency;
-		//pr_info_ratelimited("%s - loadadjfreq / targetload: %u freq: %u\n", __func__, (loadadjfreq / tl), freq);
+		if (mx_iload_debug)
+			pr_info_ratelimited("%s - loadadjfreq / targetload: %u freq: %u\n", __func__, (loadadjfreq / tl), freq);
 
 		if (freq > prevfreq) {
 			/* The previous frequency is too low */
@@ -387,9 +389,11 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	spin_lock_irqsave(&icpu->target_freq_lock, flags);
 	do_div(cputime_speedadj, delta_time);
 	loadadjfreq = (unsigned int)cputime_speedadj * 100;
-	//pr_info_ratelimited("%s - raw loadadjfreq: %u\n", __func__, loadadjfreq);
+	if (mx_iload_debug)
+		pr_info_ratelimited("%s - raw loadadjfreq: %u\n", __func__, loadadjfreq);
 	iactive_current_load[cpu] = cpu_load = DIV_ROUND_CLOSEST(loadadjfreq, policy->cur);
-	//pr_info_ratelimited("%s - cpuload: %d loadadjfreq: %u freq: %u\n", __func__, cpu_load, loadadjfreq, policy->cur);
+	if (mx_iload_debug)
+		pr_info_ratelimited("%s - cpuload: %d loadadjfreq: %u freq: %u\n", __func__, cpu_load, loadadjfreq, policy->cur);
 	tunables->boosted = tunables->boost ||
 			    now < tunables->boostpulse_endtime;
 
