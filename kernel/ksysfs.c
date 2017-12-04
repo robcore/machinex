@@ -128,9 +128,9 @@ KERNEL_ATTR_RW(kexec_crash_size);
 static ssize_t vmcoreinfo_show(struct kobject *kobj,
 			       struct kobj_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%lx %x\n",
-		       paddr_vmcoreinfo_note(),
-		       (unsigned int)vmcoreinfo_max_size);
+	phys_addr_t vmcore_base = paddr_vmcoreinfo_note();
+	return sprintf(buf, "%pa %x\n", &vmcore_base,
+			(unsigned int)VMCOREINFO_NOTE_SIZE);
 }
 KERNEL_ATTR_RO(vmcoreinfo);
 
@@ -179,30 +179,6 @@ static ssize_t rcu_normal_store(struct kobject *kobj,
 }
 KERNEL_ATTR_RW(rcu_normal);
 #endif /* #ifndef CONFIG_TINY_RCU */
-/*
-unsigned int late_init_complete = 0;
-
-static ssize_t late_init_complete_show(struct kobject *kobj,
-				struct kobj_attribute *attr, char *buf)
-{
-	return sprintf(buf, "%u\n", late_init_complete);
-}
-
-static ssize_t late_init_complete_store(struct kobject *kobj,
-				struct kobj_attribute *attr, const char *buf, size_t count)
-{
-	unsigned int input;
-	int ret;
-
-	ret = sscanf(buf, "%u", &input);
-	if (input != 1)
-		return -EINVAL;
-
-	late_init_complete = input;
-	return count;
-}
-KERNEL_ATTR_RW(late_init_complete);
-*/
 extern int poweroff_charging;
 static ssize_t poweroff_charging_show(struct kobject *kobj,
 				  struct kobj_attribute *attr, char *buf)
