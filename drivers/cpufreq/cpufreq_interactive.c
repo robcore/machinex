@@ -273,7 +273,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 	struct cpufreq_policy *policy = icpu->ipolicy->policy;
 	struct cpufreq_frequency_table *freq_table = policy->freq_table;
 	unsigned int prevfreq, freqmin = 0, freqmax = policy->max, tl;
-	unsigned int freq = policy->cur;
+	unsigned int freq = policy->cur, loadfreq;
 	int index;
 
 	do {
@@ -284,8 +284,9 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 		 * Find the lowest frequency where the computed load is less
 		 * than or equal to the target load.
 		 */
-
-		index = cpufreq_frequency_table_target(policy, loadadjfreq / tl,
+		loadfreq = loadadjfreq / tl;
+		clamp_val(loadfreq, 384000, 1890000);
+		index = cpufreq_frequency_table_target(policy, loadfreq,
 						       CPUFREQ_RELATION_L);
 		freq = freq_table[index].frequency;
 		//pr_info_ratelimited("%s - loadadjfreq / targetload: %u freq: %u\n", __func__, (loadadjfreq / tl), freq);
@@ -299,7 +300,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 
 			/* Find highest frequency that is less than freqmax */
 			index = cpufreq_frequency_table_target(policy,
-					freqmax - 1, CPUFREQ_RELATION_H);
+					freqmax - 108000, CPUFREQ_RELATION_H);
 
 			freq = freq_table[index].frequency;
 
@@ -321,7 +322,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 
 			/* Find lowest frequency that is higher than freqmin */
 			index = cpufreq_frequency_table_target(policy,
-					freqmin + 1, CPUFREQ_RELATION_L);
+					freqmin + 108000, CPUFREQ_RELATION_L);
 
 			freq = freq_table[index].frequency;
 
