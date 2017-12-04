@@ -354,7 +354,7 @@ static u64 update_load(struct interactive_cpu *icpu, unsigned int cpu)
 		active_time = delta_time - delta_idle;
 		icpu->cputime_speedadj += active_time * icpu->ipolicy->policy->cur;
 	} else
-		icpu->cputime_speedadj += icpu->ipolicy->policy->min;
+		icpu->cputime_speedadj += icpu->ipolicy->policy->max;
 
 	icpu->time_in_idle = now_idle;
 	icpu->time_in_idle_timestamp = now;
