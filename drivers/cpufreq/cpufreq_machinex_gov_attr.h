@@ -20,7 +20,7 @@
 /**
  * I have a very specific, hacked kernel configuration.
  * There is a 110% chance that this not only won't work
- * for you, but cause headaches that aren't worth it.
+ * for you, but will cause headaches that aren't worth it.
  * Please ask me anything you need to know and I'll fill
  * you in, as I'd rather help you than see people get
  * screwed by my lack of organization.  This is NOT one
