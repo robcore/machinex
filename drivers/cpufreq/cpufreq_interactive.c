@@ -344,6 +344,7 @@ static u64 update_load(struct interactive_cpu *icpu, unsigned int cpu)
 {
 	struct interactive_tunables *tunables = icpu->ipolicy->tunables;
 	u64 now_idle, now, active_time, delta_idle, delta_time;
+	unsigned int cpusonline = num_online_cpus();
 
 	now_idle = get_cpu_idle_time(cpu, &now);
 	delta_idle = (now_idle - icpu->time_in_idle);
@@ -353,9 +354,10 @@ static u64 update_load(struct interactive_cpu *icpu, unsigned int cpu)
 	if (delta_time > delta_idle) {
 		active_time = delta_time - delta_idle;
 		icpu->cputime_speedadj += active_time * icpu->ipolicy->policy->cur;
-	} else
-		icpu->cputime_speedadj += icpu->ipolicy->policy->min;
-
+	} else {
+		clamp_val(cpusonline, 2, 4);
+		icpu->cputime_speedadj += (icpu->ipolicy->policy->max * (cpusonline - 1));
+	}
 	icpu->time_in_idle = now_idle;
 	icpu->time_in_idle_timestamp = now;
 
