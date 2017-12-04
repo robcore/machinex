@@ -285,7 +285,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 		 * than or equal to the target load.
 		 */
 
-		index = cpufreq_frequency_table_target(policy, ((DIV_ROUND_CLOSEST(loadadjfreq, tl) * 1000000),
+		index = cpufreq_frequency_table_target(policy, (DIV_ROUND_CLOSEST(loadadjfreq, tl) * 1000000),
 						       CPUFREQ_RELATION_L);
 
 		freq = freq_table[index].frequency;
