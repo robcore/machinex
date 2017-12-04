@@ -180,7 +180,7 @@ static bool timer_slack_required(struct intelliactive_cpu *icpu)
 	return false;
 }
 
-static void gov_slack_timer_start(struct intelliactive_cpu *icpu, int cpu)
+static void gov_slack_timer_start(struct intelliactive_cpu *icpu, unsigned int cpu)
 {
 	struct intelliactive_tunables *tunables = icpu->ipolicy->tunables;
 
@@ -199,7 +199,7 @@ static void gov_slack_timer_modify(struct intelliactive_cpu *icpu)
 	mod_timer(&icpu->slack_timer, jiffies + tunables->timer_slack_delay);
 }
 
-static void slack_timer_resched(struct intelliactive_cpu *icpu, int cpu,
+static void slack_timer_resched(struct intelliactive_cpu *icpu, unsigned int cpu,
 				bool modify)
 {
 	struct intelliactive_tunables *tunables = icpu->ipolicy->tunables;
@@ -338,7 +338,7 @@ static unsigned int choose_freq(struct intelliactive_cpu *icpu,
 	return freq;
 }
 
-static u64 update_load(struct intelliactive_cpu *icpu, int cpu)
+static u64 update_load(struct intelliactive_cpu *icpu, unsigned int cpu)
 {
 	struct intelliactive_tunables *tunables = icpu->ipolicy->tunables;
 	u64 now_idle, now, active_time, delta_idle, delta_time;
@@ -372,7 +372,7 @@ static void eval_target_freq(struct intelliactive_cpu *icpu)
 	unsigned int max_freq;
 	unsigned long flags;
 	int cpu_load;
-	int cpu = smp_processor_id();
+	unsigned int cpu = smp_processor_id();
 	unsigned int phase = 0;
 	unsigned int counter = 0;
 
@@ -1099,7 +1099,7 @@ static void gov_set_update_util(struct intelliactive_policy *ipolicy)
 {
 	struct cpufreq_policy *policy = ipolicy->policy;
 	struct intelliactive_cpu *icpu;
-	int cpu;
+	unsigned int cpu;
 
 	for_each_cpu(cpu, policy->cpus) {
 		icpu = &per_cpu(intelliactive_cpu, cpu);
