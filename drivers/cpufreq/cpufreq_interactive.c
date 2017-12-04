@@ -285,7 +285,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 		 * than or equal to the target load.
 		 */
 
-		index = cpufreq_frequency_table_target(policy, loadadjfreq / tl,
+		index = cpufreq_frequency_table_target(policy, ((loadadjfreq / tl) * 1000),
 						       CPUFREQ_RELATION_L);
 
 		freq = freq_table[index].frequency;
@@ -299,7 +299,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 
 			/* Find highest frequency that is less than freqmax */
 			index = cpufreq_frequency_table_target(policy,
-					freqmax - 1, CPUFREQ_RELATION_H);
+					freqmax, CPUFREQ_RELATION_H);
 
 			freq = freq_table[index].frequency;
 
@@ -321,7 +321,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 
 			/* Find lowest frequency that is higher than freqmin */
 			index = cpufreq_frequency_table_target(policy,
-					freqmin + 1, CPUFREQ_RELATION_L);
+					freqmin, CPUFREQ_RELATION_L);
 
 			freq = freq_table[index].frequency;
 
@@ -446,10 +446,9 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	}
 
 	if (icpu->target_freq == new_freq &&
-//	    icpu->target_freq <= policy->cur) {
-	    icpu->target_freq <= floor_freq) {
+	    (icpu->target_freq == policy->cur ||
+	    icpu->target_freq <= floor_freq))
 		goto exit;
-	}
 
 	icpu->target_freq = new_freq;
 	spin_unlock_irqrestore(&icpu->target_freq_lock, flags);
