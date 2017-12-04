@@ -285,10 +285,10 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 		 * than or equal to the target load.
 		 */
 
-		index = cpufreq_frequency_table_target(policy, loadadjfreq / tl,
+		index = cpufreq_frequency_table_target(policy, ((DIV_ROUND_CLOSEST(loadadjfreq, tl) * 100000),
 						       CPUFREQ_RELATION_L);
+
 		freq = freq_table[index].frequency;
-		pr_info_ratelimited("%s - loadadjfreq / targetload: %u freq: %u\n", __func__, (loadadjfreq / tl), freq);
 
 		if (freq > prevfreq) {
 			/* The previous frequency is too low */
@@ -299,7 +299,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 
 			/* Find highest frequency that is less than freqmax */
 			index = cpufreq_frequency_table_target(policy,
-					freqmax - 1, CPUFREQ_RELATION_H);
+					freqmax, CPUFREQ_RELATION_H);
 
 			freq = freq_table[index].frequency;
 
@@ -321,7 +321,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 
 			/* Find lowest frequency that is higher than freqmin */
 			index = cpufreq_frequency_table_target(policy,
-					freqmin + 1, CPUFREQ_RELATION_L);
+					freqmin, CPUFREQ_RELATION_L);
 
 			freq = freq_table[index].frequency;
 
@@ -386,9 +386,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	spin_lock_irqsave(&icpu->target_freq_lock, flags);
 	do_div(cputime_speedadj, delta_time);
 	loadadjfreq = (unsigned int)cputime_speedadj * 100;
-	pr_info_ratelimited("%s - raw loadadjfreq: %u\n", __func__, loadadjfreq);
-	iactive_current_load[cpu] = cpu_load = DIV_ROUND_CLOSEST(loadadjfreq, policy->cur);
-	pr_info_ratelimited("%s - cpuload: %d loadadjfreq: %u freq: %u\n", __func__, cpu_load, loadadjfreq, policy->cur);
+	iactive_current_load[cpu] = cpu_load = (DIV_ROUND_CLOSEST(loadadjfreq, DIV_ROUND_CLOSEST(policy->cur, 100000)));
 	tunables->boosted = tunables->boost ||
 			    now < tunables->boostpulse_endtime;
 
@@ -448,10 +446,9 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	}
 
 	if (icpu->target_freq == new_freq &&
-//	    icpu->target_freq <= policy->cur) {
-	    icpu->target_freq <= floor_freq) {
+	    (icpu->target_freq == policy->cur ||
+	    icpu->target_freq <= floor_freq))
 		goto exit;
-	}
 
 	icpu->target_freq = new_freq;
 	spin_unlock_irqrestore(&icpu->target_freq_lock, flags);
