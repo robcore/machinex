@@ -39,6 +39,7 @@ unsigned long __read_mostly sysctl_hung_task_timeout_secs = CONFIG_DEFAULT_HUNG_
 unsigned long __read_mostly sysctl_hung_task_warnings = 10;
 
 static int __read_mostly did_panic;
+static bool hung_task_show_lock;
 
 static struct task_struct *watchdog_task;
 
@@ -94,14 +95,16 @@ static void check_hung_task(struct task_struct *t, unsigned long timeout)
 		t->last_switch_count = switch_count;
 		return;
 	}
-	if (!sysctl_hung_task_warnings)
+	if (!sysctl_hung_task_warnings && !sysctl_hung_task_panic)
 		return;
-	sysctl_hung_task_warnings--;
 
 	/*
 	 * Ok, the task did not get scheduled for more than 2 minutes,
 	 * complain:
 	 */
+	if (sysctl_hung_task_warnings) {
+		if (sysctl_hung_task_warnings > 0)
+			sysctl_hung_task_warnings--;
 	pr_err("INFO: task %s:%d blocked for more than %ld seconds.\n",
 		t->comm, t->pid, timeout);
 	pr_err("      %s %s %.*s\n",
@@ -111,11 +114,12 @@ static void check_hung_task(struct task_struct *t, unsigned long timeout)
 	pr_err("\"echo 0 > /proc/sys/kernel/hung_task_timeout_secs\""
 		" disables this message.\n");
 	sched_show_task(t);
-	debug_show_held_locks(t);
 
 	touch_nmi_watchdog();
 
 	if (sysctl_hung_task_panic) {
+		if (hung_task_show_lock)
+		debug_show_held_locks(t);
 		trigger_all_cpu_backtrace();
 		panic("hung_task: blocked tasks");
 	}
@@ -162,8 +166,9 @@ static void check_hung_uninterruptible_tasks(unsigned long timeout)
 	if (test_taint(TAINT_DIE) || did_panic)
 		return;
 
+	hung_task_show_lock = false;
 	rcu_read_lock();
-	do_each_thread(g, t) {
+	for_each_process_thread(g, t) {
 		if (!max_count--)
 			goto unlock;
 		if (!--batch_count) {
@@ -174,15 +179,19 @@ static void check_hung_uninterruptible_tasks(unsigned long timeout)
 		/* use "==" to skip the TASK_KILLABLE tasks waiting on NFS */
 		if (t->state == TASK_UNINTERRUPTIBLE)
 			check_hung_task(t, timeout);
-	} while_each_thread(g, t);
+	}
  unlock:
 	rcu_read_unlock();
+	if (hung_task_show_lock)
+		debug_show_held_locks(t);
 }
 
-static unsigned long timeout_jiffies(unsigned long timeout)
+static long hung_timeout_jiffies(unsigned long last_checked,
+				 unsigned long timeout)
 {
 	/* timeout of 0 will disable the watchdog */
-	return timeout ? timeout * HZ : MAX_SCHEDULE_TIMEOUT;
+	return timeout ? last_checked - jiffies + timeout * HZ :
+		MAX_SCHEDULE_TIMEOUT;
 }
 
 /*
@@ -205,20 +214,34 @@ int proc_dohung_task_timeout_secs(struct ctl_table *table, int write,
 	return ret;
 }
 
+static atomic_t reset_hung_task = ATOMIC_INIT(0);
+
+void reset_hung_task_detector(void)
+{
+	atomic_set(&reset_hung_task, 1);
+}
+EXPORT_SYMBOL_GPL(reset_hung_task_detector);
+
 /*
  * kthread which checks for tasks stuck in D state
  */
 static int watchdog(void *dummy)
 {
+	unsigned long hung_last_checked = jiffies;
+
 	set_user_nice(current, 0);
 
 	for ( ; ; ) {
 		unsigned long timeout = sysctl_hung_task_timeout_secs;
+		long t = hung_timeout_jiffies(hung_last_checked, timeout);
 
-		while (schedule_timeout_interruptible(timeout_jiffies(timeout)))
-			timeout = sysctl_hung_task_timeout_secs;
-
-		check_hung_uninterruptible_tasks(timeout);
+		if (t <= 0) {
+			if (!atomic_xchg(&reset_hung_task, 0))
+				check_hung_uninterruptible_tasks(timeout);
+			hung_last_checked = jiffies;
+			continue;
+		}
+		schedule_timeout_interruptible(t);
 	}
 
 	return 0;
