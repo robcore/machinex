@@ -369,7 +369,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	struct cpufreq_policy *policy = icpu->ipolicy->policy;
 	struct cpufreq_frequency_table *freq_table = policy->freq_table;
 	u64 cputime_speedadj, now, max_fvtime;
-	unsigned int new_freq, loadadjfreq, index, delta_time;
+	unsigned int new_freq, loadadjfreq, index, delta_time, floor_freq = 1026000;
 	unsigned long flags;
 	int cpu_load;
 	unsigned int cpu = smp_processor_id();
@@ -386,7 +386,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	spin_lock_irqsave(&icpu->target_freq_lock, flags);
 	do_div(cputime_speedadj, delta_time);
 	loadadjfreq = (unsigned int)cputime_speedadj * 100;
-	iactive_current_load[cpu] = cpu_load = loadadjfreq / policy->cur;
+	iactive_current_load[cpu] = cpu_load = DIV_ROUND_CLOSEST(loadadjfreq / policy->cur, NR_CPUS) * num_online_cpus();
 	tunables->boosted = tunables->boost ||
 			    now < tunables->boostpulse_endtime;
 
@@ -446,7 +446,8 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	}
 
 	if (icpu->target_freq == new_freq &&
-	    icpu->target_freq <= policy->cur) {
+//	    icpu->target_freq <= policy->cur) {
+	    icpu->target_freq <= floor_freq) {
 		goto exit;
 	}
 
