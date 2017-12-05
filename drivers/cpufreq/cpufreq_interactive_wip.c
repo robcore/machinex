@@ -274,9 +274,11 @@ static unsigned int choose_freq(struct interactive_policy *ipolicy,
 		 * than or equal to the target load.
 		 */
 		loadfreq = DIV_ROUND_CLOSEST(loadadjfreq, tl);
+		if (!loadfreq)
+			loadfreq = DIV_ROUND_CLOSEST(this_cpu_load(policy->cpu), tl);
 		clamp_val(loadfreq, 384000, 1890000);
 		index = cpufreq_frequency_table_target(policy, loadfreq,
-						       CPUFREQ_RELATION_L);
+						       CPUFREQ_RELATION_C);
 		freq = freq_table[index].frequency;
 		if (mx_iload_debug)
 			pr_info_ratelimited("%s - loadadjfreq / targetload: %u freq: %u\n", __func__, (loadadjfreq / tl), freq);
