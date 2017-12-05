@@ -144,7 +144,7 @@ static DEFINE_PER_CPU(struct cpufreq_policy *, cpufreq_cpu_data);
 static DEFINE_RWLOCK(cpufreq_driver_lock);
 
 /* Flag to suspend/resume CPUFreq governors */
-static bool cpufreq_suspended;
+bool cpufreq_suspended;
 
 static inline bool has_target(void)
 {
