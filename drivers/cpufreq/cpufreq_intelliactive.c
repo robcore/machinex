@@ -292,7 +292,7 @@ static unsigned int choose_freq(struct intelliactive_cpu *icpu,
 			/* The previous frequency is too low */
 			freqmin = prevfreq;
 
-			if (freq < freqmax)
+			if (freq > freqmax)
 				continue;
 
 			/* Find highest frequency that is less than freqmax */
