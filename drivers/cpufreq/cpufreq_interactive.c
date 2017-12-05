@@ -282,7 +282,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 			loadfreq = DIV_ROUND_CLOSEST(loadadjfreq, tl);
 		else
 			loadfreq = DIV_ROUND_CLOSEST(this_cpu_load(policy->cpu), tl);
-		clamp_val(loadfreq, 384000, 1890000);
+		clamp_val(loadfreq, policy->min, policy->max);
 		index = cpufreq_frequency_table_target(policy, loadfreq,
 						       CPUFREQ_RELATION_C);
 
