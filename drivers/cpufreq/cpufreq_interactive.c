@@ -292,9 +292,6 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 			/* The previous frequency is too low */
 			freqmin = prevfreq;
 
-			if (freq > freqmax)
-				continue;
-
 			/* Find highest frequency that is less than freqmax */
 			index = cpufreq_frequency_table_target(policy,
 					freqmax - 1, CPUFREQ_RELATION_H);
