@@ -372,7 +372,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	unsigned long flags;
 	int cpu_load;
 	unsigned int cpu = smp_processor_id();
-	if (cpu != policy->cpu)
+	if (unlikely(cpu != policy->cpu))
 		return;
 
 	spin_lock_irqsave(&icpu->load_lock, flags);
@@ -387,8 +387,8 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	spin_lock_irqsave(&icpu->target_freq_lock, flags);
 	do_div(cputime_speedadj, delta_time);
 	loadadjfreq = (unsigned int)cputime_speedadj * 100;
-	if (loadadjfreq != 0 && loadadjfreq != 100)
-		iactive_current_load[cpu] = cpu_load = DIV_ROUND_CLOSEST(loadadjfreq, policy->cur);
+	cpu_load = DIV_ROUND_CLOSEST(loadadjfreq, policy->cur);
+	if (cpu_load == 0 && cpu_load != 100)
 	else
 		iactive_current_load[cpu] = cpu_load = this_cpu_load(cpu);
 
@@ -467,7 +467,7 @@ exit:
 static void cpufreq_interactive_update(struct interactive_cpu *icpu)
 {
 	unsigned int cpu = smp_processor_id();
-	if (cpu != icpu->ipolicy->policy->cpu)
+	if (unlikely(cpu != icpu->ipolicy->policy->cpu))
 		return;
 	eval_target_freq(icpu);
 	slack_timer_resched(icpu, cpu, true);
@@ -478,7 +478,7 @@ static void cpufreq_interactive_idle_end(void)
 	unsigned int cpu = smp_processor_id();
 	struct interactive_cpu *icpu = &per_cpu(interactive_cpu,
 						cpu);
-	if (cpu != icpu->ipolicy->policy->cpu)
+	if (unlikely(cpu != icpu->ipolicy->policy->cpu))
 		return;
 
 	if (!down_read_trylock(&icpu->enable_sem))
