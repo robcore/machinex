@@ -18,7 +18,6 @@
 #include <linux/types.h>
 #include <linux/nodemask.h>
 #include <uapi/linux/oom.h>
-#include <linux/mm.h> /* VM_FAULT* */
 
 struct zonelist;
 struct notifier_block;
@@ -44,35 +43,6 @@ enum oom_scan_t {
 
 /* Thread is the potential origin of an oom condition; kill first on oom */
 #define OOM_FLAG_ORIGIN		((__force oom_flags_t)0x1)
-
-/*
- * Details of the page allocation that triggered the oom killer that are used to
- * determine what should be killed.
- */
-struct oom_control {
-	/* Used to determine cpuset */
-	struct zonelist *zonelist;
-
-	/* Used to determine mempolicy */
-	nodemask_t *nodemask;
-
-	/* Memory cgroup in which oom is invoked, or NULL for global oom */
-	struct mem_cgroup *memcg;
-
-	/* Used to determine cpuset and node locality requirement */
-	const gfp_t gfp_mask;
-
-	/*
-	 * order == -1 means the oom kill is required by sysrq, otherwise only
-	 * for display purposes.
-	 */
-	const int order;
-
-	/* Used by oom implementation, do not set */
-	unsigned long totalpages;
-	struct task_struct *chosen;
-	unsigned long chosen_points;
-};
 
 static inline void set_current_oom_origin(void)
 {
