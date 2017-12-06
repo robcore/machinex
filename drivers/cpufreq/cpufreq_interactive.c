@@ -380,7 +380,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	spin_lock_irqsave(&icpu->target_freq_lock, flags);
 	do_div(cputime_speedadj, delta_time);
 	loadadjfreq = (unsigned int)cputime_speedadj * 100;
-	if (loadadjfreq != 0 || loadadjfreq != 100)
+	if (loadadjfreq == 0 || loadadjfreq == 100)
 		iactive_current_load[cpu] = cpu_load = DIV_ROUND_CLOSEST(loadadjfreq, policy->cur);
 	else
 		iactive_current_load[cpu] = cpu_load = this_cpu_load(cpu);
