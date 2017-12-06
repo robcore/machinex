@@ -2653,7 +2653,7 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
 			reapply_hard_limits(policy->cpu, false);
 	}
 
-	policy->cached_target_freq = DEFAULT_HARD_MAX;
+	policy->cached_target_freq = UINT_MAX;
 
 	pr_debug("new min and max freqs are %u - %u kHz\n",
 		 policy->min, policy->max);
