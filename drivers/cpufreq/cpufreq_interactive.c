@@ -139,6 +139,7 @@ static cpumask_t speedchange_cpumask;
 static spinlock_t speedchange_cpumask_lock;
 
 int iactive_current_load[NR_CPUS];
+#define hlimit_hispeed(cpu) check_cpufreq_hardlimit(cpu, iactive_hispeed_freq[cpu]) 
 /* Target load. Lower values result in higher CPU speeds. */
 #define DEFAULT_TARGET_LOAD 95
 static unsigned int default_target_loads[] = {DEFAULT_TARGET_LOAD};
@@ -391,22 +392,22 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	if (cpu_load >= iactive_go_hispeed_load[cpu]) {
 		//if (policy->cur < tunables->hispeed_freq) {
 			//new_freq = tunables->hispeed_freq;
-		if (policy->cur < iactive_hispeed_freq[cpu]) {
-			new_freq = iactive_hispeed_freq[cpu];
+		if (policy->cur < hlimit_hispeed(cpu)) {
+			new_freq = hlimit_hispeed(cpu);
 		} else {
 			new_freq = choose_freq(icpu, loadadjfreq);
 
-			if (new_freq < iactive_hispeed_freq[cpu])
-				new_freq = iactive_hispeed_freq[cpu];
+			if (new_freq < hlimit_hispeed(cpu))
+				new_freq = hlimit_hispeed(cpu);
 		}
 	} else {
 		new_freq = choose_freq(icpu, loadadjfreq);
-		if (new_freq > iactive_hispeed_freq[cpu] &&
-		    policy->cur < iactive_hispeed_freq[cpu])
-			new_freq = iactive_hispeed_freq[cpu];
+		if (new_freq > hlimit_hispeed(cpu) &&
+		    policy->cur < hlimit_hispeed(cpu))
+			new_freq = hlimit_hispeed(cpu);
 	}
 
-	if (policy->cur >= iactive_hispeed_freq[cpu] &&
+	if (policy->cur >= hlimit_hispeed(cpu) &&
 	    new_freq > policy->cur &&
 	    now - icpu->pol_hispeed_val_time < freq_to_above_hispeed_delay(tunables, policy->cur)) {
 		goto exit;
@@ -434,7 +435,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	 * or above the selected frequency for a minimum of min_sample_time
 	 */
 
-	if (new_freq > iactive_hispeed_freq[cpu]) {
+	if (new_freq > hlimit_hispeed(cpu)) {
 		icpu->floor_freq = new_freq;
 		if (icpu->target_freq >= policy->cur || new_freq >= policy->cur)
 			icpu->loc_floor_val_time = now;
@@ -446,7 +447,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 		goto exit;
 	}
 
-	icpu->target_freq = new_freq;
+	icpu->target_freq = check_cpufreq_hardlimit(cpu, new_freq);
 	spin_unlock_irqrestore(&icpu->target_freq_lock, flags);
 
 	spin_lock_irqsave(&speedchange_cpumask_lock, flags);
@@ -548,7 +549,19 @@ again:
 	set_current_state(TASK_INTERRUPTIBLE);
 	spin_lock_irqsave(&speedchange_cpumask_lock, flags);
 
-	if (cpumask_empty(&speedchange_cpumask) || interactive_suspended) {
+	if (interactive_suspended) {
+		cpumask_clear(&speedchange_cpumask);
+		spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
+
+		schedule();
+
+		if (kthread_should_stop())
+			return 0;
+
+		spin_lock_irqsave(&speedchange_cpumask_lock, flags);
+	}
+
+	if (cpumask_empty(&speedchange_cpumask)) {
 		spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
 
 		schedule();
