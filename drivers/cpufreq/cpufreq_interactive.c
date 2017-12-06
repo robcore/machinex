@@ -266,7 +266,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 {
 	struct cpufreq_policy *policy = icpu->ipolicy->policy;
 	struct cpufreq_frequency_table *freq_table = policy->freq_table;
-	unsigned int prevfreq, freqmin = 0, freqmax = policy->max, tl;
+	unsigned int prevfreq, freqmin = 0, freqmax = UINT_MAX, tl;
 	unsigned int freq = policy->cur, loadfreq;
 	int index;
 
@@ -278,7 +278,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 		 * Find the lowest frequency where the computed load is less
 		 * than or equal to the target load.
 		 */
-		if (loadadjfreq)
+		if (loadadjfreq != 0 && loadadjfreq != 100)
 			loadfreq = DIV_ROUND_CLOSEST(loadadjfreq, tl);
 		else
 			loadfreq = DIV_ROUND_CLOSEST(this_cpu_load(policy->cpu), tl);
@@ -291,6 +291,9 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 		if (freq > prevfreq) {
 			/* The previous frequency is too low */
 			freqmin = prevfreq;
+
+			if (freq < freqmax)
+				continue;
 
 			/* Find highest frequency that is less than freqmax */
 			index = cpufreq_frequency_table_target(policy,
@@ -380,7 +383,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	spin_lock_irqsave(&icpu->target_freq_lock, flags);
 	do_div(cputime_speedadj, delta_time);
 	loadadjfreq = (unsigned int)cputime_speedadj * 100;
-	if (loadadjfreq == 0 || loadadjfreq == 100)
+	if (loadadjfreq != 0 && loadadjfreq != 100)
 		iactive_current_load[cpu] = cpu_load = DIV_ROUND_CLOSEST(loadadjfreq, policy->cur);
 	else
 		iactive_current_load[cpu] = cpu_load = this_cpu_load(cpu);
