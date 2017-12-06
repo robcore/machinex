@@ -192,6 +192,15 @@ radix_tree_node_alloc(struct radix_tree_root *root)
 		struct radix_tree_preload *rtp;
 
 		/*
+		 * Even if the caller has preloaded, try to allocate from the
+		 * cache first for the new node to get accounted.
+		 */
+		ret = kmem_cache_alloc(radix_tree_node_cachep,
+				       gfp_mask | __GFP_ACCOUNT | __GFP_NOWARN);
+		if (ret)
+			goto out;
+
+		/*
 		 * Provided the caller has preloaded here, we will always
 		 * succeed in getting a node here (and never reach
 		 * kmem_cache_alloc)
@@ -207,10 +216,12 @@ radix_tree_node_alloc(struct radix_tree_root *root)
 		 * Update the allocation stack trace as this is more useful
 		 * for debugging.
 		 */
+		goto out;
 	}
-	if (ret == NULL)
-		ret = kmem_cache_alloc(radix_tree_node_cachep, gfp_mask);
 
+	ret = kmem_cache_alloc(radix_tree_node_cachep,
+			       gfp_mask | __GFP_ACCOUNT);
+out:
 	BUG_ON(radix_tree_is_indirect_ptr(ret));
 	return ret;
 }
@@ -404,10 +415,10 @@ int __radix_tree_create(struct radix_tree_root *root, unsigned long index,
 	slot = indirect_to_ptr(root->rnode);
 
 	height = root->height;
-	shift = (height-1) * RADIX_TREE_MAP_SHIFT;
+	shift = height * RADIX_TREE_MAP_SHIFT;
 
 	offset = 0;			/* uninitialised var warning */
-	while (height > 0) {
+	while (shift > 0) {
 		if (slot == NULL) {
 			/* Have to add a child node.  */
 			if (!(slot = radix_tree_node_alloc(root)))
@@ -425,11 +436,11 @@ int __radix_tree_create(struct radix_tree_root *root, unsigned long index,
 		}
 
 		/* Go a level down */
+		shift -= RADIX_TREE_MAP_SHIFT;
 		offset = (index >> shift) & RADIX_TREE_MAP_MASK;
 		node = slot;
 		slot = node->slots[offset];
 		slot = indirect_to_ptr(slot);
-		shift -= RADIX_TREE_MAP_SHIFT;
 		height--;
 	}
 
