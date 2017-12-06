@@ -388,9 +388,10 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	do_div(cputime_speedadj, delta_time);
 	loadadjfreq = (unsigned int)cputime_speedadj * 100;
 	cpu_load = DIV_ROUND_CLOSEST(loadadjfreq, policy->cur);
-	if (cpu_load == 0 && cpu_load != 100)
-	else
-		iactive_current_load[cpu] = cpu_load = this_cpu_load(cpu);
+	if (cpu_load == 0 || cpu_load == 100)
+		cpu_load = this_cpu_load(cpu);
+
+	iactive_current_load[cpu] = cpu_load;
 
 	if (cpu_load >= iactive_go_hispeed_load[cpu]) {
 		//if (policy->cur < tunables->hispeed_freq) {
