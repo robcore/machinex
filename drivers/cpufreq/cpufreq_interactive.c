@@ -336,6 +336,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 		/* If same frequency chosen as previous then done. */
 	} while (freq != prevfreq);
 
+	check_cpufreq_hardlimit(policy->cpu, freq);
 	return freq;
 }
 
@@ -392,22 +393,22 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	if (cpu_load >= iactive_go_hispeed_load[cpu]) {
 		//if (policy->cur < tunables->hispeed_freq) {
 			//new_freq = tunables->hispeed_freq;
-		if (policy->cur < hlimit_hispeed(cpu)) {
-			new_freq = hlimit_hispeed(cpu);
+		if (policy->cur < iactive_hispeed_freq[cpu]) {
+			new_freq = iactive_hispeed_freq[cpu];
 		} else {
 			new_freq = choose_freq(icpu, loadadjfreq);
 
-			if (new_freq < hlimit_hispeed(cpu))
-				new_freq = hlimit_hispeed(cpu);
+			if (new_freq < iactive_hispeed_freq[cpu])
+				new_freq = iactive_hispeed_freq[cpu];
 		}
 	} else {
 		new_freq = choose_freq(icpu, loadadjfreq);
-		if (new_freq > hlimit_hispeed(cpu) &&
-		    policy->cur < hlimit_hispeed(cpu))
-			new_freq = hlimit_hispeed(cpu);
+		if (new_freq > iactive_hispeed_freq[cpu] &&
+		    policy->cur < iactive_hispeed_freq[cpu])
+			new_freq = iactive_hispeed_freq[cpu];
 	}
 
-	if (policy->cur >= hlimit_hispeed(cpu) &&
+	if (policy->cur >= iactive_hispeed_freq[cpu] &&
 	    new_freq > policy->cur &&
 	    now - icpu->pol_hispeed_val_time < freq_to_above_hispeed_delay(tunables, policy->cur)) {
 		goto exit;
@@ -435,7 +436,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	 * or above the selected frequency for a minimum of min_sample_time
 	 */
 
-	if (new_freq > hlimit_hispeed(cpu)) {
+	if (new_freq > iactive_hispeed_freq[cpu]) {
 		icpu->floor_freq = new_freq;
 		if (icpu->target_freq >= policy->cur || new_freq >= policy->cur)
 			icpu->loc_floor_val_time = now;
