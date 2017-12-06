@@ -507,7 +507,7 @@ static int page_cache_tree_insert(struct address_space *mapping,
 	void **slot;
 	int error;
 
-	error = __radix_tree_create(&mapping->page_tree, page->index, 0
+	error = __radix_tree_create(&mapping->page_tree, page->index,
 				    &node, &slot);
 	if (error)
 		return error;
@@ -2700,4 +2700,3 @@ int try_to_release_page(struct page *page, gfp_t gfp_mask)
 }
 
 EXPORT_SYMBOL(try_to_release_page);
-

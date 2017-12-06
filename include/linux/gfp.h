@@ -165,12 +165,6 @@ static inline int gfpflags_to_migratetype(const gfp_t gfp_flags)
 	return (gfp_flags & GFP_MOVABLE_MASK) >> GFP_MOVABLE_SHIFT;
 }
 
-static inline bool gfpflags_allow_blocking(const gfp_t gfp_flags)
-{
-	return gfp_flags & __GFP_WAIT;
-}
-#define __GFP_ACCOUNT ~(__GFP_NOACCOUNT)
-
 #ifdef CONFIG_HIGHMEM
 #define OPT_ZONE_HIGHMEM ZONE_HIGHMEM
 #else
