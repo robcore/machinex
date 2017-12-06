@@ -105,10 +105,10 @@ static unsigned int radix_tree_descend(struct radix_tree_node *parent,
 
 #ifdef CONFIG_RADIX_TREE_MULTIORDER
 	if (radix_tree_is_internal_node(entry)) {
-		unsigned long siboff = get_slot_offset(parent, entry);
-		if (siboff < RADIX_TREE_MAP_SIZE) {
-			offset = siboff;
-			entry = rcu_dereference_raw(parent->slots[offset]);
+		if (is_sibling_entry(parent, entry)) {
+			void **sibentry = (void **) entry_to_node(entry);
+			offset = get_slot_offset(parent, sibentry);
+			entry = rcu_dereference_raw(*sibentry);
 		}
 	}
 #endif
@@ -277,10 +277,11 @@ radix_tree_node_alloc(struct radix_tree_root *root)
 
 		/*
 		 * Even if the caller has preloaded, try to allocate from the
-		 * cache first for the new node to get accounted.
+		 * cache first for the new node to get accounted to the memory
+		 * cgroup.
 		 */
 		ret = kmem_cache_alloc(radix_tree_node_cachep,
-				       gfp_mask | __GFP_ACCOUNT | __GFP_NOWARN);
+				       gfp_mask | __GFP_NOWARN);
 		if (ret)
 			goto out;
 
@@ -302,8 +303,7 @@ radix_tree_node_alloc(struct radix_tree_root *root)
 		 */
 		goto out;
 	}
-	ret = kmem_cache_alloc(radix_tree_node_cachep,
-			       gfp_mask | __GFP_ACCOUNT);
+	ret = kmem_cache_alloc(radix_tree_node_cachep, gfp_mask);
 out:
 	BUG_ON(radix_tree_is_internal_node(ret));
 	return ret;
@@ -349,6 +349,12 @@ static int __radix_tree_preload(gfp_t gfp_mask, int nr)
 	struct radix_tree_preload *rtp;
 	struct radix_tree_node *node;
 	int ret = -ENOMEM;
+
+	/*
+	 * Nodes preloaded by one cgroup can be be used by another cgroup, so
+	 * they should never be accounted to any particular memory cgroup.
+	 */
+	gfp_mask &= ~__GFP_ACCOUNT;
 
 	preempt_disable();
 	rtp = this_cpu_ptr(&radix_tree_preloads);
@@ -1576,15 +1582,10 @@ void *radix_tree_delete(struct radix_tree_root *root, unsigned long index)
 }
 EXPORT_SYMBOL(radix_tree_delete);
 
-struct radix_tree_node *radix_tree_replace_clear_tags(
-			struct radix_tree_root *root,
-			unsigned long index, void *entry)
+void radix_tree_clear_tags(struct radix_tree_root *root,
+			   struct radix_tree_node *node,
+			   void **slot)
 {
-	struct radix_tree_node *node;
-	void **slot;
-
-	__radix_tree_lookup(root, index, &node, &slot);
-
 	if (node) {
 		unsigned int tag, offset = get_slot_offset(node, slot);
 		for (tag = 0; tag < RADIX_TREE_MAX_TAGS; tag++)
@@ -1593,9 +1594,6 @@ struct radix_tree_node *radix_tree_replace_clear_tags(
 		/* Clear root node tags */
 		root->gfp_mask &= __GFP_BITS_MASK;
 	}
-
-	radix_tree_replace_slot(slot, entry);
-	return node;
 }
 
 /**
@@ -1643,32 +1641,31 @@ static __init void radix_tree_init_maxnodes(void)
 	}
 }
 
-static int radix_tree_callback(struct notifier_block *nfb,
-				unsigned long action, void *hcpu)
+static int radix_tree_cpu_dead(unsigned int cpu)
 {
-	int cpu = (long)hcpu;
 	struct radix_tree_preload *rtp;
 	struct radix_tree_node *node;
 
 	/* Free per-cpu pool of preloaded nodes */
-	if (action == CPU_DEAD || action == CPU_DEAD_FROZEN) {
-		rtp = &per_cpu(radix_tree_preloads, cpu);
-		while (rtp->nr) {
-			node = rtp->nodes;
-			rtp->nodes = node->private_data;
-			kmem_cache_free(radix_tree_node_cachep, node);
-			rtp->nr--;
-		}
+	rtp = &per_cpu(radix_tree_preloads, cpu);
+	while (rtp->nr) {
+		node = rtp->nodes;
+		rtp->nodes = node->private_data;
+		kmem_cache_free(radix_tree_node_cachep, node);
+		rtp->nr--;
 	}
-	return NOTIFY_OK;
+	return 0;
 }
 
 void __init radix_tree_init(void)
 {
+	int ret;
 	radix_tree_node_cachep = kmem_cache_create("radix_tree_node",
 			sizeof(struct radix_tree_node), 0,
 			SLAB_PANIC | SLAB_RECLAIM_ACCOUNT,
 			radix_tree_node_ctor);
 	radix_tree_init_maxnodes();
-	hotcpu_notifier(radix_tree_callback, 0);
+	ret = cpuhp_setup_state_nocalls(CPUHP_RADIX_DEAD, "lib/radix:dead",
+					NULL, radix_tree_cpu_dead);
+	WARN_ON(ret < 0);
 }
