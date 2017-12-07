@@ -283,7 +283,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 		 */
 
 		index = cpufreq_frequency_table_target(policy, loadadjfreq / tl,
-						       CPUFREQ_RELATION_C);
+						       CPUFREQ_RELATION_L);
 
 		freq = freq_table[index].frequency;
 
