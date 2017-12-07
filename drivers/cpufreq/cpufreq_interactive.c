@@ -383,8 +383,8 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	do_div(cputime_speedadj, delta_time);
 	loadadjfreq = (unsigned int)cputime_speedadj * 100;
 	tmpload = DIV_ROUND_CLOSEST(loadadjfreq, policy->cur);
-	if (tmpload == 0 || tmpload == 100)
-		tmpload = this_cpu_load(cpu);
+//	if (tmpload == 0 || tmpload == 100)
+//		tmpload = this_cpu_load(cpu);
 
 	iactive_current_load[cpu] = cpu_load = tmpload;
 
