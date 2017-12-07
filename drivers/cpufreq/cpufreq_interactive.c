@@ -272,7 +272,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 	struct cpufreq_frequency_table *freq_table = policy->freq_table;
 	unsigned int prevfreq, freqmin = 0, freqmax = UINT_MAX, tl;
 	unsigned int freq = policy->cur;
-	int index;
+	unsigned int index, cdex;
 
 	do {
 		prevfreq = freq;
@@ -285,8 +285,10 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 
 		index = cpufreq_frequency_table_target(policy, loadadjfreq / tl,
 						       CPUFREQ_RELATION_L);
+		cdex = cpufreq_frequency_table_target(policy, loadadjfreq / tl,
+						       CPUFREQ_RELATION_C);
 
-		freq = freq_table[index].frequency;
+		freq = min(freq_table[index].frequency, freq_table[cdex].frequency);
 
 		if (freq > prevfreq) {
 			/* The previous frequency is too low */
