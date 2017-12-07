@@ -270,7 +270,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 	struct cpufreq_policy *policy = icpu->ipolicy->policy;
 	struct cpufreq_frequency_table *freq_table = policy->freq_table;
 	unsigned int prevfreq, freqmin = 0, freqmax = UINT_MAX, tl;
-	unsigned int freq = policy->cur, loadfreq;
+	unsigned int freq = policy->cur;
 	int index;
 
 	do {
@@ -281,12 +281,8 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 		 * Find the lowest frequency where the computed load is less
 		 * than or equal to the target load.
 		 */
-		if (loadadjfreq != 0 && loadadjfreq != 100)
-			loadfreq = DIV_ROUND_CLOSEST(loadadjfreq, tl);
-		else
-			loadfreq = DIV_ROUND_CLOSEST(this_cpu_load(policy->cpu), tl);
-		clamp_val(loadfreq, policy->min, policy->max);
-		index = cpufreq_frequency_table_target(policy, loadfreq,
+
+		index = cpufreq_frequency_table_target(policy, loadadjfreq / tl,
 						       CPUFREQ_RELATION_C);
 
 		freq = freq_table[index].frequency;
@@ -338,7 +334,6 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 		/* If same frequency chosen as previous then done. */
 	} while (freq != prevfreq);
 
-	check_cpufreq_hardlimit(policy->cpu, freq);
 	return freq;
 }
 
@@ -451,7 +446,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 		goto exit;
 	}
 
-	icpu->target_freq = check_cpufreq_hardlimit(cpu, new_freq);
+	icpu->target_freq = new_freq;
 	spin_unlock_irqrestore(&icpu->target_freq_lock, flags);
 
 	spin_lock_irqsave(&speedchange_cpumask_lock, flags);
@@ -1049,13 +1044,13 @@ static struct notifier_block iactive_pm_notifier = {
 
 static int interactive_kthread_create(void)
 {
-	//struct sched_param param = { .sched_priority = DEFAULT_PRIO };
+	struct sched_param param = { .sched_priority =  MAX_USER_RT_PRIO / 2 };
 	speedchange_task = kthread_create(cpufreq_interactive_speedchange_task,
 					  NULL, "cfinteractive");
 	if (IS_ERR(speedchange_task))
 		return PTR_ERR(speedchange_task);
 
-	//sched_setscheduler_nocheck(speedchange_task, SCHED_NORMAL, &param);
+	sched_setscheduler_nocheck(speedchange_task, SCHED_FIFO, &param);
 	get_task_struct(speedchange_task);
 
 	/* wake up so the thread does not look hung to the freezer */
@@ -1120,10 +1115,10 @@ int cpufreq_interactive_init(struct cpufreq_policy *policy)
 		ret = interactive_kthread_create();
 		if (ret)
 			goto fail;
-		cpu_pm_register_notifier(&cpufreq_interactive_idle_nb);
 		cpufreq_register_notifier(&cpufreq_notifier_block,
 					  CPUFREQ_TRANSITION_NOTIFIER);
 		register_pm_notifier(&iactive_pm_notifier);
+		cpu_pm_register_notifier(&cpufreq_interactive_idle_nb);
 	}
 
  out:
