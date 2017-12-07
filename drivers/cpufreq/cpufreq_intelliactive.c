@@ -340,7 +340,6 @@ static unsigned int choose_freq(struct intelliactive_cpu *icpu,
 		/* If same frequency chosen as previous then done. */
 	} while (freq != prevfreq);
 
-	check_cpufreq_hardlimit(policy->cpu, freq);
 	return freq;
 }
 
@@ -489,7 +488,7 @@ static void eval_target_freq(struct intelliactive_cpu *icpu)
 		goto exit;
 	}
 
-	icpu->target_freq = check_cpufreq_hardlimit(cpu, new_freq);
+	icpu->target_freq = new_freq;
 	spin_unlock_irqrestore(&icpu->target_freq_lock, flags);
 
 	spin_lock_irqsave(&speedchange_cpumask_lock, flags);
@@ -1180,6 +1179,49 @@ static void intelliactive_tunables_free(struct intelliactive_tunables *tunables)
 	kfree(tunables);
 }
 
+
+static int intelliactive_suspend_handler(struct notifier_block *nb,
+				unsigned long val, void *data)
+{
+	switch (val) {
+	case PM_PROACTIVE_RESUME:
+		intelliactive_suspended = 0;
+		break;
+	case PM_PROACTIVE_SUSPEND:
+		intelliactive_suspended = 1;
+		break;
+	default:
+		return NOTIFY_DONE;
+	}
+	return NOTIFY_OK;
+}
+
+static struct notifier_block iactive_pm_notifier = {
+	.notifier_call = intelliactive_suspend_handler,
+};
+
+static int intelliactive_kthread_create(void)
+{
+	struct sched_param param = { .sched_priority =  MAX_USER_RT_PRIO / 2 };
+	speedchange_task = kthread_create(cpufreq_intelliactive_speedchange_task,
+					  NULL, "cfintelliactive");
+	if (IS_ERR(speedchange_task))
+		return PTR_ERR(speedchange_task);
+
+	sched_setscheduler_nocheck(speedchange_task, SCHED_FIFO, &param);
+	get_task_struct(speedchange_task);
+
+	/* wake up so the thread does not look hung to the freezer */
+	wake_up_process(speedchange_task);
+	return 0;
+}
+
+static void intelliactive_kthread_destroy(void)
+{
+	kthread_stop(speedchange_task);
+	put_task_struct(speedchange_task);
+}
+
 int cpufreq_intelliactive_init(struct cpufreq_policy *policy)
 {
 	struct intelliactive_policy *ipolicy;
@@ -1230,9 +1272,13 @@ int cpufreq_intelliactive_init(struct cpufreq_policy *policy)
 
 	/* One time initialization for governor */
 	if (!intelliactive_gov.usage_count++) {
-		cpu_pm_register_notifier(&cpufreq_intelliactive_idle_nb);
+		ret = intelliactive_kthread_create();
+		if (ret)
+			goto fail;
 		cpufreq_register_notifier(&cpufreq_notifier_block,
 					  CPUFREQ_TRANSITION_NOTIFIER);
+		register_pm_notifier(&iactive_pm_notifier);
+		cpu_pm_register_notifier(&cpufreq_intelliactive_idle_nb);
 	}
 
 out:
@@ -1265,6 +1311,8 @@ void cpufreq_intelliactive_exit(struct cpufreq_policy *policy)
 		cpufreq_unregister_notifier(&cpufreq_notifier_block,
 					    CPUFREQ_TRANSITION_NOTIFIER);
 		cpu_pm_unregister_notifier(&cpufreq_intelliactive_idle_nb);
+		unregister_pm_notifier(&iactive_pm_notifier);
+		intelliactive_kthread_destroy();
 	}
 
 	count = gov_attr_set_put(&tunables->attr_set, &ipolicy->tunables_hook);
@@ -1352,27 +1400,7 @@ static struct intelliactive_governor intelliactive_gov = {
 	}
 };
 
-static int intelliactive_suspend_handler(struct notifier_block *nb,
-				unsigned long val, void *data)
-{
-	switch (val) {
-	case PM_PROACTIVE_RESUME:
-		intelliactive_suspended = 0;
-		break;
-	case PM_PROACTIVE_SUSPEND:
-		intelliactive_suspended = 1;
-		break;
-	default:
-		return NOTIFY_DONE;
-	}
-	return NOTIFY_OK;
-}
-
-static struct notifier_block iactive_pm_notifier = {
-	.notifier_call = intelliactive_suspend_handler,
-};
-
-static void cpufreq_intelliactive_nop_timer(struct timer_list *t)
+static void cpufreq_intelliactive_nop_timer(struct timer_list *unused)
 {
 	/*
 	 * The purpose of slack-timer is to wake up the CPU from IDLE, in order
@@ -1385,7 +1413,6 @@ static void cpufreq_intelliactive_nop_timer(struct timer_list *t)
 
 static int __init cpufreq_intelliactive_gov_init(void)
 {
-	struct sched_param param = { .sched_priority = DEFAULT_PRIO };
 	struct intelliactive_cpu *icpu;
 	unsigned int cpu;
 
@@ -1403,17 +1430,6 @@ static int __init cpufreq_intelliactive_gov_init(void)
 	}
 
 	spin_lock_init(&speedchange_cpumask_lock);
-	speedchange_task = kthread_create(cpufreq_intelliactive_speedchange_task,
-					  NULL, "cfintelliactive");
-	if (IS_ERR(speedchange_task))
-		return PTR_ERR(speedchange_task);
-
-	sched_setscheduler_nocheck(speedchange_task, SCHED_NORMAL, &param);
-	get_task_struct(speedchange_task);
-
-	/* wake up so the thread does not look hung to the freezer */
-	wake_up_process(speedchange_task);
-	register_pm_notifier(&iactive_pm_notifier);
 	return cpufreq_register_governor(CPU_FREQ_GOV_INTELLIACTIVE);
 }
 
@@ -1436,9 +1452,6 @@ module_init(cpufreq_intelliactive_gov_init);
 static void __exit cpufreq_intelliactive_gov_exit(void)
 {
 	cpufreq_unregister_governor(CPU_FREQ_GOV_INTELLIACTIVE);
-	kthread_stop(speedchange_task);
-	put_task_struct(speedchange_task);
-	unregister_pm_notifier(&iactive_pm_notifier);
 }
 module_exit(cpufreq_intelliactive_gov_exit);
 
