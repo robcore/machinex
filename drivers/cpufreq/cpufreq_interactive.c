@@ -32,6 +32,8 @@
 #include <linux/kthread.h>
 #include <linux/slab.h>
 #include <linux/suspend.h>
+#include <linux/cpu_pm.h>
+
 #include "cpufreq_machinex_gov_attr.h"
 
 #define gov_attr_ro(_name)						\
@@ -896,7 +898,7 @@ static struct kobj_type interactive_tunables_ktype = {
 static int cpufreq_interactive_idle_notifier(struct notifier_block *nb,
 					     unsigned long val, void *data)
 {
-	if (val == IDLE_END)
+	if (val == CPU_PM_EXIT)
 		cpufreq_interactive_idle_end();
 
 	return 0;
@@ -1077,7 +1079,7 @@ int cpufreq_interactive_init(struct cpufreq_policy *policy)
 
 	/* One time initialization for governor */
 	if (!interactive_gov.usage_count++) {
-		idle_notifier_register(&cpufreq_interactive_idle_nb);
+		cpu_pm_register_notifier(&cpufreq_interactive_idle_nb);
 		cpufreq_register_notifier(&cpufreq_notifier_block,
 					  CPUFREQ_TRANSITION_NOTIFIER);
 	}
@@ -1111,7 +1113,7 @@ void cpufreq_interactive_exit(struct cpufreq_policy *policy)
 	if (!--interactive_gov.usage_count) {
 		cpufreq_unregister_notifier(&cpufreq_notifier_block,
 					    CPUFREQ_TRANSITION_NOTIFIER);
-		idle_notifier_unregister(&cpufreq_interactive_idle_nb);
+		cpu_pm_unregister_notifier(&cpufreq_interactive_idle_nb);
 	}
 
 	count = gov_attr_set_put(&tunables->attr_set, &ipolicy->tunables_hook);
