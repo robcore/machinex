@@ -384,7 +384,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	do_div(cputime_speedadj, delta_time);
 	loadadjfreq = (unsigned int)cputime_speedadj * 10;
 	cpu_load = DIV_ROUND_UP((loadadjfreq * policy->cur), policy->max);
-
+	sanitize_min_max(cpu_load, 0, 100);
 	iactive_current_load[cpu] = cpu_load;
 
 	if (cpu_load >= iactive_go_hispeed_load[cpu]) {
