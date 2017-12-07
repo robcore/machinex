@@ -1053,7 +1053,7 @@ static struct attribute_group intelliactive_attr_group = {
 static int cpufreq_intelliactive_idle_notifier(struct notifier_block *nb,
 					     unsigned long val, void *data)
 {
-	if (val == CPU_PM_EXIT && !intelliactive)
+	if (val == CPU_PM_EXIT && !intelliactive_suspended)
 		cpufreq_intelliactive_idle_end();
 
 	return 0;
