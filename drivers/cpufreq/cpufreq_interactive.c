@@ -551,7 +551,14 @@ static int cpufreq_interactive_speedchange_task(void *data)
 
 again:
 	set_current_state(TASK_INTERRUPTIBLE);
-	
+
+	if (interactive_suspended) {
+		schedule();
+
+		if (kthread_should_stop())
+			return 0;
+	}
+
 	spin_lock_irqsave(&speedchange_cpumask_lock, flags);
 
 	if (cpumask_empty(&speedchange_cpumask)) {
