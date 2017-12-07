@@ -195,7 +195,6 @@ void arch_cpu_idle_prepare(void)
 
 void arch_cpu_idle_enter(void)
 {
-	idle_notifier_call_chain(IDLE_START);
 #ifdef CONFIG_PL310_ERRATA_769419
 	wmb();
 #endif
@@ -203,7 +202,6 @@ void arch_cpu_idle_enter(void)
 
 void arch_cpu_idle_exit(void)
 {
-	idle_notifier_call_chain(IDLE_END);
 }
 
 /*
