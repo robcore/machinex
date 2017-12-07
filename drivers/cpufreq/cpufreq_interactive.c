@@ -372,8 +372,6 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	unsigned long flags;
 	int cpu_load, tmpload;
 	unsigned int cpu = smp_processor_id();
-	if (unlikely(cpu != policy->cpu))
-		return;
 
 	spin_lock_irqsave(&icpu->load_lock, flags);
 	now = update_load(icpu, cpu);
@@ -467,20 +465,14 @@ exit:
 
 static void cpufreq_interactive_update(struct interactive_cpu *icpu)
 {
-	unsigned int cpu = smp_processor_id();
-	if (unlikely(cpu != icpu->ipolicy->policy->cpu))
-		return;
 	eval_target_freq(icpu);
-	slack_timer_resched(icpu, cpu, true);
+	slack_timer_resched(icpu, smp_processor_id(), true);
 }
 
 static void cpufreq_interactive_idle_end(void)
 {
-	unsigned int cpu = smp_processor_id();
 	struct interactive_cpu *icpu = &per_cpu(interactive_cpu,
-						cpu);
-	if (unlikely(cpu != icpu->ipolicy->policy->cpu))
-		return;
+						smp_processor_id());
 
 	if (!down_read_trylock(&icpu->enable_sem))
 		return;
