@@ -1027,6 +1027,48 @@ static void interactive_tunables_free(struct interactive_tunables *tunables)
 	kfree(tunables);
 }
 
+static int interactive_suspend_handler(struct notifier_block *nb,
+				unsigned long val, void *data)
+{
+	switch (val) {
+	case PM_PROACTIVE_RESUME:
+		interactive_suspended = 0;
+		break;
+	case PM_PROACTIVE_SUSPEND:
+		interactive_suspended = 1;
+		break;
+	default:
+		return NOTIFY_DONE;
+	}
+	return NOTIFY_OK;
+}
+
+static struct notifier_block iactive_pm_notifier = {
+	.notifier_call = interactive_suspend_handler,
+};
+
+static int interactive_kthread_create(void)
+{
+	//struct sched_param param = { .sched_priority = DEFAULT_PRIO };
+	speedchange_task = kthread_create(cpufreq_interactive_speedchange_task,
+					  NULL, "cfinteractive");
+	if (IS_ERR(speedchange_task))
+		return PTR_ERR(speedchange_task);
+
+	//sched_setscheduler_nocheck(speedchange_task, SCHED_NORMAL, &param);
+	get_task_struct(speedchange_task);
+
+	/* wake up so the thread does not look hung to the freezer */
+	wake_up_process(speedchange_task);
+	return 0;
+}
+
+static void interactive_kthread_destroy(void)
+{
+	kthread_stop(speedchange_task);
+	put_task_struct(speedchange_task);
+}
+
 int cpufreq_interactive_init(struct cpufreq_policy *policy)
 {
 	struct interactive_policy *ipolicy;
@@ -1075,9 +1117,13 @@ int cpufreq_interactive_init(struct cpufreq_policy *policy)
 
 	/* One time initialization for governor */
 	if (!interactive_gov.usage_count++) {
+		ret = interactive_kthread_create();
+		if (ret)
+			goto fail;
 		cpu_pm_register_notifier(&cpufreq_interactive_idle_nb);
 		cpufreq_register_notifier(&cpufreq_notifier_block,
 					  CPUFREQ_TRANSITION_NOTIFIER);
+		register_pm_notifier(&iactive_pm_notifier);
 	}
 
  out:
@@ -1110,6 +1156,8 @@ void cpufreq_interactive_exit(struct cpufreq_policy *policy)
 		cpufreq_unregister_notifier(&cpufreq_notifier_block,
 					    CPUFREQ_TRANSITION_NOTIFIER);
 		cpu_pm_unregister_notifier(&cpufreq_interactive_idle_nb);
+		unregister_pm_notifier(&iactive_pm_notifier);
+		interactive_kthread_destroy();
 	}
 
 	count = gov_attr_set_put(&tunables->attr_set, &ipolicy->tunables_hook);
@@ -1197,27 +1245,7 @@ static struct interactive_governor interactive_gov = {
 	}
 };
 
-static int interactive_suspend_handler(struct notifier_block *nb,
-				unsigned long val, void *data)
-{
-	switch (val) {
-	case PM_PROACTIVE_RESUME:
-		interactive_suspended = 0;
-		break;
-	case PM_PROACTIVE_SUSPEND:
-		interactive_suspended = 1;
-		break;
-	default:
-		return NOTIFY_DONE;
-	}
-	return NOTIFY_OK;
-}
-
-static struct notifier_block iactive_pm_notifier = {
-	.notifier_call = interactive_suspend_handler,
-};
-
-static void cpufreq_interactive_nop_timer(struct timer_list *t)
+static void cpufreq_interactive_nop_timer(struct timer_list *unused)
 {
 	/*
 	 * The purpose of slack-timer is to wake up the CPU from IDLE, in order
@@ -1230,7 +1258,6 @@ static void cpufreq_interactive_nop_timer(struct timer_list *t)
 
 static int __init cpufreq_interactive_gov_init(void)
 {
-	//struct sched_param param = { .sched_priority = DEFAULT_PRIO };
 	struct interactive_cpu *icpu;
 	unsigned int cpu;
 
@@ -1248,17 +1275,6 @@ static int __init cpufreq_interactive_gov_init(void)
 	}
 
 	spin_lock_init(&speedchange_cpumask_lock);
-	speedchange_task = kthread_create(cpufreq_interactive_speedchange_task,
-					  NULL, "cfinteractive");
-	if (IS_ERR(speedchange_task))
-		return PTR_ERR(speedchange_task);
-
-	//sched_setscheduler_nocheck(speedchange_task, SCHED_NORMAL, &param);
-	get_task_struct(speedchange_task);
-
-	/* wake up so the thread does not look hung to the freezer */
-	wake_up_process(speedchange_task);
-	register_pm_notifier(&iactive_pm_notifier);
 	return cpufreq_register_governor(CPU_FREQ_GOV_INTERACTIVE);
 }
 
@@ -1281,9 +1297,6 @@ module_init(cpufreq_interactive_gov_init);
 static void __exit cpufreq_interactive_gov_exit(void)
 {
 	cpufreq_unregister_governor(CPU_FREQ_GOV_INTERACTIVE);
-	kthread_stop(speedchange_task);
-	put_task_struct(speedchange_task);
-	unregister_pm_notifier(&iactive_pm_notifier);
 }
 module_exit(cpufreq_interactive_gov_exit);
 
