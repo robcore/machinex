@@ -54,7 +54,8 @@ __ATTR(_name, 0644, show_##_name, store_##_name)
 #define DEFAULT_MIN_SAMPLE_TIME (10 * USEC_PER_MSEC)
 
 static unsigned int interactive_suspended;
-
+unsigned int iactive_load_debug;
+module_param(iactive_load_debug, uint, 0644);
 /* Separate instance required for each 'interactive' directory in sysfs */
 struct interactive_tunables {
 	struct gov_attr_set attr_set;
