@@ -68,6 +68,14 @@ static ssize_t iactive_current_load_show(struct device *dev,
 	return sprintf(buf, "Disabled\n");
 }
 
+static ssize_t iactive_choose_freq_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	if (iactive_load_debug)
+		return sprintf(buf, "%u\n", iactive_choose_freq[(dev->id)]);
+	return sprintf(buf, "Disabled\n");
+}
+
 store_one_cpu_clamp(dbs_cpu_sampling_rate, 1000, 10000);
 store_one_cpu_clamp(dbs_up_threshold, 1, 99);
 store_one_cpu_clamp(dbs_micro_up_threshold, 1, 99);
@@ -126,6 +134,7 @@ DEVICE_ATTR_RW(sync_freq);
 DEVICE_ATTR_RW(up_threshold_any_cpu_freq);
 DEVICE_ATTR_RW(mx_cpufreq_governor);
 DEVICE_ATTR_RO(iactive_current_load);
+DEVICE_ATTR_RO(iactive_choose_freq);
 
 static struct attribute *mx_cpu_attrs[] = {
 	&dev_attr_dbs_cpu_sampling_rate.attr,
@@ -145,6 +154,7 @@ static struct attribute *mx_cpu_attrs[] = {
 	&dev_attr_up_threshold_any_cpu_freq.attr,
 	&dev_attr_mx_cpufreq_governor.attr,
 	&dev_attr_iactive_current_load.attr,
+	&dev_attr_iactive_choose_freq.attr,
 	NULL,
 };
 
