@@ -898,7 +898,7 @@ static struct kobj_type interactive_tunables_ktype = {
 static int cpufreq_interactive_idle_notifier(struct notifier_block *nb,
 					     unsigned long val, void *data)
 {
-	if (val == CPU_PM_EXIT)
+	if (val == CPU_PM_EXIT && !interactive_suspended)
 		cpufreq_interactive_idle_end();
 
 	return 0;

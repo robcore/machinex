@@ -31,6 +31,9 @@
 #include <linux/timer.h>
 #include <linux/kthread.h>
 #include <linux/slab.h>
+#include <linux/suspend.h>
+#include <linux/cpu_pm.h>
+
 #include "cpufreq_machinex_gov_attr.h"
 
 #define gov_attr_ro(_name)						\
@@ -44,6 +47,8 @@ __ATTR(_name, 0200, NULL, store_##_name)
 #define gov_attr_rw(_name)						\
 static struct governor_attr _name =					\
 __ATTR(_name, 0644, show_##_name, store_##_name)
+
+static unsigned int intelliactive_suspended;
 
 /* Separate instance required for each 'intelliactive' directory in sysfs */
 struct intelliactive_tunables {
@@ -292,6 +297,9 @@ static unsigned int choose_freq(struct intelliactive_cpu *icpu,
 			/* The previous frequency is too low */
 			freqmin = prevfreq;
 
+			if (freq < freqmax)
+				continue;
+
 			/* Find highest frequency that is less than freqmax */
 			index = cpufreq_frequency_table_target(policy,
 					freqmax - 1, CPUFREQ_RELATION_H);
@@ -332,6 +340,7 @@ static unsigned int choose_freq(struct intelliactive_cpu *icpu,
 		/* If same frequency chosen as previous then done. */
 	} while (freq != prevfreq);
 
+	check_cpufreq_hardlimit(policy->cpu, freq);
 	return freq;
 }
 
@@ -340,16 +349,15 @@ static u64 update_load(struct intelliactive_cpu *icpu, unsigned int cpu)
 	struct intelliactive_tunables *tunables = icpu->ipolicy->tunables;
 	u64 now_idle, now, active_time, delta_idle, delta_time;
 
+	now = ktime_to_us(ktime_get());
 	now_idle = get_cpu_idle_time(cpu, &now);
 	delta_idle = (now_idle - icpu->time_in_idle);
 	delta_time = (now - icpu->time_in_idle_timestamp);
 
-	if (delta_time <= delta_idle)
-		active_time = 0;
-	else
+	if (delta_time > delta_idle) {
 		active_time = delta_time - delta_idle;
-
-	icpu->cputime_speedadj += active_time * icpu->ipolicy->policy->cur;
+		icpu->cputime_speedadj += active_time * icpu->ipolicy->policy->cur;
+	}
 
 	icpu->time_in_idle = now_idle;
 	icpu->time_in_idle_timestamp = now;
@@ -481,7 +489,7 @@ static void eval_target_freq(struct intelliactive_cpu *icpu)
 		goto exit;
 	}
 
-	icpu->target_freq = new_freq;
+	icpu->target_freq = check_cpufreq_hardlimit(cpu, new_freq);
 	spin_unlock_irqrestore(&icpu->target_freq_lock, flags);
 
 	spin_lock_irqsave(&speedchange_cpumask_lock, flags);
@@ -582,6 +590,18 @@ static int cpufreq_intelliactive_speedchange_task(void *data)
 again:
 	set_current_state(TASK_INTERRUPTIBLE);
 	spin_lock_irqsave(&speedchange_cpumask_lock, flags);
+
+	if (intelliactive_suspended) {
+		cpumask_clear(&speedchange_cpumask);
+		spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
+
+		schedule();
+
+		if (kthread_should_stop())
+			return 0;
+
+		spin_lock_irqsave(&speedchange_cpumask_lock, flags);
+	}
 
 	if (cpumask_empty(&speedchange_cpumask)) {
 		spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
@@ -1033,7 +1053,7 @@ static struct attribute_group intelliactive_attr_group = {
 static int cpufreq_intelliactive_idle_notifier(struct notifier_block *nb,
 					     unsigned long val, void *data)
 {
-	if (val == IDLE_END)
+	if (val == CPU_PM_EXIT && !intelliactive)
 		cpufreq_intelliactive_idle_end();
 
 	return 0;
@@ -1216,7 +1236,7 @@ int cpufreq_intelliactive_init(struct cpufreq_policy *policy)
 
 	/* One time initialization for governor */
 	if (!intelliactive_gov.usage_count++) {
-		idle_notifier_register(&cpufreq_intelliactive_idle_nb);
+		cpu_pm_register_notifier(&cpufreq_intelliactive_idle_nb);
 		cpufreq_register_notifier(&cpufreq_notifier_block,
 					  CPUFREQ_TRANSITION_NOTIFIER);
 	}
@@ -1250,7 +1270,7 @@ void cpufreq_intelliactive_exit(struct cpufreq_policy *policy)
 	if (!--intelliactive_gov.usage_count) {
 		cpufreq_unregister_notifier(&cpufreq_notifier_block,
 					    CPUFREQ_TRANSITION_NOTIFIER);
-		idle_notifier_unregister(&cpufreq_intelliactive_idle_nb);
+		cpu_pm_unregister_notifier(&cpufreq_intelliactive_idle_nb);
 	}
 
 	count = gov_attr_set_put(&tunables->attr_set, &ipolicy->tunables_hook);
@@ -1338,6 +1358,26 @@ static struct intelliactive_governor intelliactive_gov = {
 	}
 };
 
+static int intelliactive_suspend_handler(struct notifier_block *nb,
+				unsigned long val, void *data)
+{
+	switch (val) {
+	case PM_PROACTIVE_RESUME:
+		intelliactive_suspended = 0;
+		break;
+	case PM_PROACTIVE_SUSPEND:
+		intelliactive_suspended = 1;
+		break;
+	default:
+		return NOTIFY_DONE;
+	}
+	return NOTIFY_OK;
+}
+
+static struct notifier_block iactive_pm_notifier = {
+	.notifier_call = intelliactive_suspend_handler,
+};
+
 static void cpufreq_intelliactive_nop_timer(struct timer_list *t)
 {
 	/*
@@ -1379,7 +1419,7 @@ static int __init cpufreq_intelliactive_gov_init(void)
 
 	/* wake up so the thread does not look hung to the freezer */
 	wake_up_process(speedchange_task);
-
+	register_pm_notifier(&iactive_pm_notifier);
 	return cpufreq_register_governor(CPU_FREQ_GOV_INTELLIACTIVE);
 }
 
@@ -1404,6 +1444,7 @@ static void __exit cpufreq_intelliactive_gov_exit(void)
 	cpufreq_unregister_governor(CPU_FREQ_GOV_INTELLIACTIVE);
 	kthread_stop(speedchange_task);
 	put_task_struct(speedchange_task);
+	unregister_pm_notifier(&iactive_pm_notifier);
 }
 module_exit(cpufreq_intelliactive_gov_exit);
 
