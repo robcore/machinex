@@ -41,6 +41,7 @@ unsigned int sync_freq[NR_CPUS] = {1026000, 1026000, 1026000, 1026000};
 unsigned int up_threshold_any_cpu_freq[NR_CPUS] = {702000, 702000, 702000, 702000};
 extern unsigned int iactive_load_debug;
 extern int iactive_current_load[NR_CPUS];
+extern unsigned int iactive_choose_freq[NR_CPUS];
 
 show_one_cpu(dbs_cpu_sampling_rate);
 show_one_cpu(dbs_up_threshold);

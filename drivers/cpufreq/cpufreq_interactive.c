@@ -56,6 +56,7 @@ __ATTR(_name, 0644, show_##_name, store_##_name)
 static unsigned int interactive_suspended;
 unsigned int iactive_load_debug;
 module_param(iactive_load_debug, uint, 0644);
+unsigned int iactive_choose_freq[NR_CPUS];
 /* Separate instance required for each 'interactive' directory in sysfs */
 struct interactive_tunables {
 	struct gov_attr_set attr_set;
@@ -288,8 +289,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 		cdex = cpufreq_frequency_table_target(policy, loadadjfreq / tl,
 						       CPUFREQ_RELATION_C);
 
-		freq = min(freq_table[index].frequency, freq_table[cdex].frequency);
-
+		iactive_choose_freq[policy->cpu] = freq = min(freq_table[index].frequency, freq_table[cdex].frequency);
 		if (freq > prevfreq) {
 			/* The previous frequency is too low */
 			freqmin = prevfreq;
