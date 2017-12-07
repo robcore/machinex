@@ -370,7 +370,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	u64 cputime_speedadj, now, max_fvtime;
 	unsigned int new_freq, loadadjfreq, index, delta_time, floor_freq = 1026000;
 	unsigned long flags;
-	int cpu_load;
+	int cpu_load, tmpload;
 	unsigned int cpu = smp_processor_id();
 	if (unlikely(cpu != policy->cpu))
 		return;
@@ -387,11 +387,11 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	spin_lock_irqsave(&icpu->target_freq_lock, flags);
 	do_div(cputime_speedadj, delta_time);
 	loadadjfreq = (unsigned int)cputime_speedadj * 100;
-	cpu_load = DIV_ROUND_CLOSEST(loadadjfreq, policy->cur);
-	if (cpu_load == 0 || cpu_load == 100)
-		cpu_load = this_cpu_load(cpu);
+	tmpload = DIV_ROUND_CLOSEST(loadadjfreq, policy->cur);
+	if (tmpload == 0 || tmpload == 100)
+		tmpload = this_cpu_load(cpu);
 
-	iactive_current_load[cpu] = cpu_load;
+	iactive_current_load[cpu] = cpu_load = tmpload;
 
 	if (cpu_load >= iactive_go_hispeed_load[cpu]) {
 		//if (policy->cur < tunables->hispeed_freq) {
