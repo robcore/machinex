@@ -382,7 +382,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 
 	spin_lock_irqsave(&icpu->target_freq_lock, flags);
 	do_div(cputime_speedadj, delta_time);
-	loadadjfreq = (unsigned int)cputime_speedadj * 100;
+	loadadjfreq = (unsigned int)cputime_speedadj * 10;
 	cpu_load = DIV_ROUND_UP((loadadjfreq * policy->cur), policy->max);
 
 	iactive_current_load[cpu] = cpu_load;
