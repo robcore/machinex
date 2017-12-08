@@ -286,7 +286,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 		 * Find the lowest frequency where the computed load is less
 		 * than or equal to the target load.
 		 */
-		iactive_load_over_target[policy->cpu] = loadadjfreq / tl;
+		iactive_load_over_target[policy->cpu] = ((loadadjfreq / tl) * 100000);
 		index = cpufreq_frequency_table_target(policy, iactive_load_over_target[policy->cpu],
 						       CPUFREQ_RELATION_L);
 		cdex = cpufreq_frequency_table_target(policy, iactive_load_over_target[policy->cpu],
@@ -391,12 +391,11 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 
 	spin_lock_irqsave(&icpu->target_freq_lock, flags);
 	do_div(cputime_speedadj, delta_time);
-	loadadjfreq = (unsigned int)cputime_speedadj * 100;
+	loadadjfreq = (unsigned int)cputime_speedadj;
 	if (iactive_load_debug)
 		iactive_raw_loadadjfreq[cpu] = loadadjfreq;
 
-	cpu_load = (DIV_ROUND_UP((loadadjfreq * policy->cur), policy->max) * 1000);
-	sanitize_min_max(cpu_load, DEFAULT_HARD_MIN, DEFAULT_HARD_MAX);
+	cpu_load = (DIV_ROUND_UP((loadadjfreq * policy->cur), policy->max));
 	if (iactive_load_debug)
 		iactive_current_load[cpu] = cpu_load;
 	if (cpu_load >= iactive_go_hispeed_load[cpu]) {
