@@ -42,6 +42,7 @@ unsigned int up_threshold_any_cpu_freq[NR_CPUS] = {702000, 702000, 702000, 70200
 extern unsigned int iactive_load_debug;
 extern int iactive_current_load[NR_CPUS];
 extern unsigned int iactive_choose_freq[NR_CPUS];
+extern unsigned int iactive_raw_loadadjfreq[NR_CPUS];
 
 show_one_cpu(dbs_cpu_sampling_rate);
 show_one_cpu(dbs_up_threshold);
@@ -73,6 +74,14 @@ static ssize_t iactive_choose_freq_show(struct device *dev,
 {
 	if (iactive_load_debug)
 		return sprintf(buf, "%u\n", iactive_choose_freq[(dev->id)]);
+	return sprintf(buf, "Disabled\n");
+}
+
+static ssize_t iactive_raw_loadadjfreq_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	if (iactive_load_debug)
+		return sprintf(buf, "%u\n", iactive_raw_loadadjfreq[(dev->id)]);
 	return sprintf(buf, "Disabled\n");
 }
 

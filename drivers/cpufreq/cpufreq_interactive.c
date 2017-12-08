@@ -142,7 +142,8 @@ static struct task_struct *speedchange_task;
 static cpumask_t speedchange_cpumask;
 static spinlock_t speedchange_cpumask_lock;
 
-int iactive_current_load[NR_CPUS];
+unsigned int iactive_current_load[NR_CPUS];
+unsigned int iactive_raw_loadadjfreq[NR_CPUS];
 #define hlimit_hispeed(cpu) check_cpufreq_hardlimit(cpu, iactive_hispeed_freq[cpu]) 
 /* Target load. Lower values result in higher CPU speeds. */
 #define DEFAULT_TARGET_LOAD 95
@@ -289,7 +290,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 		cdex = cpufreq_frequency_table_target(policy, loadadjfreq / tl,
 						       CPUFREQ_RELATION_C);
 
-		iactive_choose_freq[policy->cpu] = freq = min(freq_table[index].frequency, freq_table[cdex].frequency);
+		iactive_choose_freq[policy->cpu] = freq = max(freq_table[index].frequency, freq_table[cdex].frequency);
 		if (freq > prevfreq) {
 			/* The previous frequency is too low */
 			freqmin = prevfreq;
@@ -384,9 +385,9 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 
 	spin_lock_irqsave(&icpu->target_freq_lock, flags);
 	do_div(cputime_speedadj, delta_time);
-	loadadjfreq = (unsigned int)cputime_speedadj * 10;
+	loadadjfreq = (unsigned int)cputime_speedadj * 100;
+	iactive_raw_loadadjfreq[cpu] = loadadjfreq;
 	cpu_load = DIV_ROUND_UP((loadadjfreq * policy->cur), policy->max);
-	sanitize_min_max(cpu_load, 0, 100);
 	iactive_current_load[cpu] = cpu_load;
 
 	if (cpu_load >= iactive_go_hispeed_load[cpu]) {
