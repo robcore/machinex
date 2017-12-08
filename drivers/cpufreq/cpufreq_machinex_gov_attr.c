@@ -102,8 +102,6 @@ static ssize_t iactive_load_over_target_show(struct device *dev,
 	return sprintf(buf, "Disabled\n");
 }
 
-unsigned int iactive_load_over_target[NR_CPUS];
-
 store_one_cpu_clamp(dbs_cpu_sampling_rate, 1000, 10000);
 store_one_cpu_clamp(dbs_up_threshold, 1, 99);
 store_one_cpu_clamp(dbs_micro_up_threshold, 1, 99);

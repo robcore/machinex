@@ -286,15 +286,14 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 		 * Find the lowest frequency where the computed load is less
 		 * than or equal to the target load.
 		 */
-
-		index = cpufreq_frequency_table_target(policy, loadadjfreq / tl,
+		iactive_load_over_target[policy->cpu] = loadadjfreq / tl;
+		index = cpufreq_frequency_table_target(policy, iactive_load_over_target[policy->cpu],
 						       CPUFREQ_RELATION_L);
-		cdex = cpufreq_frequency_table_target(policy, loadadjfreq / tl,
+		cdex = cpufreq_frequency_table_target(policy, iactive_load_over_target[policy->cpu],
 						       CPUFREQ_RELATION_C);
 		if (iactive_load_debug) {
 			iactive_choose_freq_low[policy->cpu] = freq_table[index].frequency;
 			iactive_choose_freq_closest[policy->cpu] = freq_table[cdex].frequency;
-			iactive_load_over_target = loadadjfreq / tl;
 		}
 
 		freq = max(freq_table[index].frequency, freq_table[cdex].frequency);
@@ -393,16 +392,14 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	spin_lock_irqsave(&icpu->target_freq_lock, flags);
 	do_div(cputime_speedadj, delta_time);
 	loadadjfreq = (unsigned int)cputime_speedadj * 100;
-	if (iactive_load_debug) {
+	if (iactive_load_debug)
 		iactive_raw_loadadjfreq[cpu] = loadadjfreq;
-		cpu_load = DIV_ROUND_UP((loadadjfreq * policy->cur), policy->max);
-		iactive_current_load[cpu] = cpu_load;
-	} else
-		cpu_load = sanitize_min_max((DIV_ROUND_UP((loadadjfreq * policy->cur), policy->max) * 1000), DEFAULT_HARD_MIN, DEFAULT_HARD_MAX);
 
+	cpu_load = (DIV_ROUND_UP((loadadjfreq * policy->cur), policy->max) * 1000);
+	sanitize_min_max(cpu_load, DEFAULT_HARD_MIN, DEFAULT_HARD_MAX);
+	if (iactive_load_debug)
+		iactive_current_load[cpu] = cpu_load;
 	if (cpu_load >= iactive_go_hispeed_load[cpu]) {
-		//if (policy->cur < tunables->hispeed_freq) {
-			//new_freq = tunables->hispeed_freq;
 		if (policy->cur < iactive_hispeed_freq[cpu]) {
 			new_freq = iactive_hispeed_freq[cpu];
 		} else {
@@ -420,9 +417,8 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 
 	if (policy->cur >= iactive_hispeed_freq[cpu] &&
 	    new_freq > policy->cur &&
-	    now - icpu->pol_hispeed_val_time < freq_to_above_hispeed_delay(tunables, policy->cur)) {
+	    now - icpu->pol_hispeed_val_time < freq_to_above_hispeed_delay(tunables, policy->cur))
 		goto exit;
-	}
 
 	icpu->loc_hispeed_val_time = now;
 
@@ -436,9 +432,8 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	 */
 	max_fvtime = max(icpu->pol_floor_val_time, icpu->loc_floor_val_time);
 	if (new_freq < icpu->floor_freq && icpu->target_freq >= policy->cur) {
-		if (now - max_fvtime < tunables->min_sample_time) {
+		if (now - max_fvtime < tunables->min_sample_time)
 			goto exit;
-		}
 	}
 
 	/*
@@ -454,9 +449,8 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 
 	if (icpu->target_freq == new_freq &&
 	    (icpu->target_freq == policy->cur ||
-	    icpu->target_freq < floor_freq)) {
+	    icpu->target_freq < floor_freq))
 		goto exit;
-	}
 
 	icpu->target_freq = new_freq;
 	spin_unlock_irqrestore(&icpu->target_freq_lock, flags);
