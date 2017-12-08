@@ -144,6 +144,7 @@ DEVICE_ATTR_RW(up_threshold_any_cpu_freq);
 DEVICE_ATTR_RW(mx_cpufreq_governor);
 DEVICE_ATTR_RO(iactive_current_load);
 DEVICE_ATTR_RO(iactive_choose_freq);
+DEVICE_ATTR_RO(iactive_raw_loadadjfreq);
 
 static struct attribute *mx_cpu_attrs[] = {
 	&dev_attr_dbs_cpu_sampling_rate.attr,
@@ -164,6 +165,7 @@ static struct attribute *mx_cpu_attrs[] = {
 	&dev_attr_mx_cpufreq_governor.attr,
 	&dev_attr_iactive_current_load.attr,
 	&dev_attr_iactive_choose_freq.attr,
+	&dev_attr_iactive_raw_loadadjfreq.attr,
 	NULL,
 };
 
