@@ -32,7 +32,7 @@ unsigned int su_rate_limit_us[NR_CPUS] = { 1000, 1000, 1000, 1000 };
 /*Machinex Interactive tunables */
 unsigned int iactive_hispeed_freq[NR_CPUS] = {1782000, 1782000, 1782000, 1782000};
 unsigned long iactive_go_hispeed_load[NR_CPUS] = {99, 99, 99, 99};
-int iactive_target_load[NR_CPUS] = {95, 95, 95, 95};
+unsigned int iactive_target_load[NR_CPUS] = {95, 95, 95, 95};
 
 /*Machinex Intelliactive tunable*/
 unsigned int two_phase_freq[NR_CPUS] = {1674000, 1674000, 1674000, 1674000};
@@ -40,7 +40,7 @@ unsigned int up_threshold_any_cpu_load[NR_CPUS] = {80, 80, 80, 80};
 unsigned int sync_freq[NR_CPUS] = {1026000, 1026000, 1026000, 1026000};
 unsigned int up_threshold_any_cpu_freq[NR_CPUS] = {702000, 702000, 702000, 702000};
 extern unsigned int iactive_load_debug;
-extern int iactive_current_load[NR_CPUS];
+extern unsigned int iactive_current_load[NR_CPUS];
 extern unsigned int iactive_choose_freq[NR_CPUS];
 extern unsigned int iactive_raw_loadadjfreq[NR_CPUS];
 
