@@ -56,8 +56,7 @@ __ATTR(_name, 0644, show_##_name, store_##_name)
 static unsigned int interactive_suspended;
 unsigned int iactive_load_debug;
 module_param(iactive_load_debug, uint, 0644);
-unsigned int iactive_choose_freq_low[NR_CPUS];
-unsigned int iactive_choose_freq_closest[NR_CPUS];
+unsigned int iactive_choose_freq[NR_CPUS];
 unsigned int iactive_load_over_target[NR_CPUS];
 /* Separate instance required for each 'interactive' directory in sysfs */
 struct interactive_tunables {
@@ -276,7 +275,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 	struct cpufreq_frequency_table *freq_table = policy->freq_table;
 	unsigned int prevfreq, freqmin = 0, freqmax = UINT_MAX, tl;
 	unsigned int freq = policy->cur;
-	unsigned int index, cdex;
+	unsigned int index;
 
 	do {
 		prevfreq = freq;
@@ -289,14 +288,11 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 		iactive_load_over_target[policy->cpu] = ((loadadjfreq / tl) * 100000);
 		index = cpufreq_frequency_table_target(policy, iactive_load_over_target[policy->cpu],
 						       CPUFREQ_RELATION_L);
-		cdex = cpufreq_frequency_table_target(policy, iactive_load_over_target[policy->cpu],
-						       CPUFREQ_RELATION_C);
 		if (iactive_load_debug) {
-			iactive_choose_freq_low[policy->cpu] = freq_table[index].frequency;
-			iactive_choose_freq_closest[policy->cpu] = freq_table[cdex].frequency;
+			iactive_choose_freq[policy->cpu] = freq_table[index].frequency;
 		}
 
-		freq = max(freq_table[index].frequency, freq_table[cdex].frequency);
+		freq = freq_table[index].frequency;
 		if (freq > prevfreq) {
 			/* The previous frequency is too low */
 			freqmin = prevfreq;
@@ -391,11 +387,11 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 
 	spin_lock_irqsave(&icpu->target_freq_lock, flags);
 	do_div(cputime_speedadj, delta_time);
-	loadadjfreq = (unsigned int)cputime_speedadj;
+	loadadjfreq = (unsigned int)cputime_speedadj * 100;
 	if (iactive_load_debug)
 		iactive_raw_loadadjfreq[cpu] = loadadjfreq;
 
-	cpu_load = (DIV_ROUND_UP((loadadjfreq * policy->cur), policy->max));
+	cpu_load = (DIV_ROUND_UP(DIV_ROUND_UP((loadadjfreq * policy->cur), policy->max), 100));
 	if (iactive_load_debug)
 		iactive_current_load[cpu] = cpu_load;
 	if (cpu_load >= iactive_go_hispeed_load[cpu]) {
