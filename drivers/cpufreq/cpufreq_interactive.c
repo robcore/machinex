@@ -405,7 +405,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 			new_freq = policy->max;
 	} else if (cpu_load >= iactive_go_hispeed_load[cpu] && cpu_load < full_speed_load) {
 		if (policy->cur < iactive_hispeed_freq[cpu] &&
-			iactive_hispeed_freq[cpu] < policy->max) {
+			iactive_hispeed_freq[cpu] < policy->max)
 			new_freq = iactive_hispeed_freq[cpu];
 		else
 			new_freq = policy->max;
