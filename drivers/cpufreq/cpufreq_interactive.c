@@ -50,8 +50,8 @@ __ATTR(_name, 0644, show_##_name, store_##_name)
 
 #define DEFAULT_SAMPLING_RATE (20 * USEC_PER_MSEC)
 #define DEFAULT_ABOVE_HISPEED_DELAY DEFAULT_SAMPLING_RATE
-#define DEFAULT_TIMER_SLACK (2 * DEFAULT_SAMPLING_RATE)
-#define DEFAULT_MIN_SAMPLE_TIME (10 * USEC_PER_MSEC)
+#define DEFAULT_TIMER_SLACK (3 * DEFAULT_SAMPLING_RATE)
+#define DEFAULT_MIN_SAMPLE_TIME (60 * USEC_PER_MSEC)
 
 static unsigned int interactive_suspended;
 unsigned int iactive_load_debug;
@@ -145,6 +145,7 @@ static spinlock_t speedchange_cpumask_lock;
 
 unsigned int iactive_current_load[NR_CPUS];
 unsigned int iactive_raw_loadadjfreq[NR_CPUS];
+unsigned int full_speed_load = 95;
 #define hlimit_hispeed(cpu) check_cpufreq_hardlimit(cpu, iactive_hispeed_freq[cpu]) 
 /* Target load. Lower values result in higher CPU speeds. */
 #define DEFAULT_TARGET_LOAD 95
@@ -296,7 +297,6 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 						       CPUFREQ_RELATION_C);
 		if (iactive_load_debug) {
 			iactive_load_over_target[policy->cpu] = load_over_target;
-			iactive_choose_freq[policy->cpu] = freq_table[index].frequency;
 		}
 
 		freq = freq_table[index].frequency;
@@ -400,18 +400,18 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	cpu_load = DIV_ROUND_UP(loadadjfreq, policy->cur);
 	if (iactive_load_debug)
 		iactive_current_load[cpu] = cpu_load;
-	if (cpu_load >= iactive_go_hispeed_load[cpu]) {
-		if (policy->cur < iactive_hispeed_freq[cpu]) {
+	if (cpu_load >= full_speed_load) {
+		if (policy->cur < policy->max)
+			new_freq = policy->max;
+	} else if (cpu_load >= iactive_go_hispeed_load[cpu] && cpu_load < full_speed_load) {
+		if (policy->cur < iactive_hispeed_freq[cpu] &&
+			iactive_hispeed_freq[cpu] < policy->max) {
 			new_freq = iactive_hispeed_freq[cpu];
-		} else {
-			new_freq = choose_freq(icpu, loadadjfreq);
-
-			if (new_freq < iactive_hispeed_freq[cpu])
-				new_freq = iactive_hispeed_freq[cpu];
-		}
+		else
+			new_freq = policy->max;
 	} else {
 		new_freq = choose_freq(icpu, loadadjfreq);
-		if (new_freq > iactive_hispeed_freq[cpu] &&
+		if (new_freq >= iactive_hispeed_freq[cpu] &&
 		    policy->cur < iactive_hispeed_freq[cpu])
 			new_freq = iactive_hispeed_freq[cpu];
 	}
@@ -426,6 +426,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	index = cpufreq_frequency_table_target(policy, new_freq,
 					       CPUFREQ_RELATION_L);
 	new_freq = freq_table[index].frequency;
+	iactive_choose_freq[cpu] = new_freq;
 
 	/*
 	 * Do not scale below floor_freq unless we have been at or above the
