@@ -269,6 +269,21 @@ static unsigned int freq_to_targetload(struct interactive_tunables *tunables,
  * choose_freq() will find the minimum frequency that does not exceed its
  * target load given the current load.
  */
+
+static unsigned int get_load_over_target(unsigned int tget)
+{
+		if (tget >= 10000 && tget < 100000)
+			tget *= 10;
+		else if (tget >= 1000 && tget < 10000)
+			tget *= 100;
+		else if (tget >= 100 && tget < 1000)
+			tget *= 1000;
+		else
+			return tget;
+
+	return tget;
+}
+
 static unsigned int choose_freq(struct interactive_cpu *icpu,
 				unsigned int loadadjfreq)
 {
@@ -285,13 +300,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 		 * Find the lowest frequency where the computed load is less
 		 * than or equal to the target load.
 		 */
-		load_over_target = DIV_ROUND_CLOSEST(loadadjfreq, tl);
-		if (load_over_target >= 10000 && load_over_target < 100000)
-			load_over_target *= 10;
-		if (load_over_target >= 1000 && load_over_target < 10000)
-			load_over_target *= 100;
-		if (load_over_target >= 100 && load_over_target < 1000)
-			load_over_target *= 1000;
+		load_over_target = get_load_over_target(DIV_ROUND_CLOSEST(loadadjfreq, tl));
 		clamp_val(load_over_target, 0, DEFAULT_HARD_MAX);
 		index = cpufreq_frequency_table_target(policy, load_over_target,
 						       CPUFREQ_RELATION_C);
@@ -345,7 +354,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 		}
 
 		/* If same frequency chosen as previous then done. */
-	} while (freq != prevfreq);
+	} while (freq != prevfreq && !interactive_suspended);
 
 	return freq;
 }
