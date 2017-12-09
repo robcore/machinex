@@ -287,8 +287,8 @@ static unsigned int choose_freq(struct intelliactive_cpu *icpu,
 		 * Find the lowest frequency where the computed load is less
 		 * than or equal to the target load.
 		 */
-		load_over_target = (loadadjfreq / tl);
-		index = cpufreq_frequency_table_target(policy, iactive_load_over_target,
+		load_over_target = DIV_ROUND_CLOSEST(loadadjfreq, tl);
+		index = cpufreq_frequency_table_target(policy, load_over_target,
 						       CPUFREQ_RELATION_L);
 
 		freq = freq_table[index].frequency;
@@ -392,7 +392,7 @@ static void eval_target_freq(struct intelliactive_cpu *icpu)
 	spin_lock_irqsave(&icpu->target_freq_lock, flags);
 	do_div(cputime_speedadj, delta_time);
 	loadadjfreq = (unsigned int)cputime_speedadj * 100;
-	DIV_ROUND_UP((loadadjfreq), policy->cur);
+	cpu_load = DIV_ROUND_UP((loadadjfreq), policy->cur);
 	tunables->boosted = tunables->boost ||
 			    now < tunables->boostpulse_endtime;
 
