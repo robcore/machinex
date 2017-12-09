@@ -287,7 +287,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 		 */
 		iactive_load_over_target[policy->cpu] = (loadadjfreq / tl);
 		index = cpufreq_frequency_table_target(policy, iactive_load_over_target[policy->cpu],
-						       CPUFREQ_RELATION_L);
+						       CPUFREQ_RELATION_C);
 		if (iactive_load_debug) {
 			iactive_choose_freq[policy->cpu] = freq_table[index].frequency;
 		}
