@@ -58,6 +58,7 @@ unsigned int iactive_load_debug;
 module_param(iactive_load_debug, uint, 0644);
 unsigned int iactive_choose_freq[NR_CPUS];
 unsigned int iactive_load_over_target[NR_CPUS];
+static unsigned int skip_count[NR_CPUS];
 /* Separate instance required for each 'interactive' directory in sysfs */
 struct interactive_tunables {
 	struct gov_attr_set attr_set;
@@ -450,9 +451,16 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	}
 
 	if (icpu->target_freq == new_freq &&
-	    (icpu->target_freq == policy->cur ||
-	    icpu->target_freq < floor_freq))
+	    (icpu->target_freq == policy->cur))
 		goto exit;
+
+	if (policy->cur >= floor_freq && new_freq < floor_freq &&
+		skip_count[cpu]) {
+		skip_count[cpu] = 0;
+		goto exit;
+	}
+
+	skip_count[cpu]++;
 
 	icpu->target_freq = new_freq;
 	spin_unlock_irqrestore(&icpu->target_freq_lock, flags);
