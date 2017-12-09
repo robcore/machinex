@@ -373,14 +373,18 @@ static void eval_target_freq(struct intelliactive_cpu *icpu)
 	struct cpufreq_policy *policy = icpu->ipolicy->policy;
 	struct cpufreq_frequency_table *freq_table = policy->freq_table;
 	u64 cputime_speedadj, now, max_fvtime, delta_time;
-	unsigned int new_freq, loadadjfreq, index, cpu_load,
-				 cpu = smp_processor_id(), phase = 0,
-				 counter = 0, max_freq, max_load;
+	unsigned int new_freq, loadadjfreq, index;
+	int i, max_load;
+	unsigned int max_freq;
 	unsigned long flags;
+	int cpu_load;
+	unsigned int cpu = smp_processor_id();
+	unsigned int phase = 0;
+	unsigned int counter = 0;
 
 	spin_lock_irqsave(&icpu->load_lock, flags);
 	now = update_load(icpu, cpu);
-	delta_time = (unsigned int)(now - icpu->cputime_speedadj_timestamp);
+	delta_time = (now - icpu->cputime_speedadj_timestamp);
 	cputime_speedadj = icpu->cputime_speedadj;
 	spin_unlock_irqrestore(&icpu->load_lock, flags);
 
@@ -390,7 +394,7 @@ static void eval_target_freq(struct intelliactive_cpu *icpu)
 	spin_lock_irqsave(&icpu->target_freq_lock, flags);
 	do_div(cputime_speedadj, delta_time);
 	loadadjfreq = (unsigned int)cputime_speedadj * 100;
-	cpu_load = DIV_ROUND_UP((loadadjfreq), policy->cur);
+	cpu_load = DIV_ROUND_UP(loadadjfreq, policy->cur);
 	tunables->boosted = tunables->boost ||
 			    now < tunables->boostpulse_endtime;
 

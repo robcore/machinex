@@ -380,7 +380,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 
 	spin_lock_irqsave(&icpu->load_lock, flags);
 	now = update_load(icpu, cpu);
-	delta_time = (unsigned int)(now - icpu->cputime_speedadj_timestamp);
+	delta_time = (now - icpu->cputime_speedadj_timestamp);
 	cputime_speedadj = icpu->cputime_speedadj;
 	spin_unlock_irqrestore(&icpu->load_lock, flags);
 
@@ -393,7 +393,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	if (iactive_load_debug)
 		iactive_raw_loadadjfreq[cpu] = loadadjfreq;
 
-	cpu_load = DIV_ROUND_UP((loadadjfreq), policy->cur);
+	cpu_load = DIV_ROUND_UP(loadadjfreq, policy->cur);
 	if (iactive_load_debug)
 		iactive_current_load[cpu] = cpu_load;
 	if (cpu_load >= iactive_go_hispeed_load[cpu]) {
