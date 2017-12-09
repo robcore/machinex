@@ -298,7 +298,6 @@ static unsigned int choose_freq(struct intelliactive_cpu *icpu,
 						       CPUFREQ_RELATION_L);
 
 		freq = freq_table[index].frequency;
-
 		if (freq > prevfreq) {
 			/* The previous frequency is too low */
 			freqmin = prevfreq;
