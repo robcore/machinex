@@ -50,8 +50,8 @@ __ATTR(_name, 0644, show_##_name, store_##_name)
 
 #define DEFAULT_SAMPLING_RATE (20 * USEC_PER_MSEC)
 #define DEFAULT_ABOVE_HISPEED_DELAY DEFAULT_SAMPLING_RATE
-#define DEFAULT_TIMER_SLACK (3 * DEFAULT_SAMPLING_RATE)
-#define DEFAULT_MIN_SAMPLE_TIME (60 * USEC_PER_MSEC)
+#define DEFAULT_TIMER_SLACK DEFAULT_SAMPLING_RATE
+#define DEFAULT_MIN_SAMPLE_TIME DEFAULT_SAMPLING_RATE
 
 static unsigned int interactive_suspended;
 unsigned int iactive_load_debug;
@@ -555,6 +555,9 @@ again:
 	set_current_state(TASK_INTERRUPTIBLE);
 
 	if (interactive_suspended) {
+		spin_lock_irqsave(&speedchange_cpumask_lock, flags);
+		cpumask_clear(&speedchange_cpumask);
+		spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
 		schedule();
 
 		if (kthread_should_stop())
@@ -565,7 +568,6 @@ again:
 
 	if (cpumask_empty(&speedchange_cpumask)) {
 		spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
-
 		schedule();
 
 		if (kthread_should_stop())
