@@ -374,10 +374,9 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	struct cpufreq_policy *policy = icpu->ipolicy->policy;
 	struct cpufreq_frequency_table *freq_table = policy->freq_table;
 	u64 cputime_speedadj, now, max_fvtime, delta_time;
-	unsigned int new_freq, loadadjfreq, index, floor_freq = 1026000;
+	unsigned int new_freq, loadadjfreq, index, floor_freq = 1026000,
+	cpu = smp_processor_id(), cpu_load;
 	unsigned long flags;
-	int cpu_load;
-	unsigned int cpu = smp_processor_id();
 
 	spin_lock_irqsave(&icpu->load_lock, flags);
 	now = update_load(icpu, cpu);

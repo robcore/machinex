@@ -375,8 +375,7 @@ static void eval_target_freq(struct intelliactive_cpu *icpu)
 	u64 cputime_speedadj, now, max_fvtime, delta_time;
 	unsigned int new_freq, loadadjfreq, index, cpu_load,
 				 cpu = smp_processor_id(), phase = 0,
-				 counter = 0, max_freq;
-	int i, max_load;
+				 counter = 0, max_freq, max_load;
 	unsigned long flags;
 
 	spin_lock_irqsave(&icpu->load_lock, flags);
