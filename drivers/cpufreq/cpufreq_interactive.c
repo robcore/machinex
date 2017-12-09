@@ -370,8 +370,8 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	struct interactive_tunables *tunables = icpu->ipolicy->tunables;
 	struct cpufreq_policy *policy = icpu->ipolicy->policy;
 	struct cpufreq_frequency_table *freq_table = policy->freq_table;
-	u64 cputime_speedadj, now, max_fvtime;
-	unsigned int new_freq, loadadjfreq, index, delta_time, floor_freq = 1026000;
+	u64 cputime_speedadj, now, max_fvtime, delta_time;
+	unsigned int new_freq, loadadjfreq, index, floor_freq = 1026000;
 	unsigned long flags;
 	int cpu_load;
 	unsigned int cpu = smp_processor_id();
