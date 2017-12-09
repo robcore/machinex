@@ -276,8 +276,7 @@ static unsigned int choose_freq(struct intelliactive_cpu *icpu,
 	struct cpufreq_policy *policy = icpu->ipolicy->policy;
 	struct cpufreq_frequency_table *freq_table = policy->freq_table;
 	unsigned int prevfreq, freqmin = 0, freqmax = UINT_MAX, tl,
-	freq = policy->cur, load_over_target;
-	int index;
+	freq = policy->cur, load_over_target, index;
 
 	do {
 		prevfreq = freq;
@@ -287,8 +286,10 @@ static unsigned int choose_freq(struct intelliactive_cpu *icpu,
 		 * Find the lowest frequency where the computed load is less
 		 * than or equal to the target load.
 		 */
-		load_over_target = clamp_val((DIV_ROUND_CLOSEST(loadadjfreq, tl) * 10), 
-							DEFAULT_HARD_MIN, DEFAULT_HARD_MAX);
+		load_over_target = DIV_ROUND_CLOSEST(loadadjfreq, tl);
+		if (load_over_target < 100000)
+			load_over_target *= 10;
+		clamp_val(load_over_target, DEFAULT_HARD_MIN, DEFAULT_HARD_MAX);
 		index = cpufreq_frequency_table_target(policy, load_over_target,
 						       CPUFREQ_RELATION_L);
 
