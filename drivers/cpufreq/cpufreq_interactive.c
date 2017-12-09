@@ -285,7 +285,8 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 		 * Find the lowest frequency where the computed load is less
 		 * than or equal to the target load.
 		 */
-		iactive_load_over_target[policy->cpu] = DIV_ROUND_CLOSEST(loadadjfreq, tl);
+		iactive_load_over_target[policy->cpu] = clamp_val((DIV_ROUND_CLOSEST(loadadjfreq, tl) * 10), 
+							DEFAULT_HARD_MIN, DEFAULT_HARD_MAX);
 		index = cpufreq_frequency_table_target(policy, iactive_load_over_target[policy->cpu],
 						       CPUFREQ_RELATION_C);
 		if (iactive_load_debug) {

@@ -287,7 +287,8 @@ static unsigned int choose_freq(struct intelliactive_cpu *icpu,
 		 * Find the lowest frequency where the computed load is less
 		 * than or equal to the target load.
 		 */
-		load_over_target = DIV_ROUND_CLOSEST(loadadjfreq, tl);
+		load_over_target = clamp_val((DIV_ROUND_CLOSEST(loadadjfreq, tl) * 10), 
+							DEFAULT_HARD_MIN, DEFAULT_HARD_MAX);
 		index = cpufreq_frequency_table_target(policy, load_over_target,
 						       CPUFREQ_RELATION_L);
 
@@ -371,14 +372,11 @@ static void eval_target_freq(struct intelliactive_cpu *icpu)
 	struct cpufreq_policy *policy = icpu->ipolicy->policy;
 	struct cpufreq_frequency_table *freq_table = policy->freq_table;
 	u64 cputime_speedadj, now, max_fvtime, delta_time;
-	unsigned int new_freq, loadadjfreq, index;
+	unsigned int new_freq, loadadjfreq, index, cpu_load,
+				 cpu = smp_processor_id(), phase = 0,
+				 counter = 0, max_freq;
 	int i, max_load;
-	unsigned int max_freq;
 	unsigned long flags;
-	int cpu_load;
-	unsigned int cpu = smp_processor_id();
-	unsigned int phase = 0;
-	unsigned int counter = 0;
 
 	spin_lock_irqsave(&icpu->load_lock, flags);
 	now = update_load(icpu, cpu);
