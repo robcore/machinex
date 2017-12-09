@@ -2619,17 +2619,6 @@ static void update_cfs_shares(struct sched_entity *se)
 	reweight_entity(cfs_rq_of(se), se, shares);
 }
 
-void reweight_task(struct task_struct *p, int prio)
-{
-	struct sched_entity *se = &p->se;
-	struct cfs_rq *cfs_rq = cfs_rq_of(se);
-	struct load_weight *load = &se->load;
-	unsigned long weight = scale_load(sched_prio_to_weight[prio]);
-
-	reweight_entity(cfs_rq, se, weight);
-	load->inv_weight = sched_prio_to_wmult[prio];
-}
-
 #else /* CONFIG_FAIR_GROUP_SCHED */
 static inline void update_cfs_shares(struct sched_entity *se)
 {
