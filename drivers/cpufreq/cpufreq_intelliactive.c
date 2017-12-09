@@ -287,7 +287,11 @@ static unsigned int choose_freq(struct intelliactive_cpu *icpu,
 		 * than or equal to the target load.
 		 */
 		load_over_target = DIV_ROUND_CLOSEST(loadadjfreq, tl);
-		if (load_over_target > 0 && load_over_target < 100000)
+		if (load_over_target >= 100 && load_over_target < 1000)
+			load_over_target *= 1000;
+		if (load_over_target >= 1000 && load_over_target < 10000)
+			load_over_target *= 100;
+		if (load_over_target >= 10000 && load_over_target < 100000)
 			load_over_target *= 10;
 		clamp_val(load_over_target, 0, DEFAULT_HARD_MAX);
 		index = cpufreq_frequency_table_target(policy, load_over_target,
