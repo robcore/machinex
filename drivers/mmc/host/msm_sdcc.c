@@ -7040,7 +7040,7 @@ msmsdcc_runtime_resume(struct device *dev)
 		if (mmc->card && mmc_card_sdio(mmc->card)) {
 			if (host->plat->mpm_sdiowakeup_int ||
 					host->plat->sdiowakeup_irq)
-				wake_lock_timeout(&host->sdio_wlock, msecs_to_jiffies(10));
+				wake_lock_timeout(&host->sdio_wlock, msecs_to_jiffies(2));
 		}
 
 		wake_unlock(&host->sdio_suspend_wlock);
@@ -7121,7 +7121,7 @@ static int msmsdcc_suspend_noirq(struct device *dev)
 	if (atomic_read(&host->clks_on) && !host->plat->is_sdio_al_client) {
 		pr_warn("%s: clocks are on after suspend, aborting system "
 				"suspend\n", mmc_hostname(mmc));
-		rc = -EAGAIN;
+		rc = -EBUSY;
 	}
 
 	return rc;
