@@ -7163,10 +7163,6 @@ static int msmsdcc_runtime_suspend(struct device *dev)
 {
 	return 0;
 }
-static int msmsdcc_runtime_idle(struct device *dev)
-{
-	return 0;
-}
 static int msmsdcc_pm_suspend(struct device *dev)
 {
 	return 0;
