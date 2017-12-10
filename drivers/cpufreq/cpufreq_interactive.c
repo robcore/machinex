@@ -1062,13 +1062,13 @@ static struct notifier_block iactive_pm_notifier = {
 
 static int interactive_kthread_create(void)
 {
-	struct sched_param param = { .sched_priority =  MAX_USER_RT_PRIO / 2 };
+	//struct sched_param param = { .sched_priority =  MAX_USER_RT_PRIO / 2 };
 	speedchange_task = kthread_create(cpufreq_interactive_speedchange_task,
 					  NULL, "cfinteractive");
 	if (IS_ERR(speedchange_task))
 		return PTR_ERR(speedchange_task);
 
-	sched_setscheduler_nocheck(speedchange_task, SCHED_FIFO, &param);
+	//sched_setscheduler_nocheck(speedchange_task, SCHED_FIFO, &param);
 	get_task_struct(speedchange_task);
 
 	/* wake up so the thread does not look hung to the freezer */
@@ -1166,10 +1166,10 @@ void cpufreq_interactive_exit(struct cpufreq_policy *policy)
 
 	/* Last policy using the governor ? */
 	if (!--interactive_gov.usage_count) {
+		unregister_pm_notifier(&iactive_pm_notifier);
+		cpu_pm_unregister_notifier(&cpufreq_interactive_idle_nb);
 		cpufreq_unregister_notifier(&cpufreq_notifier_block,
 					    CPUFREQ_TRANSITION_NOTIFIER);
-		cpu_pm_unregister_notifier(&cpufreq_interactive_idle_nb);
-		unregister_pm_notifier(&iactive_pm_notifier);
 		interactive_kthread_destroy();
 	}
 

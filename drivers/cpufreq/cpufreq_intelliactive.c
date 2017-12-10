@@ -1206,13 +1206,13 @@ static struct notifier_block iactive_pm_notifier = {
 
 static int intelliactive_kthread_create(void)
 {
-	struct sched_param param = { .sched_priority =  MAX_USER_RT_PRIO / 2 };
+	//struct sched_param param = { .sched_priority =  MAX_USER_RT_PRIO / 2 };
 	speedchange_task = kthread_create(cpufreq_intelliactive_speedchange_task,
 					  NULL, "cfintelliactive");
 	if (IS_ERR(speedchange_task))
 		return PTR_ERR(speedchange_task);
 
-	sched_setscheduler_nocheck(speedchange_task, SCHED_FIFO, &param);
+	//sched_setscheduler_nocheck(speedchange_task, SCHED_FIFO, &param);
 	get_task_struct(speedchange_task);
 
 	/* wake up so the thread does not look hung to the freezer */
