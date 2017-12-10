@@ -6985,8 +6985,8 @@ msmsdcc_runtime_suspend(struct device *dev)
 				msmsdcc_gate_clock(host);
 			}
 		}
-busy:
 	}
+busy:
 	if (mmc) {
 		host->sdcc_suspending = 0;
 		mmc->suspend_task = NULL;
