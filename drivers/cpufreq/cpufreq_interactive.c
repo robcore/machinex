@@ -354,7 +354,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 		}
 
 		/* If same frequency chosen as previous then done. */
-	} while (freq != prevfreq && !interactive_suspended);
+	} while (freq != prevfreq);
 
 	return freq;
 }
