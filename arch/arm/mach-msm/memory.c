@@ -126,7 +126,7 @@ static unsigned long total_size(unsigned long bank)
 	unsigned long size;
 
 	size = mb->size;
-	for (i = bank - 1, mb = &meminfo.bank[bank - 1]; i >= 0; i--, mb--) {
+	for (i = bank - 1, mb = &meminfo.bank[bank - 1]; i > 0; i--, mb--) {
 		if (mb->start + mb->size != (mb + 1)->start)
 			break;
 		if (reserve_info->paddr_to_memtype(mb->start) != memtype)
@@ -203,7 +203,7 @@ static void __init reserve_memory_for_mempools(void)
 		 * be able to steal memory that would otherwise become
 		 * highmem.
 		 */
-		for (i = meminfo.nr_banks - 1; i >= 0; i--) {
+		for (i = meminfo.nr_banks - 1; i > 0; i--) {
 			mb = &meminfo.bank[i];
 			membank_type =
 				reserve_info->paddr_to_memtype(mb->start);
@@ -312,10 +312,6 @@ int32_t pmem_kalloc(const size_t size, const uint32_t flags)
 			(flags & PMEM_ALIGNMENT_MASK));
 		return -EINVAL;
 	}
-
-	/* on 7x30 and 8x55 "EBI1 kernel PMEM" is really on EBI0 */
-	if (cpu_is_msm7x30() || cpu_is_msm8x55())
-			ebi1_memtype = MEMTYPE_EBI0;
 
 	pmem_memtype = flags & PMEM_MEMTYPE_MASK;
 	if (pmem_memtype == PMEM_MEMTYPE_EBI1)
