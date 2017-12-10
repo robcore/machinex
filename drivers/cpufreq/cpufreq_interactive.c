@@ -54,7 +54,7 @@ __ATTR(_name, 0644, show_##_name, store_##_name)
 #define DEFAULT_MIN_SAMPLE_TIME DEFAULT_SAMPLING_RATE
 
 static unsigned int interactive_suspended;
-unsigned int iactive_load_debug;
+unsigned int iactive_load_debug __read_mostly;
 module_param(iactive_load_debug, uint, 0644);
 unsigned int iactive_choose_freq[NR_CPUS];
 unsigned int iactive_load_over_target[NR_CPUS];
