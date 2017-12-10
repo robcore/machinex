@@ -52,6 +52,7 @@ __ATTR(_name, 0644, show_##_name, store_##_name)
 #define DEFAULT_ABOVE_HISPEED_DELAY DEFAULT_SAMPLING_RATE
 #define DEFAULT_TIMER_SLACK DEFAULT_SAMPLING_RATE
 #define DEFAULT_MIN_SAMPLE_TIME DEFAULT_SAMPLING_RATE
+
 static unsigned int interactive_suspended;
 unsigned int iactive_load_debug;
 module_param(iactive_load_debug, uint, 0644);
@@ -363,7 +364,7 @@ static u64 update_load(struct interactive_cpu *icpu, unsigned int cpu)
 	struct interactive_tunables *tunables = icpu->ipolicy->tunables;
 	u64 now_idle, now, active_time, delta_idle, delta_time;
 
-	now = div_u64(jiffies64_to_nsecs(get_jiffies_64()), NSEC_PER_USEC);
+	now = ktime_to_us(ktime_get());
 	now_idle = get_cpu_idle_time(cpu, &now);
 	delta_idle = (now_idle - icpu->time_in_idle);
 	delta_time = (now - icpu->time_in_idle_timestamp);
