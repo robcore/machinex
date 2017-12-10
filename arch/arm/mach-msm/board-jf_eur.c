@@ -853,9 +853,6 @@ static void __init reserve_ion_memory(void)
 	 * Some sizes must be set up exactly and aligned correctly. Incorrect
 	 * alignments are considered a configuration issue
 	 */
-	fixed_size = (fixed_size + HOLE_SIZE + SECTION_SIZE - 1)
-		& SECTION_MASK;
-	apq8064_reserve_fixed_area(fixed_size);
 
 	fixed_low_start = APQ8064_FIXED_AREA_START;
 	if (low_use_cma) {
