@@ -50,9 +50,8 @@ __ATTR(_name, 0644, show_##_name, store_##_name)
 
 #define DEFAULT_SAMPLING_RATE (20 * USEC_PER_MSEC)
 #define DEFAULT_ABOVE_HISPEED_DELAY DEFAULT_SAMPLING_RATE
-#define DEFAULT_TIMER_SLACK (2 * DEFAULT_SAMPLING_RATE)
-#define DEFAULT_MIN_SAMPLE_TIME (10 * USEC_PER_MSEC)
-
+#define DEFAULT_TIMER_SLACK DEFAULT_SAMPLING_RATE
+#define DEFAULT_MIN_SAMPLE_TIME DEFAULT_SAMPLING_RATE
 static unsigned int interactive_suspended;
 unsigned int iactive_load_debug;
 module_param(iactive_load_debug, uint, 0644);

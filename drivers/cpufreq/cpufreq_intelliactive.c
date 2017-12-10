@@ -96,7 +96,7 @@ struct intelliactive_tunables {
 	 * Max additional time to wait in idle, beyond sampling_rate, at speeds
 	 * above minimum before wakeup to reduce speed, or -1 if unnecessary.
 	 */
-#define DEFAULT_TIMER_SLACK (2 * DEFAULT_SAMPLING_RATE)
+#define DEFAULT_TIMER_SLACK (DEFAULT_SAMPLING_RATE)
 	unsigned long timer_slack_delay;
 	unsigned long timer_slack;
 };
@@ -1312,10 +1312,10 @@ void cpufreq_intelliactive_exit(struct cpufreq_policy *policy)
 
 	/* Last policy using the governor ? */
 	if (!--intelliactive_gov.usage_count) {
+		unregister_pm_notifier(&iactive_pm_notifier);
+		cpu_pm_unregister_notifier(&cpufreq_intelliactive_idle_nb);
 		cpufreq_unregister_notifier(&cpufreq_notifier_block,
 					    CPUFREQ_TRANSITION_NOTIFIER);
-		cpu_pm_unregister_notifier(&cpufreq_intelliactive_idle_nb);
-		unregister_pm_notifier(&iactive_pm_notifier);
 		intelliactive_kthread_destroy();
 	}
 
