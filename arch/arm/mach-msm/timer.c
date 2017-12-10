@@ -1027,7 +1027,7 @@ void __init msm_timer_init(void)
 	broadcast_timer_setup();
 #endif
 	msm_sched_clock_init();
-#ifdef ARCH_HAS_READ_CURRENT_TIMER
+#ifdef HAVE_ARCH_HAS_CURRENT_TIMER
 	__raw_writel(1,
 	msm_clocks[MSM_CLOCK_DGT].regbase + TIMER_ENABLE);
 #endif

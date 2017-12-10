@@ -22,7 +22,7 @@ static int __init lpj_setup(char *str)
 
 __setup("lpj=", lpj_setup);
 
-#ifdef ARCH_HAS_READ_CURRENT_TIMER
+#ifdef HAVE_ARCH_HAS_CURRENT_TIMER
 
 /* This routine uses the read_current_timer() routine and gets the
  * loops per jiffy directly, instead of guessing it using delay().
