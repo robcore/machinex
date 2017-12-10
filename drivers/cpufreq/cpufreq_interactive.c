@@ -66,7 +66,6 @@ struct interactive_tunables {
 	unsigned int hispeed_freq;
 
 	/* Go to hi speed when CPU load at or above this value. */
-#define DEFAULT_GO_HISPEED_LOAD 99
 	unsigned long go_hispeed_load;
 
 	/* Target load. Lower values result in higher CPU speeds. */
@@ -145,10 +144,10 @@ static spinlock_t speedchange_cpumask_lock;
 
 unsigned int iactive_current_load[NR_CPUS];
 unsigned int iactive_raw_loadadjfreq[NR_CPUS];
-unsigned int full_speed_load = 90;
+unsigned int full_speed_load = 85;
 #define hlimit_hispeed(cpu) check_cpufreq_hardlimit(cpu, iactive_hispeed_freq[cpu]) 
 /* Target load. Lower values result in higher CPU speeds. */
-#define DEFAULT_TARGET_LOAD 95
+#define DEFAULT_TARGET_LOAD 75
 static unsigned int default_target_loads[] = {DEFAULT_TARGET_LOAD};
 
 static unsigned int default_above_hispeed_delay[] = {
@@ -294,8 +293,8 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 
 	do {
 		prevfreq = freq;
-		//tl = freq_to_targetload(icpu->ipolicy->tunables, freq);
-		tl = iactive_target_load[policy->cpu];
+		tl = freq_to_targetload(icpu->ipolicy->tunables, freq);
+		//tl = iactive_target_load[policy->cpu];
 		/*
 		 * Find the lowest frequency where the computed load is less
 		 * than or equal to the target load.
@@ -1109,7 +1108,7 @@ int cpufreq_interactive_init(struct cpufreq_policy *policy)
 	tunables->nabove_hispeed_delay =
 		ARRAY_SIZE(default_above_hispeed_delay);
 	tunables->go_hispeed_load = iactive_go_hispeed_load[policy->cpu];
-	tunables->target_loads = default_target_loads;
+	tunables->target_loads = &iactive_target_load[policy->cpu];
 	tunables->ntarget_loads = ARRAY_SIZE(default_target_loads);
 	tunables->min_sample_time = DEFAULT_MIN_SAMPLE_TIME;
 	tunables->sampling_rate = DEFAULT_SAMPLING_RATE;

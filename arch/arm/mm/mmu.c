@@ -834,7 +834,7 @@ static void __init create_36bit_mapping(struct map_desc *md,
  * offsets, and we take full advantage of sections and
  * supersections.
  */
-static void __init create_mapping(struct map_desc *md)
+static void __init create_mapping(struct map_desc *md, char *caller)
 {
 	unsigned long addr, length, end;
 	phys_addr_t phys;
@@ -875,8 +875,9 @@ static void __init create_mapping(struct map_desc *md)
 	length = PAGE_ALIGN(md->length + (md->virtual & ~PAGE_MASK));
 
 	if (type->prot_l1 == 0 && ((addr | phys | length) & ~SECTION_MASK)) {
-		pr_warn("BUG: map for 0x%08llx at 0x%08lx cannot be mapped using pages, ignoring.\n",
-			(long long)__pfn_to_phys(md->pfn), addr);
+		pr_warn("BUG: map for 0x%08llx at 0x%08lx cannot be mapped using pages,"
+				"caller:%s\n",
+			(long long)__pfn_to_phys(md->pfn), addr, caller);
 		return;
 	}
 
@@ -907,7 +908,7 @@ void __init iotable_init(struct map_desc *io_desc, int nr)
 	svm = early_alloc_aligned(sizeof(*svm) * nr, __alignof__(*svm));
 
 	for (md = io_desc; nr; md++, nr--) {
-		create_mapping(md);
+		create_mapping(md, "iotable_init");
 
 		vm = &svm->vm;
 		vm->addr = (void *)(md->virtual & PAGE_MASK);
@@ -1314,7 +1315,7 @@ static void __init devicemaps_init(const struct machine_desc *mdesc)
 	map.virtual = MODULES_VADDR;
 	map.length = ((unsigned long)_etext - map.virtual + ~SECTION_MASK) & SECTION_MASK;
 	map.type = MT_ROM;
-	create_mapping(&map);
+	create_mapping(&map, "xip_kernel");
 #endif
 
 	/*
@@ -1325,14 +1326,14 @@ static void __init devicemaps_init(const struct machine_desc *mdesc)
 	map.virtual = FLUSH_BASE;
 	map.length = SZ_1M;
 	map.type = MT_CACHECLEAN;
-	create_mapping(&map);
+	create_mapping(&map, "flushbase");
 #endif
 #ifdef FLUSH_BASE_MINICACHE
 	map.pfn = __phys_to_pfn(FLUSH_BASE_PHYS + SZ_1M);
 	map.virtual = FLUSH_BASE_MINICACHE;
 	map.length = SZ_1M;
 	map.type = MT_MINICLEAN;
-	create_mapping(&map);
+	create_mapping(&map, "flushbase_minicache");
 #endif
 
 	/*
@@ -1348,13 +1349,13 @@ static void __init devicemaps_init(const struct machine_desc *mdesc)
 #else
 	map.type = MT_LOW_VECTORS;
 #endif
-	create_mapping(&map);
+	create_mapping(&map, "high_vector");
 
 	if (!vectors_high()) {
 		map.virtual = 0;
 		map.length = PAGE_SIZE * 2;
 		map.type = MT_LOW_VECTORS;
-		create_mapping(&map);
+		create_mapping(&map, "low_vector");
 	}
 
 	/* Now create a kernel read-only mapping */
@@ -1362,7 +1363,7 @@ static void __init devicemaps_init(const struct machine_desc *mdesc)
 	map.virtual = 0xffff0000 + PAGE_SIZE;
 	map.length = PAGE_SIZE;
 	map.type = MT_LOW_VECTORS;
-	create_mapping(&map);
+	create_mapping(&map, "kernel_readonly");
 
 	/*
 	 * Ask the machine support to map in the statically mapped devices.
@@ -1386,7 +1387,7 @@ static void __init devicemaps_init(const struct machine_desc *mdesc)
 			map.virtual = CONFIG_ARM_USER_ACCESSIBLE_TIMER_BASE;
 			map.length = PAGE_SIZE;
 			map.type = MT_DEVICE_USER_ACCESSIBLE;
-			create_mapping(&map);
+			create_mapping(&map, "timer_page");
 		}
 	}
 
@@ -1533,28 +1534,28 @@ static void __init map_lowmem(void)
 			map.length = SECTION_SIZE;
 			map.type = MT_MEMORY;
 
-			create_mapping(&map);
+			create_mapping(&map, "text_map");
 
 			map.pfn = __phys_to_pfn(start + SECTION_SIZE);
 			map.virtual = __phys_to_virt(start + SECTION_SIZE);
 			map.length = (unsigned long)RX_AREA_END - map.virtual;
 			map.type = MT_MEMORY_RX;
 
-			create_mapping(&map);
+			create_mapping(&map, "rx_mem");
 
 			map.pfn = __phys_to_pfn(__pa(__start_rodata));
 			map.virtual = (unsigned long)__start_rodata;
 			map.length = __init_begin - __start_rodata;
 			map.type = MT_MEMORY_R;
 
-			create_mapping(&map);
+			create_mapping(&map, "ro_data");
 
 			map.pfn = __phys_to_pfn(__pa(__init_begin));
 			map.virtual = (unsigned long)__init_begin;
 			map.length = (char *)__arch_info_begin - __init_begin;
 			map.type = MT_MEMORY_RX;
 
-			create_mapping(&map);
+			create_mapping(&map, "arch_info");
 
 			map.pfn = __phys_to_pfn(__pa(__init_data));
 			map.virtual = (unsigned long)__init_data;
@@ -1569,7 +1570,7 @@ static void __init map_lowmem(void)
 		map.type = MT_MEMORY;
 #endif
 
-		create_mapping(&map);
+		create_mapping(&map, "rw_init");
 	}
 }
 

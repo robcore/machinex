@@ -106,6 +106,6 @@ void __init early_ioremap_shutdown(void)
 		map.type = MT_DEVICE;
 		map.length = PAGE_SIZE;
 
-		create_mapping(&map);
+		create_mapping(&map, "early_io_remap");
 	}
 }
