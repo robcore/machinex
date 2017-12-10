@@ -4029,8 +4029,10 @@ static struct platform_device *common_devices[] __initdata = {
 	&msm_8960_q6_lpass,
 	&msm_pil_vidc,
 	&msm_gss,
+#if 0
 	&apq8064_dcvs_device,
 	&apq8064_msm_gov_device,
+#endif
 	&apq8064_device_cache_erp,
 	&msm8960_device_ebi1_ch0_erp,
 	&msm8960_device_ebi1_ch1_erp,
@@ -4065,7 +4067,9 @@ static struct platform_device *common_devices[] __initdata = {
 #ifdef CONFIG_LEDS_AN30259A
 	&leds_i2c_device,
 #endif
+#if 0
 	&apq8064_msm_mpd_device,
+#endif
 #ifdef CONFIG_BCM2079X_NFC_I2C
 #ifdef NFC_SW_I2C
 	&bcm2079x_i2c_gpio_device,
