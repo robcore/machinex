@@ -6941,9 +6941,7 @@ msmsdcc_runtime_suspend(struct device *dev)
 
 	if (host->pdev->id == 3) {
 		host->mmc->pm_flags |= MMC_PM_KEEP_POWER;
-		printk(KERN_INFO "%s: Enter WIFI suspend\n", __func__);
 	}
-	pr_debug("%s: %s: start\n", mmc_hostname(mmc), __func__);
 	if (mmc) {
 		host->sdcc_suspending = 1;
 		mmc->suspend_task = current;
@@ -6988,10 +6986,11 @@ msmsdcc_runtime_suspend(struct device *dev)
 			}
 		}
 busy:
+	}
+	if (mmc) {
 		host->sdcc_suspending = 0;
 		mmc->suspend_task = NULL;
-		if ((rc > 0) && wake_lock_active(&host->sdio_suspend_wlock))
-			wake_unlock(&host->sdio_suspend_wlock);
+		wake_unlock(&host->sdio_suspend_wlock);
 	}
 	pr_debug("%s: %s: ends with err=%d\n", mmc_hostname(mmc), __func__, rc);
 out:
