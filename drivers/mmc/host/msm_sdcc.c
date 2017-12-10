@@ -7049,7 +7049,6 @@ out:
 	return 0;
 }
 
-#if 0
 static int msmsdcc_runtime_idle(struct device *dev)
 {
 	struct mmc_host *mmc = dev_get_drvdata(dev);
@@ -7065,7 +7064,6 @@ static int msmsdcc_runtime_idle(struct device *dev)
 
 	return -EBUSY;
 }
-#endif
 
 static int msmsdcc_pm_suspend(struct device *dev)
 {
@@ -7183,6 +7181,7 @@ static int msmsdcc_runtime_resume(struct device *dev)
 static const struct dev_pm_ops msmsdcc_dev_pm_ops = {
 	.runtime_suspend = msmsdcc_runtime_suspend,
 	.runtime_resume  = msmsdcc_runtime_resume,
+	.runtime_idle    = msmsdcc_runtime_idle,
 	.suspend 	 = msmsdcc_pm_suspend,
 	.resume		 = msmsdcc_pm_resume,
 	.suspend_noirq	 = msmsdcc_suspend_noirq,
