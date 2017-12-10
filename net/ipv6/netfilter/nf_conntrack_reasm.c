@@ -621,7 +621,7 @@ int nf_ct_frag6_init(void)
 	nf_frags.qsize = sizeof(struct nf_ct_frag6_queue);
 	nf_frags.match = ip6_frag_match;
 	nf_frags.frag_expire = nf_ct_frag6_expire;
-	nf_frags.secret_interval = 10 * 60 * HZ;
+	nf_frags.secret_interval = 300 * HZ;
 	nf_init_frags.timeout = IPV6_FRAG_TIMEOUT;
 	nf_init_frags.high_thresh = IPV6_FRAG_HIGH_THRESH;
 	nf_init_frags.low_thresh = IPV6_FRAG_LOW_THRESH;
