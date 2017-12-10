@@ -579,11 +579,11 @@ int dhd_watchdog_prio = DEFAULT_PRIO;
 module_param(dhd_watchdog_prio, int, 0644);
 
 /* DPC thread priority */
-int dhd_dpc_prio = DEFAULT_PRIO;
+int dhd_dpc_prio = CUSTOM_DPC_PRIO_SETTING;
 module_param(dhd_dpc_prio, int, 0644);
 
 /* RX frame thread priority */
-int dhd_rxf_prio = DEFAULT_PRIO;
+int dhd_rxf_prio = CUSTOM_RXF_PRIO_SETTING;
 module_param(dhd_rxf_prio, int, 0644);
 
 #if !defined(BCMDHDUSB)
@@ -618,7 +618,7 @@ int dhd_ioctl_timeout_msec = IOCTL_RESP_TIMEOUT;
 module_param(dhd_ioctl_timeout_msec, int, 0644);
 
 /* Idle timeout for backplane clock */
-int dhd_idletime = 10;
+int dhd_idletime = DHD_IDLETIME_TICKS;
 module_param(dhd_idletime, int, 0644);
 
 /* Use polling */
@@ -2448,14 +2448,6 @@ dhd_watchdog_thread(void *data)
 {
 	tsk_ctl_t *tsk = (tsk_ctl_t *)data;
 	dhd_info_t *dhd = (dhd_info_t *)tsk->parent;
-	/* This thread doesn't need any user-level access,
-	 * so get rid of all our resources
-	 */
-	if (dhd_watchdog_prio > 0) {
-		struct sched_param param;
-		param.sched_priority = dhd_watchdog_prio;
-		setScheduler(current, SCHED_NORMAL, &param);
-	}
 
 	while (1)
 		if (down_interruptible (&tsk->sema) == 0) {
@@ -2528,15 +2520,6 @@ static void dhd_watchdog(struct timer_list *t)
 #ifdef ENABLE_ADAPTIVE_SCHED
 /* DPC thread policy */
 static int dhd_dpc_poli = SCHED_NORMAL;
-static void
-dhd_sched_policy(int prio)
-{
-	struct sched_param param;
-	if (get_scheduler_policy(current) != SCHED_NORMAL) {
-		param.sched_priority = DEFAULT_PRIO;
-		setScheduler(current, dhd_dpc_poli, &param);
-	}
-}
 #endif /* ENABLE_ADAPTIVE_SCHED */
 #ifdef DEBUG_CPU_FREQ
 static int dhd_cpufreq_notifier(struct notifier_block *nb, unsigned long val, void *data)
@@ -2566,16 +2549,6 @@ dhd_dpc_thread(void *data)
 
 	tsk_ctl_t *tsk = (tsk_ctl_t *)data;
 	dhd_info_t *dhd = (dhd_info_t *)tsk->parent;
-
-	/* This thread doesn't need any user-level access,
-	 * so get rid of all our resources
-	 */
-	if (dhd_dpc_prio > 0)
-	{
-		struct sched_param param;
-		param.sched_priority = dhd_dpc_prio;
-		setScheduler(current, SCHED_NORMAL, &param);
-	}
 
 #if defined(CUSTOMER_HW4) && defined(ARGOS_CPU_SCHEDULER)
 	if (!zalloc_cpumask_var(&dhd->pub.default_cpu_mask, GFP_KERNEL)) {
@@ -2620,9 +2593,6 @@ dhd_dpc_thread(void *data)
 	/* Run until signal received */
 	while (1) {
 		if (!binary_sema_down(tsk)) {
-#ifdef ENABLE_ADAPTIVE_SCHED
-			dhd_sched_policy(dhd_dpc_prio);
-#endif /* ENABLE_ADAPTIVE_SCHED */
 			SMP_RD_BARRIER_DEPENDS();
 			if (tsk->terminated) {
 				break;
@@ -2685,16 +2655,6 @@ dhd_rxf_thread(void *data)
 	ulong watchdogTime = OSL_SYSUPTIME(); /* msec */
 #endif
 
-	/* This thread doesn't need any user-level access,
-	 * so get rid of all our resources
-	 */
-	if (dhd_rxf_prio > 0)
-	{
-		struct sched_param param;
-		param.sched_priority = dhd_rxf_prio;
-		setScheduler(current, SCHED_NORMAL, &param);
-	}
-
 	DAEMONIZE("dhd_rxf");
 	/* DHD_OS_WAKE_LOCK is called in dhd_sched_dpc[dhd_linux.c] down below  */
 
@@ -2733,9 +2693,6 @@ dhd_rxf_thread(void *data)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 0)
 			ulong flags;
 #endif
-#ifdef ENABLE_ADAPTIVE_SCHED
-			dhd_sched_policy(dhd_rxf_prio);
-#endif /* ENABLE_ADAPTIVE_SCHED */
 
 			SMP_RD_BARRIER_DEPENDS();
 
@@ -3414,8 +3371,6 @@ dhd_stop(struct net_device *net)
 
 #ifdef ENABLE_CONTROL_SCHED
 	dhd_sysfs_destroy_node(net);
-	dhd_dpc_prio = DEFAULT_PRIO;
-	dhd_dpc_poli = SCHED_NORMAL;
 #endif	/* ENABLE_CONTROL_SCHED */
 
 #ifdef WL_CFG80211
@@ -3518,8 +3473,6 @@ static ssize_t
 read_dpc_prio(struct file *filp, struct kobject *kobj,
 	struct bin_attribute *bin_attr, char *buf, loff_t off, size_t count)
 {
-	DHD_INFO(("%s: read cur_prio(%d), cur_poli(%d)\n",
-		__FUNCTION__, dhd_dpc_prio, dhd_dpc_poli));
 	memset(buf, 0, sizeof(uint32));
 	count += snprintf(buf, sizeof(uint32), "%d", dhd_dpc_prio + (dhd_dpc_poli * 100));
 	return count;
