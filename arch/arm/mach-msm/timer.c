@@ -35,6 +35,7 @@
 #include <mach/msm_iomap.h>
 #include <mach/irqs.h>
 #include <mach/socinfo.h>
+#include <linux/suspend.h>
 
 #if defined(CONFIG_MSM_SMD)
 #include "smd_private.h"
@@ -81,11 +82,11 @@ enum {
  */
 static int global_timer_offset;
 static int msm_global_timer;
-#if 0
+
 static struct timespec persistent_ts;
 static u64 persistent_ns;
 static u64 last_persistent_ns;
-#endif
+
 #define NR_TIMERS ARRAY_SIZE(msm_clocks)
 
 unsigned int gpt_hz = 32768;
@@ -850,12 +851,33 @@ static int msm_local_timer_dying_cpu(unsigned int cpu)
 	disable_percpu_irq(evt->irq);
 	return 0;
 }
-#if 0
+
+static bool timer_suspended;
+static int msm_timer_sleepytime(struct notifier_block *b, 
+					unsigned long event, void *p)
+{
+	switch (event) {
+	case PM_SUSPEND_PREPARE:
+		timer_suspended = true;
+		break;
+	case PM_POST_SUSPEND:
+		timer_suspended = false;
+		break;
+	}
+	return NOTIFY_DONE;
+}
+
+static struct notifier_block msm_timer_notifier = {
+	.notifier_call = msm_timer_sleepytime,
+};
 void read_persistent_clock(struct timespec *ts)
 {
 	int64_t delta;
 	int64_t sclk_max;
 	struct timespec *tsp = &persistent_ts;
+
+	if (!tsp || timer_suspended)
+		return;
 
 	last_persistent_ns = persistent_ns;
 	persistent_ns = msm_timer_get_sclk_time(&sclk_max);
@@ -868,7 +890,6 @@ void read_persistent_clock(struct timespec *ts)
 	timespec_add_ns(tsp, delta);
 	*ts = *tsp;
 }
-#endif
 
 static void broadcast_timer_setup(void)
 {
@@ -1034,4 +1055,5 @@ void __init msm_timer_init(void)
 	msm_delay_timer.freq = dgt->freq;
 	msm_delay_timer.read_current_timer = &msm_read_current_timer;
 	register_current_timer_delay(&msm_delay_timer);
+	register_pm_notifier(&msm_timer_notifier);
 }
