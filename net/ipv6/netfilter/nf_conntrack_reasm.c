@@ -142,9 +142,12 @@ static void nf_ct_frag6_evictor(void)
 
 static void nf_ct_frag6_expire(struct timer_list *t)
 {
+	struct inet_frag_queue *frag = from_timer(frag, t, timer);
  	struct nf_ct_frag6_queue *fq;
-	fq = container_of((struct inet_frag_queue *)t,
+	fq = container_of(frag,
 			struct nf_ct_frag6_queue, q);
+	if (!fq)
+		return;
 
 	spin_lock(&fq->q.lock);
 
@@ -172,7 +175,7 @@ fq_find(__be32 id, u32 user, struct in6_addr *src, struct in6_addr *dst)
 	arg.src = src;
 	arg.dst = dst;
 
-	read_lock_bh(&nf_frags.lock);
+	local_bh_disable();
 	hash = inet6_hash_frag(id, src, dst, nf_frags.rnd);
 
 	q = inet_frag_find(&nf_init_frags, &nf_frags, &arg, hash);
