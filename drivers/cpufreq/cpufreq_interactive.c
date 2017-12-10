@@ -145,7 +145,7 @@ static spinlock_t speedchange_cpumask_lock;
 
 unsigned int iactive_current_load[NR_CPUS];
 unsigned int iactive_raw_loadadjfreq[NR_CPUS];
-unsigned int full_speed_load = 95;
+unsigned int full_speed_load = 90;
 #define hlimit_hispeed(cpu) check_cpufreq_hardlimit(cpu, iactive_hispeed_freq[cpu]) 
 /* Target load. Lower values result in higher CPU speeds. */
 #define DEFAULT_TARGET_LOAD 95
