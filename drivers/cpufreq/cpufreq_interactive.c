@@ -466,7 +466,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	}
 
 	if (icpu->target_freq == new_freq &&
-	    icpu->target_freq == policy->cur)
+	    new_freq == policy->cur)
 		goto exit;
 
 	icpu->target_freq = new_freq;
