@@ -52,6 +52,7 @@ __ATTR(_name, 0644, show_##_name, store_##_name)
 #define DEFAULT_SAMPLING_RATE (20 * USEC_PER_MSEC)
 #define DEFAULT_ABOVE_HISPEED_DELAY DEFAULT_SAMPLING_RATE
 #define DEFAULT_MIN_SAMPLE_TIME (40 * USEC_PER_MSEC)
+#define DEFAULT_TIMER_SLACK (10 * USEC_PER_MSEC)
 
 #define DEFAULT_SCRNOFF_SAMPLING_RATE (20 * USEC_PER_MSEC)
 #define DEFAULT_SCRNOFF_ABOVE_HISPEED_DELAY DEFAULT_SAMPLING_RATE
@@ -98,6 +99,12 @@ struct intelliactive_tunables {
 	/* End time of boost pulse in ktime converted to usecs */
 	u64 boostpulse_endtime;
 	bool boosted;
+	/*
+	 * Max additional time to wait in idle, beyond sampling_rate, at speeds
+	 * above minimum before wakeup to reduce speed, or -1 if unnecessary.
+	 */
+	unsigned long timer_slack_delay;
+	unsigned long timer_slack;
 };
 
 /* Separate instance required for each 'struct cpufreq_policy' */
@@ -119,6 +126,8 @@ struct intelliactive_cpu {
 	bool timer_is_busy;
 
 	struct rw_semaphore enable_sem;
+	struct timer_list slack_timer;
+
 	spinlock_t load_lock; /* protects the next 4 fields */
 	u64 time_in_idle;
 	u64 time_in_idle_timestamp;
@@ -162,7 +171,65 @@ static unsigned int default_scrnoff_above_hispeed_delay[] = {
 
 static DEFINE_MUTEX(tunables_lock);
 static DEFINE_MUTEX(ilock);
-static DEFINE_MUTEX(screenofflock);
+static inline void update_slack_delay(struct intelliactive_tunables *tunables)
+{
+	tunables->timer_slack_delay = usecs_to_jiffies(tunables->timer_slack +
+						       tunables->sampling_rate);
+}
+
+static bool timer_slack_required(struct intelliactive_cpu *icpu)
+{
+	struct intelliactive_policy *ipolicy = icpu->ipolicy;
+	struct intelliactive_tunables *tunables = ipolicy->tunables;
+
+	if (icpu->timer_is_busy)
+		return false;
+
+	if (tunables->timer_slack < 0)
+		return false;
+
+	if (icpu->target_freq > ipolicy->policy->min)
+		return true;
+
+	return false;
+}
+
+static void gov_slack_timer_start(struct intelliactive_cpu *icpu, unsigned int cpu)
+{
+	struct intelliactive_tunables *tunables = icpu->ipolicy->tunables;
+
+	icpu->slack_timer.expires = jiffies + tunables->timer_slack_delay;
+	add_timer_on(&icpu->slack_timer, cpu);
+}
+
+static void gov_slack_timer_modify(struct intelliactive_cpu *icpu)
+{
+	struct intelliactive_tunables *tunables = icpu->ipolicy->tunables;
+
+	mod_timer(&icpu->slack_timer, jiffies + tunables->timer_slack_delay);
+}
+
+static void slack_timer_resched(struct intelliactive_cpu *icpu, unsigned int cpu)
+{
+	struct intelliactive_tunables *tunables = icpu->ipolicy->tunables;
+	unsigned long flags;
+
+	spin_lock_irqsave(&icpu->load_lock, flags);
+
+	icpu->time_in_idle = get_cpu_idle_time(cpu,
+					       &icpu->time_in_idle_timestamp);
+	icpu->cputime_speedadj = 0;
+	icpu->cputime_speedadj_timestamp = icpu->time_in_idle_timestamp;
+
+	if (timer_slack_required(icpu)) {
+		if (!timer_pending(&icpu->slack_timer))
+			gov_slack_timer_start(icpu, cpu);
+		else
+			gov_slack_timer_modify(icpu);
+	}
+
+	spin_unlock_irqrestore(&icpu->load_lock, flags);
+}
 
 static unsigned int
 freq_to_above_hispeed_delay(struct intelliactive_tunables *tunables,
@@ -458,6 +525,7 @@ exit:
 static void cpufreq_intelliactive_update(struct intelliactive_cpu *icpu)
 {
 	eval_target_freq(icpu);
+	slack_timer_resched(icpu, smp_processor_id());
 }
 
 static void cpufreq_intelliactive_idle_end(void)
@@ -881,6 +949,23 @@ static ssize_t store_timer_rate(struct gov_attr_set *attr_set, const char *buf,
 	return count;
 }
 
+static ssize_t store_timer_slack(struct gov_attr_set *attr_set, const char *buf,
+				 size_t count)
+{
+	struct intelliactive_tunables *tunables = to_tunables(attr_set);
+	unsigned long val;
+	int ret;
+
+	ret = kstrtol(buf, 10, &val);
+	if (ret < 0)
+		return ret;
+
+	tunables->timer_slack = val;
+	update_slack_delay(tunables);
+
+	return count;
+}
+
 static ssize_t store_boost(struct gov_attr_set *attr_set, const char *buf,
 			   size_t count)
 {
@@ -942,6 +1027,7 @@ static ssize_t store_boostpulse_duration(struct gov_attr_set *attr_set,
 show_one(hispeed_freq, "%u");
 show_one(go_hispeed_load, "%lu");
 show_one(min_sample_time, "%lu");
+show_one(timer_slack, "%lu");
 show_one(boost, "%u");
 show_one(boostpulse_duration, "%u");
 
@@ -951,6 +1037,7 @@ gov_attr_rw(hispeed_freq);
 gov_attr_rw(go_hispeed_load);
 gov_attr_rw(min_sample_time);
 gov_attr_rw(timer_rate);
+gov_attr_rw(timer_slack);
 gov_attr_rw(boost);
 gov_attr_wo(boostpulse);
 gov_attr_rw(boostpulse_duration);
@@ -962,6 +1049,7 @@ static struct attribute *intelliactive_attributes[] = {
 	&go_hispeed_load.attr,
 	&min_sample_time.attr,
 	&timer_rate.attr,
+	&timer_slack.attr,
 	&boost.attr,
 	&boostpulse.attr,
 	&boostpulse_duration.attr,
@@ -1069,6 +1157,9 @@ static void icpu_cancel_work(struct intelliactive_cpu *icpu)
 {
 	irq_work_sync(&icpu->irq_work);
 	icpu->work_in_progress = false;
+	icpu->timer_is_busy = true;
+	WARN_ON_ONCE(del_timer(&icpu->slack_timer) < 0);
+	icpu->timer_is_busy = false;
 }
 
 static struct intelliactive_policy *
@@ -1182,25 +1273,13 @@ int cpufreq_intelliactive_init(struct cpufreq_policy *policy)
 	tunables->target_loads = &iactive_target_load[policy->cpu];
 	tunables->ntarget_loads = ARRAY_SIZE(default_target_loads);
 	tunables->boostpulse_duration = DEFAULT_MIN_SAMPLE_TIME;
-#if 0
-	mutex_lock(&screenofflock);
-	if (is_display_on()) {
-#endif
-		tunables->min_sample_time = DEFAULT_MIN_SAMPLE_TIME;
-		tunables->sampling_rate = DEFAULT_SAMPLING_RATE;
-		tunables->above_hispeed_delay = default_above_hispeed_delay;
-		tunables->nabove_hispeed_delay =
-		ARRAY_SIZE(default_above_hispeed_delay);
-#if 0
-	} else {
-		tunables->min_sample_time = DEFAULT_SCRNOFF_MIN_SAMPLE_TIME;
-		tunables->sampling_rate = DEFAULT_SCRNOFF_SAMPLING_RATE;
-		tunables->above_hispeed_delay = default_scrnoff_above_hispeed_delay;
-		tunables->nabove_hispeed_delay =
-		ARRAY_SIZE(default_scrnoff_above_hispeed_delay);
-	}
-	mutex_unlock(&screenofflock);
-#endif
+	tunables->min_sample_time = DEFAULT_MIN_SAMPLE_TIME;
+	tunables->sampling_rate = DEFAULT_SAMPLING_RATE;
+	tunables->above_hispeed_delay = default_above_hispeed_delay;
+	tunables->nabove_hispeed_delay =
+	ARRAY_SIZE(default_above_hispeed_delay);
+	tunables->timer_slack = DEFAULT_TIMER_SLACK;
+	update_slack_delay(tunables);
 
 	spin_lock_init(&tunables->target_loads_lock);
 	spin_lock_init(&tunables->above_hispeed_delay_lock);
@@ -1286,6 +1365,8 @@ int cpufreq_intelliactive_start(struct cpufreq_policy *policy)
 		down_write(&icpu->enable_sem);
 		icpu->ipolicy = ipolicy;
 		up_write(&icpu->enable_sem);
+
+		slack_timer_resched(icpu, cpu);
 	}
 
 	gov_set_update_util(ipolicy);
@@ -1342,6 +1423,17 @@ static struct intelliactive_governor intelliactive_gov = {
 	}
 };
 
+static void cpufreq_intelliactive_nop_timer(struct timer_list *unused)
+{
+	/*
+	 * The purpose of slack-timer is to wake up the CPU from IDLE, in order
+	 * to decrease its frequency if it is not set to minimum already.
+	 *
+	 * This is important for platforms where CPU with higher frequencies
+	 * consume higher power even at IDLE.
+	 */
+}
+
 static int __init cpufreq_intelliactive_gov_init(void)
 {
 	struct intelliactive_cpu *icpu;
@@ -1354,6 +1446,10 @@ static int __init cpufreq_intelliactive_gov_init(void)
 		spin_lock_init(&icpu->load_lock);
 		spin_lock_init(&icpu->target_freq_lock);
 		init_rwsem(&icpu->enable_sem);
+
+		/* Initialize per-cpu slack-timer */
+		timer_setup(&icpu->slack_timer, cpufreq_intelliactive_nop_timer,
+			    TIMER_PINNED);
 	}
 
 	spin_lock_init(&speedchange_cpumask_lock);
