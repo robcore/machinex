@@ -417,8 +417,8 @@ static void eval_target_freq(struct intelliactive_cpu *icpu)
 	if (cpu_load >= intelli_full_speed_load) {
 		if (policy->cur < policy->max)
 			new_freq = policy->max;
-	} else if (cpu_load >= iactive_go_hispeed_load[cpu] && 
-			cpu_load < intelli_full_speed_load || tunables->boosted) {
+	} else if ((cpu_load >= iactive_go_hispeed_load[cpu] && 
+			cpu_load < intelli_full_speed_load) || tunables->boosted) {
 		if (policy->cur < iactive_hispeed_freq[policy->cpu]) {
 			if (two_phase_freq[policy->cpu] < policy->cur)
 				phase = 1;
