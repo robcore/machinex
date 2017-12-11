@@ -232,8 +232,8 @@ static unsigned int choose_freq(struct intelliactive_cpu *icpu,
 
 	do {
 		prevfreq = freq;
-		tl = freq_to_targetload(icpu->ipolicy->tunables, freq);
-		//tl = iactive_target_load[policy->cpu];
+		//tl = freq_to_targetload(icpu->ipolicy->tunables, freq);
+		tl = iactive_target_load[policy->cpu];
 		/*
 		 * Find the lowest frequency where the computed load is less
 		 * than or equal to the target load.
