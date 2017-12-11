@@ -280,7 +280,7 @@ static unsigned int freq_to_targetload(struct interactive_tunables *tunables,
 
 static inline unsigned int get_load_over_target(unsigned int tget)
 {
-	if (tget < 100 || tget > 100000)
+	if (tget < 100 || tget >= 100000)
 		return tget;
 	else if (tget >= 10000 && tget < 100000)
 		tget *= 10;
