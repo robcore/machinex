@@ -413,8 +413,8 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 		iactive_raw_loadadjfreq[cpu] = loadadjfreq;
 
 	cpu_load = DIV_ROUND_UP(loadadjfreq, policy->cur);
+	iactive_max_load[cpu] = max(iactive_max_load[cpu], cpu_load);
 	if (iactive_load_debug)
-		iactive_max_load[cpu] = max(iactive_current_load[cpu], cpu_load);
 		iactive_current_load[cpu] = cpu_load;
 	if (cpu_load >= full_speed_load) {
 		if (policy->cur < policy->max)
