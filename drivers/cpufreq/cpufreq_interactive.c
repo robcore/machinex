@@ -1019,13 +1019,16 @@ int cpufreq_interactive_init(struct cpufreq_policy *policy)
 	tunables->go_hispeed_load = iactive_go_hispeed_load[policy->cpu];
 	tunables->target_loads = &iactive_target_load[policy->cpu];
 	tunables->ntarget_loads = ARRAY_SIZE(default_target_loads);
+#if 0
 	mutex_lock(&screenofflock);
 	if (is_display_on()) {
+#endif
 		tunables->min_sample_time = DEFAULT_MIN_SAMPLE_TIME;
 		tunables->sampling_rate = DEFAULT_SAMPLING_RATE;
 		tunables->above_hispeed_delay = default_above_hispeed_delay;
 		tunables->nabove_hispeed_delay =
 		ARRAY_SIZE(default_above_hispeed_delay);
+#if 0
 	} else {
 		tunables->min_sample_time = DEFAULT_SCRNOFF_MIN_SAMPLE_TIME;
 		tunables->sampling_rate = DEFAULT_SCRNOFF_SAMPLING_RATE;
@@ -1034,6 +1037,7 @@ int cpufreq_interactive_init(struct cpufreq_policy *policy)
 		ARRAY_SIZE(default_scrnoff_above_hispeed_delay);
 	}
 	mutex_unlock(&screenofflock);
+#endif
 
 	spin_lock_init(&tunables->target_loads_lock);
 	spin_lock_init(&tunables->above_hispeed_delay_lock);
