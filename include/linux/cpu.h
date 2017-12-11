@@ -241,6 +241,10 @@ static inline void enable_nonboot_cpus(void) {}
 #define IDLE_START 1
 #define IDLE_END 2
 
+void idle_notifier_register(struct notifier_block *n);
+void idle_notifier_unregister(struct notifier_block *n);
+void idle_notifier_call_chain(unsigned long val);
+
 void cpu_startup_entry(enum cpuhp_state state);
 void cpu_idle(void);
 void cpu_idle_poll_ctrl(bool enable);

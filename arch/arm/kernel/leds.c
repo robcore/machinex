@@ -12,7 +12,6 @@
 #include <linux/device.h>
 #include <linux/notifier.h>
 #include <linux/cpu.h>
-#include <linux/cpu_pm.h>
 #include <linux/syscore_ops.h>
 #include <linux/string.h>
 
@@ -110,10 +109,10 @@ static int leds_idle_notifier(struct notifier_block *nb, unsigned long val,
                                 void *data)
 {
 	switch (val) {
-	case CPU_PM_ENTER:
+	case IDLE_START:
 		leds_event(led_idle_start);
 		break;
-	case CPU_PM_EXIT:
+	case IDLE_END:
 		leds_event(led_idle_end);
 		break;
 	}
@@ -135,7 +134,7 @@ static int __init leds_init(void)
 		ret = device_create_file(&leds_device, &dev_attr_event);
 	if (ret == 0) {
 		register_syscore_ops(&leds_syscore_ops);
-		cpu_pm_notifier_register(&leds_idle_nb);
+		idle_notifier_register(&leds_idle_nb);
 	}
 
 	return ret;

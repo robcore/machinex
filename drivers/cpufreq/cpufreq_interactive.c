@@ -187,12 +187,8 @@ static void gov_slack_timer_start(struct interactive_cpu *icpu, unsigned int cpu
 {
 	struct interactive_tunables *tunables = icpu->ipolicy->tunables;
 
-	if (!timer_pending(&icpu->slack_timer)) {
-		icpu->slack_timer.expires = jiffies + tunables->timer_slack_delay;
-		add_timer_on(&icpu->slack_timer, cpu);
-	} else {
-		mod_timer(&icpu->slack_timer, jiffies + tunables->timer_slack_delay);
-	}
+	icpu->slack_timer.expires = jiffies + tunables->timer_slack_delay;
+	add_timer_on(&icpu->slack_timer, cpu);
 }
 
 static void gov_slack_timer_modify(struct interactive_cpu *icpu)
@@ -202,8 +198,7 @@ static void gov_slack_timer_modify(struct interactive_cpu *icpu)
 	mod_timer(&icpu->slack_timer, jiffies + tunables->timer_slack_delay);
 }
 
-static void slack_timer_resched(struct interactive_cpu *icpu, unsigned int cpu,
-				bool modify)
+static void slack_timer_resched(struct interactive_cpu *icpu, unsigned int cpu)
 {
 	struct interactive_tunables *tunables = icpu->ipolicy->tunables;
 	unsigned long flags;
@@ -216,10 +211,10 @@ static void slack_timer_resched(struct interactive_cpu *icpu, unsigned int cpu,
 	icpu->cputime_speedadj_timestamp = icpu->time_in_idle_timestamp;
 
 	if (timer_slack_required(icpu)) {
-		if (modify)
-			gov_slack_timer_modify(icpu);
-		else
+		if (!timer_pending(&icpu->slack_timer))
 			gov_slack_timer_start(icpu, cpu);
+		else
+			gov_slack_timer_modify(icpu);
 	}
 
 	spin_unlock_irqrestore(&icpu->load_lock, flags);
@@ -269,16 +264,16 @@ static unsigned int freq_to_targetload(struct interactive_tunables *tunables,
  * target load given the current load.
  */
 
-static unsigned int get_load_over_target(unsigned int tget)
+static inline unsigned int get_load_over_target(unsigned int tget)
 {
-		if (tget >= 10000 && tget < 100000)
-			tget *= 10;
-		else if (tget >= 1000 && tget < 10000)
-			tget *= 100;
-		else if (tget >= 100 && tget < 1000)
-			tget *= 1000;
-		else
-			return tget;
+	if (tget < 100 || tget > 100000)
+		return tget;
+	else if (tget >= 10000 && tget < 100000)
+		tget *= 10;
+	else if (tget >= 1000 && tget < 10000)
+		tget *= 100;
+	else if (tget >= 100 && tget < 1000)
+		tget *= 1000;
 
 	return tget;
 }
@@ -478,7 +473,7 @@ exit:
 static void cpufreq_interactive_update(struct interactive_cpu *icpu)
 {
 	eval_target_freq(icpu);
-	slack_timer_resched(icpu, smp_processor_id(), true);
+	slack_timer_resched(icpu, smp_processor_id());
 }
 
 static void cpufreq_interactive_idle_end(void)
@@ -906,7 +901,7 @@ static struct kobj_type interactive_tunables_ktype = {
 static int cpufreq_interactive_idle_notifier(struct notifier_block *nb,
 					     unsigned long val, void *data)
 {
-	if (val == CPU_PM_EXIT && !interactive_suspended)
+	if (val == IDLE_END)
 		cpufreq_interactive_idle_end();
 
 	return 0;
@@ -1134,8 +1129,8 @@ int cpufreq_interactive_init(struct cpufreq_policy *policy)
 			goto fail;
 		cpufreq_register_notifier(&cpufreq_notifier_block,
 					  CPUFREQ_TRANSITION_NOTIFIER);
+		idle_notifier_register(&cpufreq_interactive_idle_nb);
 		register_pm_notifier(&iactive_pm_notifier);
-		cpu_pm_register_notifier(&cpufreq_interactive_idle_nb);
 	}
 
  out:
@@ -1166,7 +1161,7 @@ void cpufreq_interactive_exit(struct cpufreq_policy *policy)
 	/* Last policy using the governor ? */
 	if (!--interactive_gov.usage_count) {
 		unregister_pm_notifier(&iactive_pm_notifier);
-		cpu_pm_unregister_notifier(&cpufreq_interactive_idle_nb);
+		idle_notifier_unregister(&cpufreq_interactive_idle_nb);
 		cpufreq_unregister_notifier(&cpufreq_notifier_block,
 					    CPUFREQ_TRANSITION_NOTIFIER);
 		interactive_kthread_destroy();
@@ -1200,7 +1195,7 @@ int cpufreq_interactive_start(struct cpufreq_policy *policy)
 		icpu->ipolicy = ipolicy;
 		up_write(&icpu->enable_sem);
 
-		slack_timer_resched(icpu, cpu, false);
+		slack_timer_resched(icpu, cpu);
 	}
 
 	gov_set_update_util(ipolicy);
