@@ -48,6 +48,11 @@ __ATTR(_name, 0200, NULL, store_##_name)
 static struct governor_attr _name =					\
 __ATTR(_name, 0644, show_##_name, store_##_name)
 
+#define DEFAULT_SAMPLING_RATE (20 * USEC_PER_MSEC)
+#define DEFAULT_ABOVE_HISPEED_DELAY DEFAULT_SAMPLING_RATE
+#define DEFAULT_TIMER_SLACK DEFAULT_SAMPLING_RATE
+#define DEFAULT_MIN_SAMPLE_TIME DEFAULT_SAMPLING_RATE
+
 static unsigned int intelliactive_suspended;
 
 /* Separate instance required for each 'intelliactive' directory in sysfs */
@@ -70,7 +75,6 @@ struct intelliactive_tunables {
 	 * The minimum amount of time to spend at a frequency before we can ramp
 	 * down.
 	 */
-#define DEFAULT_MIN_SAMPLE_TIME (40 * USEC_PER_MSEC)
 	unsigned long min_sample_time;
 
 	/* The sample rate of the timer used to increase frequency */
@@ -96,7 +100,6 @@ struct intelliactive_tunables {
 	 * Max additional time to wait in idle, beyond sampling_rate, at speeds
 	 * above minimum before wakeup to reduce speed, or -1 if unnecessary.
 	 */
-#define DEFAULT_TIMER_SLACK (DEFAULT_SAMPLING_RATE)
 	unsigned long timer_slack_delay;
 	unsigned long timer_slack;
 };
@@ -146,12 +149,11 @@ static struct task_struct *speedchange_task;
 static cpumask_t speedchange_cpumask;
 static spinlock_t speedchange_cpumask_lock;
 
+unsigned int full_speed_load = 85;
 /* Target load. Lower values result in higher CPU speeds. */
-#define DEFAULT_TARGET_LOAD 90
+#define DEFAULT_TARGET_LOAD 75
 static unsigned int default_target_loads[] = {DEFAULT_TARGET_LOAD};
 
-#define DEFAULT_SAMPLING_RATE (20 * USEC_PER_MSEC)
-#define DEFAULT_ABOVE_HISPEED_DELAY DEFAULT_SAMPLING_RATE
 static unsigned int default_above_hispeed_delay[] = {
 	DEFAULT_ABOVE_HISPEED_DELAY
 };
@@ -189,12 +191,8 @@ static void gov_slack_timer_start(struct intelliactive_cpu *icpu, unsigned int c
 {
 	struct intelliactive_tunables *tunables = icpu->ipolicy->tunables;
 
-	if (!timer_pending(&icpu->slack_timer)) {
-		icpu->slack_timer.expires = jiffies + tunables->timer_slack_delay;
-		add_timer_on(&icpu->slack_timer, cpu);
-	} else {
-		mod_timer(&icpu->slack_timer, jiffies + tunables->timer_slack_delay);
-	}
+	icpu->slack_timer.expires = jiffies + tunables->timer_slack_delay;
+	add_timer_on(&icpu->slack_timer, cpu);
 }
 
 static void gov_slack_timer_modify(struct intelliactive_cpu *icpu)
@@ -218,10 +216,10 @@ static void slack_timer_resched(struct intelliactive_cpu *icpu, unsigned int cpu
 	icpu->cputime_speedadj_timestamp = icpu->time_in_idle_timestamp;
 
 	if (timer_slack_required(icpu)) {
-		if (modify)
-			gov_slack_timer_modify(icpu);
-		else
+		if (!timer_pending(&icpu->slack_timer))
 			gov_slack_timer_start(icpu, cpu);
+		else
+			gov_slack_timer_modify(icpu);
 	}
 
 	spin_unlock_irqrestore(&icpu->load_lock, flags);
@@ -270,6 +268,21 @@ static unsigned int freq_to_targetload(struct intelliactive_tunables *tunables,
  * choose_freq() will find the minimum frequency that does not exceed its
  * target load given the current load.
  */
+
+static inline unsigned int get_load_over_target(unsigned int tget)
+{
+	if (tget < 100 || tget > 100000)
+		return tget;
+	else if (tget >= 10000 && tget < 100000)
+		tget *= 10;
+	else if (tget >= 1000 && tget < 10000)
+		tget *= 100;
+	else if (tget >= 100 && tget < 1000)
+		tget *= 1000;
+
+	return tget;
+}
+
 static unsigned int choose_freq(struct intelliactive_cpu *icpu,
 				unsigned int loadadjfreq)
 {
@@ -280,19 +293,13 @@ static unsigned int choose_freq(struct intelliactive_cpu *icpu,
 
 	do {
 		prevfreq = freq;
-		//tl = freq_to_targetload(icpu->ipolicy->tunables, freq);
-		tl = iactive_target_load[policy->cpu];
+		tl = freq_to_targetload(icpu->ipolicy->tunables, freq);
+		//tl = iactive_target_load[policy->cpu];
 		/*
 		 * Find the lowest frequency where the computed load is less
 		 * than or equal to the target load.
 		 */
-		load_over_target = DIV_ROUND_CLOSEST(loadadjfreq, tl);
-		if (load_over_target >= 10000 && load_over_target < 100000)
-			load_over_target *= 10;
-		if (load_over_target >= 1000 && load_over_target < 10000)
-			load_over_target *= 100;
-		if (load_over_target >= 100 && load_over_target < 1000)
-			load_over_target *= 1000;
+		load_over_target = get_load_over_target(DIV_ROUND_CLOSEST(loadadjfreq, tl));
 		clamp_val(load_over_target, 0, DEFAULT_HARD_MAX);
 		index = cpufreq_frequency_table_target(policy, load_over_target,
 						       CPUFREQ_RELATION_L);
@@ -353,9 +360,9 @@ static u64 update_load(struct intelliactive_cpu *icpu, unsigned int cpu)
 	struct intelliactive_tunables *tunables = icpu->ipolicy->tunables;
 	u64 now_idle, now, active_time, delta_idle, delta_time;
 
-	now = ktime_to_us(ktime_get());
 	now_idle = get_cpu_idle_time(cpu, &now);
 	delta_idle = (now_idle - icpu->time_in_idle);
+	now = ktime_to_us(ktime_get());
 	delta_time = (now - icpu->time_in_idle_timestamp);
 
 	if (delta_time > delta_idle) {
@@ -593,16 +600,19 @@ static int cpufreq_intelliactive_speedchange_task(void *data)
 again:
 	set_current_state(TASK_INTERRUPTIBLE);
 	if (intelliactive_suspended) {
+		spin_lock_irqsave(&speedchange_cpumask_lock, flags);
+		cpumask_clear(&speedchange_cpumask);
+		spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
 		schedule();
 
 		if (kthread_should_stop())
 			return 0;
 	}
+
 	spin_lock_irqsave(&speedchange_cpumask_lock, flags);
 
 	if (cpumask_empty(&speedchange_cpumask)) {
 		spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
-
 		schedule();
 
 		if (kthread_should_stop())
@@ -1050,7 +1060,7 @@ static struct attribute_group intelliactive_attr_group = {
 static int cpufreq_intelliactive_idle_notifier(struct notifier_block *nb,
 					     unsigned long val, void *data)
 {
-	if (val == CPU_PM_EXIT && !intelliactive_suspended)
+	if (val == IDLE_END)
 		cpufreq_intelliactive_idle_end();
 
 	return 0;
@@ -1254,7 +1264,7 @@ int cpufreq_intelliactive_init(struct cpufreq_policy *policy)
 	tunables->nabove_hispeed_delay =
 		ARRAY_SIZE(default_above_hispeed_delay);
 	tunables->go_hispeed_load = iactive_go_hispeed_load[policy->cpu];
-	tunables->target_loads = default_target_loads;
+	tunables->target_loads = &iactive_target_load[policy->cpu];
 	tunables->ntarget_loads = ARRAY_SIZE(default_target_loads);
 	tunables->min_sample_time = DEFAULT_MIN_SAMPLE_TIME;
 	tunables->boostpulse_duration = DEFAULT_MIN_SAMPLE_TIME;
@@ -1281,8 +1291,8 @@ int cpufreq_intelliactive_init(struct cpufreq_policy *policy)
 			goto fail;
 		cpufreq_register_notifier(&cpufreq_notifier_block,
 					  CPUFREQ_TRANSITION_NOTIFIER);
+		idle_notifier_register(&cpufreq_intelliactive_idle_nb);
 		register_pm_notifier(&iactive_pm_notifier);
-		cpu_pm_register_notifier(&cpufreq_intelliactive_idle_nb);
 	}
 
 out:
@@ -1313,7 +1323,7 @@ void cpufreq_intelliactive_exit(struct cpufreq_policy *policy)
 	/* Last policy using the governor ? */
 	if (!--intelliactive_gov.usage_count) {
 		unregister_pm_notifier(&iactive_pm_notifier);
-		cpu_pm_unregister_notifier(&cpufreq_intelliactive_idle_nb);
+		idle_notifier_unregister(&cpufreq_intelliactive_idle_nb);
 		cpufreq_unregister_notifier(&cpufreq_notifier_block,
 					    CPUFREQ_TRANSITION_NOTIFIER);
 		intelliactive_kthread_destroy();
