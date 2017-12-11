@@ -43,7 +43,6 @@ extern unsigned int iactive_hispeed_freq[NR_CPUS];
 extern unsigned long iactive_go_hispeed_load[NR_CPUS];
 extern unsigned int iactive_target_load[NR_CPUS];
 extern unsigned int iactive_current_load[NR_CPUS];
-extern unsigned int iactive_max_load[NR_CPUS];
 extern unsigned int iactive_choose_freq[NR_CPUS];
 extern unsigned int iactive_load_over_target[NR_CPUS];
 extern unsigned int iactive_raw_loadadjfreq[NR_CPUS];
