@@ -63,7 +63,6 @@ unsigned int iactive_load_debug __read_mostly;
 module_param(iactive_load_debug, uint, 0644);
 unsigned int iactive_choose_freq[NR_CPUS];
 unsigned int iactive_load_over_target[NR_CPUS];
-unsigned int iactive_max_load[NR_CPUS];
 /* Separate instance required for each 'interactive' directory in sysfs */
 struct interactive_tunables {
 	struct gov_attr_set attr_set;
@@ -149,7 +148,7 @@ static spinlock_t speedchange_cpumask_lock;
 
 unsigned int iactive_current_load[NR_CPUS];
 unsigned int iactive_raw_loadadjfreq[NR_CPUS];
-static unsigned int full_speed_load = 105;
+static unsigned int full_speed_load = 125;
 #define hlimit_hispeed(cpu) check_cpufreq_hardlimit(cpu, iactive_hispeed_freq[cpu]) 
 /* Target load. Lower values result in higher CPU speeds. */
 #define DEFAULT_TARGET_LOAD 85
@@ -413,7 +412,6 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 		iactive_raw_loadadjfreq[cpu] = loadadjfreq;
 
 	cpu_load = DIV_ROUND_UP(loadadjfreq, policy->cur);
-	iactive_max_load[cpu] = max(iactive_max_load[cpu], cpu_load);
 	if (iactive_load_debug)
 		iactive_current_load[cpu] = cpu_load;
 	if (cpu_load >= full_speed_load) {
