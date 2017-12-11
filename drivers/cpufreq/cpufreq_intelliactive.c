@@ -149,7 +149,7 @@ static struct task_struct *speedchange_task;
 static cpumask_t speedchange_cpumask;
 static spinlock_t speedchange_cpumask_lock;
 
-unsigned int full_speed_load = 85;
+static unsigned int intelli_full_speed_load = 85;
 /* Target load. Lower values result in higher CPU speeds. */
 #define DEFAULT_TARGET_LOAD 75
 static unsigned int default_target_loads[] = {DEFAULT_TARGET_LOAD};
