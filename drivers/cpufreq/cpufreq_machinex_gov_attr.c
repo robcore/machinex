@@ -73,9 +73,7 @@ static ssize_t iactive_current_load_show(struct device *dev,
 static ssize_t iactive_max_load_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
-	if (iactive_load_debug)
-		return sprintf(buf, "%u\n", iactive_max_load[(dev->id)]);
-	return sprintf(buf, "Disabled\n");
+	return sprintf(buf, "%u\n", iactive_max_load[(dev->id)]);
 }
 
 static ssize_t iactive_choose_freq_show(struct device *dev,
