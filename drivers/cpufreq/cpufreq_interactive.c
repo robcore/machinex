@@ -174,15 +174,12 @@ static inline void update_slack_delay(struct interactive_tunables *tunables)
 						       tunables->sampling_rate);
 }
 
-static unsigned int __read_mostly test_slack_suspend;
-module_param(test_slack_suspend, uint, 0644);
-
 static bool timer_slack_required(struct interactive_cpu *icpu)
 {
 	struct interactive_policy *ipolicy = icpu->ipolicy;
 	struct interactive_tunables *tunables = ipolicy->tunables;
 
-	if (test_slack_suspend && !is_display_on())
+	if (!is_display_on())
 		return false;
 
 	if (icpu->timer_is_busy)
