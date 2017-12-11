@@ -63,6 +63,7 @@ unsigned int iactive_load_debug __read_mostly;
 module_param(iactive_load_debug, uint, 0644);
 unsigned int iactive_choose_freq[NR_CPUS];
 unsigned int iactive_load_over_target[NR_CPUS];
+unsigned int iactive_max_load[NR_CPUS];
 /* Separate instance required for each 'interactive' directory in sysfs */
 struct interactive_tunables {
 	struct gov_attr_set attr_set;
@@ -413,6 +414,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 
 	cpu_load = DIV_ROUND_UP(loadadjfreq, policy->cur);
 	if (iactive_load_debug)
+		iactive_max_load[cpu] = max(iactive_current_load[cpu], cpu_load);
 		iactive_current_load[cpu] = cpu_load;
 	if (cpu_load >= full_speed_load) {
 		if (policy->cur < policy->max)

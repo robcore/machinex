@@ -41,6 +41,7 @@ unsigned int sync_freq[NR_CPUS] = {1026000, 1026000, 1026000, 1026000};
 unsigned int up_threshold_any_cpu_freq[NR_CPUS] = {702000, 702000, 702000, 702000};
 extern unsigned int iactive_load_debug;
 extern unsigned int iactive_current_load[NR_CPUS];
+extern unsigned int iactive_max_load[NR_CPUS];
 extern unsigned int iactive_choose_freq[NR_CPUS];
 extern unsigned int iactive_raw_loadadjfreq[NR_CPUS];
 extern unsigned int iactive_load_over_target[NR_CPUS];
@@ -67,6 +68,13 @@ static ssize_t iactive_current_load_show(struct device *dev,
 {
 	if (iactive_load_debug)
 		return sprintf(buf, "%u\n", iactive_current_load[(dev->id)]);
+	return sprintf(buf, "Disabled\n");
+}
+static ssize_t iactive_max_load_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	if (iactive_load_debug)
+		return sprintf(buf, "%u\n", iactive_max_load[(dev->id)]);
 	return sprintf(buf, "Disabled\n");
 }
 
@@ -152,6 +160,7 @@ DEVICE_ATTR_RW(sync_freq);
 DEVICE_ATTR_RW(up_threshold_any_cpu_freq);
 DEVICE_ATTR_RW(mx_cpufreq_governor);
 DEVICE_ATTR_RO(iactive_current_load);
+DEVICE_ATTR_RO(iactive_max_load);
 DEVICE_ATTR_RO(iactive_choose_freq);
 DEVICE_ATTR_RO(iactive_raw_loadadjfreq);
 DEVICE_ATTR_RO(iactive_load_over_target);
@@ -174,6 +183,7 @@ static struct attribute *mx_cpu_attrs[] = {
 	&dev_attr_up_threshold_any_cpu_freq.attr,
 	&dev_attr_mx_cpufreq_governor.attr,
 	&dev_attr_iactive_current_load.attr,
+	&dev_attr_iactive_max_load.attr,
 	&dev_attr_iactive_choose_freq.attr,
 	&dev_attr_iactive_raw_loadadjfreq.attr,
 	&dev_attr_iactive_load_over_target.attr,
