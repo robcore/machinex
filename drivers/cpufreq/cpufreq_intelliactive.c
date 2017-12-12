@@ -277,7 +277,7 @@ static unsigned int freq_to_targetload(struct intelliactive_tunables *tunables,
 
 static inline unsigned int get_load_over_target(unsigned int tget)
 {
-	if (tget < 100 || tget > 100000)
+	if (tget < 100 || tget >= 100000)
 		return tget;
 	else if (tget >= 10000 && tget < 100000)
 		tget *= 10;
@@ -408,7 +408,7 @@ static void eval_target_freq(struct intelliactive_cpu *icpu)
 		return;
 
 	spin_lock_irqsave(&icpu->target_freq_lock, flags);
-	do_div(cputime_speedadj, delta_time);
+	DIV_ROUND_CLOSEST(cputime_speedadj, delta_time);
 	loadadjfreq = (unsigned int)cputime_speedadj * 100;
 	cpu_load = DIV_ROUND_UP(loadadjfreq, policy->cur);
 	tunables->boosted = tunables->boost ||
