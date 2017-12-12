@@ -965,8 +965,6 @@ void __init msm_timer_init(void)
 		dgt->freq = 6750000;
 	}
 
-	pr_info("Global Timer Val:0x%x", global_timer_offset);
-
 	if (msm_clocks[MSM_CLOCK_GPT].clocksource.rating > DG_TIMER_RATING)
 		msm_global_timer = MSM_CLOCK_GPT;
 	else
@@ -1058,4 +1056,7 @@ void __init msm_timer_init(void)
 		set_user_accessible_timer_flag(true);
 	}
 	register_pm_notifier(&msm_timer_notifier);
+	pr_info("Global Timer Val:0x%x", global_timer_offset);
+	pr_info("GPT Base: %pK\n", msm_clocks[MSM_CLOCK_GPT].regbase);
+	pr_info("DGT Base: %pK\n", msm_clocks[MSM_CLOCK_DGT].regbase);
 }
