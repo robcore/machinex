@@ -965,6 +965,10 @@ void __init msm_timer_init(void)
 		dgt->freq = 6750000;
 	}
 
+	pr_info("MSM Timer0 Base: 0x%x\n", MSM_TMR0_BASE);
+	pr_info("MSM Timer Base: 0x%x\n", MSM_TMR_BASE);
+	pr_info("Global Timer Val:0x%x", global_timer_offset);
+
 	if (msm_clocks[MSM_CLOCK_GPT].clocksource.rating > DG_TIMER_RATING)
 		msm_global_timer = MSM_CLOCK_GPT;
 	else
@@ -1036,6 +1040,17 @@ void __init msm_timer_init(void)
 
 		clockevents_register_device(ce);
 	}
+#ifdef HAVE_ARCH_HAS_CURRENT_TIMER
+	__raw_writel(1,
+	msm_clocks[MSM_CLOCK_DGT].regbase + TIMER_ENABLE);
+#endif
+	msm_delay_timer.freq = dgt->freq;
+	msm_delay_timer.read_current_timer = &msm_read_current_timer;
+	register_current_timer_delay(&msm_delay_timer);
+#ifdef CONFIG_LOCAL_TIMERS
+	broadcast_timer_setup();
+#endif
+	msm_sched_clock_init();
 
 	if (use_user_accessible_timers()) {
 		struct msm_clock *gtclock = &msm_clocks[MSM_CLOCK_GPT];
@@ -1044,16 +1059,5 @@ void __init msm_timer_init(void)
 		setup_user_timer_offset(virt_to_phys(addr)&0xfff);
 		set_user_accessible_timer_flag(true);
 	}
-#ifdef CONFIG_LOCAL_TIMERS
-	broadcast_timer_setup();
-#endif
-	msm_sched_clock_init();
-#ifdef HAVE_ARCH_HAS_CURRENT_TIMER
-	__raw_writel(1,
-	msm_clocks[MSM_CLOCK_DGT].regbase + TIMER_ENABLE);
-#endif
-	msm_delay_timer.freq = dgt->freq;
-	msm_delay_timer.read_current_timer = &msm_read_current_timer;
-	register_current_timer_delay(&msm_delay_timer);
 	register_pm_notifier(&msm_timer_notifier);
 }
