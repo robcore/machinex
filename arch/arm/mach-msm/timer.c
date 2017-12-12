@@ -965,8 +965,6 @@ void __init msm_timer_init(void)
 		dgt->freq = 6750000;
 	}
 
-	pr_info("MSM Timer0 Base: 0x%x\n", MSM_TMR0_BASE);
-	pr_info("MSM Timer Base: 0x%x\n", MSM_TMR_BASE);
 	pr_info("Global Timer Val:0x%x", global_timer_offset);
 
 	if (msm_clocks[MSM_CLOCK_GPT].clocksource.rating > DG_TIMER_RATING)
