@@ -561,6 +561,7 @@ static struct notifier_block msm_therm_nb = {
 #endif
 static int setup_mitigator(void)
 {
+	struct sched_param rtparam = { .sched_priority = MAX_USER_RT_PRIO / 2 };
 	mitigator = kthread_create(mitigation_control,
 						  NULL, "mx_thermal");
 	if (IS_ERR(mitigator)) {
@@ -568,6 +569,7 @@ static int setup_mitigator(void)
 		return -ENOMEM;
 	}
 	kthread_bind(mitigator, 0);
+	sched_setscheduler_nocheck(mitigator, SCHED_FIFO, &rtparam);
 	get_task_struct(mitigator);
 	wake_up_process(mitigator);
 	last_tempcheck = ktime_get();
