@@ -134,6 +134,8 @@ static int sec_bat_set_charge(
 	ktime_t current_time;
 	struct timespec ts;
 
+	if (battery->cable_type == POWER_SUPPLY_TYPE_OTG)
+		return 0;
 	val.intval = battery->status;
 	psy_do_property("sec-charger", set,
 		POWER_SUPPLY_PROP_STATUS, val);
@@ -2809,6 +2811,7 @@ static int sec_battery_probe(struct platform_device *pdev)
 	struct sec_battery_info *battery;
 	int ret = 0;
 	int i;
+	union power_supply_propval value;
 
 	battery = kzalloc(sizeof(*battery), GFP_KERNEL);
 	if (!battery)
@@ -2976,11 +2979,16 @@ static int sec_battery_probe(struct platform_device *pdev)
 		goto err_req_irq;
 	}
 
-	wake_lock(&battery->monitor_wake_lock);
-	queue_work(battery->monitor_wqueue, &battery->monitor_work);
-
 	pdata->initial_check();
 	battery->pdata->check_cable_result_callback(POWER_SUPPLY_TYPE_MAINS);
+
+	psy_do_property("battery", get,
+				POWER_SUPPLY_PROP_ONLINE, value);
+
+	if (value.intval == POWER_SUPPLY_TYPE_BATTERY) {
+		wake_lock(&battery->monitor_wake_lock);
+		queue_work(battery->monitor_wqueue, &battery->monitor_work);
+	}
 #ifdef CONFIG_SAMSUNG_BATTERY_FACTORY
 	/*enable vf ldo to check battery */
 	battery->pdata->check_cable_result_callback(battery->cable_type);
