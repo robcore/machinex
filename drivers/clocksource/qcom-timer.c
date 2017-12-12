@@ -234,7 +234,7 @@ static notrace cycle_t msm_read_timer_count_shift(struct clocksource *cs)
 void __init jf_timer_init(void)
 {
 	struct clocksource *cs = &msm_clocksource;
-	if (msm_timer_map(0xFA000000, 0x24, 0x00001000, 0x0088))
+	if (msm_timer_map(0x0200A000, 0x24, 0x00001000, 0x0088))
 		return;
 	cs->read = msm_read_timer_count_shift;
 	cs->mask = CLOCKSOURCE_MASK((32 - MSM_DGT_SHIFT));
