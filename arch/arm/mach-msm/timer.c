@@ -82,11 +82,11 @@ enum {
  */
 static int global_timer_offset;
 static int msm_global_timer;
-
+#if 0
 static struct timespec persistent_ts;
 static u64 persistent_ns;
 static u64 last_persistent_ns;
-
+#endif
 #define NR_TIMERS ARRAY_SIZE(msm_clocks)
 
 unsigned int gpt_hz = 32768;
@@ -851,7 +851,7 @@ static int msm_local_timer_dying_cpu(unsigned int cpu)
 	disable_percpu_irq(evt->irq);
 	return 0;
 }
-
+#if 0
 static bool timer_suspended;
 static int msm_timer_sleepytime(struct notifier_block *b, 
 					unsigned long event, void *p)
@@ -890,7 +890,7 @@ void read_persistent_clock(struct timespec *ts)
 	timespec_add_ns(tsp, delta);
 	*ts = *tsp;
 }
-
+#endif
 static void broadcast_timer_setup(void)
 {
 	struct clock_event_device *evt;
@@ -1036,6 +1036,12 @@ void __init msm_timer_init(void)
 
 		clockevents_register_device(ce);
 	}
+
+#ifdef CONFIG_LOCAL_TIMERS
+	broadcast_timer_setup();
+#endif
+	msm_sched_clock_init();
+
 #ifdef HAVE_ARCH_HAS_CURRENT_TIMER
 	__raw_writel(1,
 	msm_clocks[MSM_CLOCK_DGT].regbase + TIMER_ENABLE);
@@ -1043,10 +1049,7 @@ void __init msm_timer_init(void)
 	msm_delay_timer.freq = dgt->freq;
 	msm_delay_timer.read_current_timer = &msm_read_current_timer;
 	register_current_timer_delay(&msm_delay_timer);
-#ifdef CONFIG_LOCAL_TIMERS
-	broadcast_timer_setup();
-#endif
-	msm_sched_clock_init();
+
 
 	if (use_user_accessible_timers()) {
 		struct msm_clock *gtclock = &msm_clocks[MSM_CLOCK_GPT];
@@ -1055,7 +1058,7 @@ void __init msm_timer_init(void)
 		setup_user_timer_offset(virt_to_phys(addr)&0xfff);
 		set_user_accessible_timer_flag(true);
 	}
-	register_pm_notifier(&msm_timer_notifier);
+	//register_pm_notifier(&msm_timer_notifier);
 	pr_info("Global Timer Val:0x%x", global_timer_offset);
 	pr_info("GPT Base: %pK\n", msm_clocks[MSM_CLOCK_GPT].regbase);
 	pr_info("DGT Base: %pK\n", msm_clocks[MSM_CLOCK_DGT].regbase);
