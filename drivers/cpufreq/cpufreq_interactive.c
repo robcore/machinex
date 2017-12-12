@@ -403,7 +403,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 		return;
 
 	spin_lock_irqsave(&icpu->target_freq_lock, flags);
-	DIV_ROUND_CLOSEST(cputime_speedadj, delta_time);
+	do_div(cputime_speedadj, delta_time);
 	loadadjfreq = (unsigned int)cputime_speedadj * 100;
 	if (iactive_load_debug)
 		iactive_raw_loadadjfreq[cpu] = loadadjfreq;
