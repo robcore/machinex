@@ -1021,10 +1021,12 @@ void __init msm_timer_init(void)
 		if (res)
 			pr_err("msm_timer_init: request_irq failed for %s\n",
 			       ce->name);
-		else
+		else {
 			enable_percpu_irq(ce->irq,
 					 IRQ_TYPE_EDGE_RISING);
-
+			pr_info("msm_timer_init: request_irq failed for %s\n",
+			       ce->name);
+		}
 		chip = irq_get_chip(clock->irq);
 		if (chip && chip->irq_mask)
 			chip->irq_mask(irq_get_irq_data(clock->irq));
@@ -1035,6 +1037,14 @@ void __init msm_timer_init(void)
 				;
 
 		clockevents_register_device(ce);
+
+		pr_info("MSM Timer: %s irq is %u\n", cs->name, clock->irq);
+		pr_info("MSM Timer: %s base is %pK\n", cs->name, clock->regbase);
+		pr_info("MSM Timer: %s rating is %d\n", cs->name, ce->rating);
+		pr_info("MSM Timer: %s mask is %llu\n", cs->name, cs->mask);
+		pr_info("MSM Timer: %s freq is %u\n", cs->name, clock->freq);
+		pr_info("MSM Timer: %s write_delay is %u\n", cs->name, clock->write_delay);
+		pr_info("MSM Timer: %s shift is %u\n", cs->name, ce->shift);
 	}
 
 #ifdef CONFIG_LOCAL_TIMERS
@@ -1060,6 +1070,4 @@ void __init msm_timer_init(void)
 	}
 	//register_pm_notifier(&msm_timer_notifier);
 	pr_info("Global Timer Val:0x%x", global_timer_offset);
-	pr_info("GPT Base: %pK\n", msm_clocks[MSM_CLOCK_GPT].regbase);
-	pr_info("DGT Base: %pK\n", msm_clocks[MSM_CLOCK_DGT].regbase);
 }
