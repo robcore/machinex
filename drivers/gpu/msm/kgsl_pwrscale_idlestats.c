@@ -191,7 +191,7 @@ static int idlestats_init(struct kgsl_device *device,
 		goto err;
 	for (i = 0; i < num_possible_cpus(); i++) {
 		cpufreq_frequency_table_cpuinfo(&cpu_policy,
-					cpufreq_frequency_get_table(i));
+					cpufreq_frequency_get_table());
 		priv->cpu_info.max_freq[i] = cpu_policy.max / 1000;
 		priv->cpu_info.curr_freq[i] = cpu_policy.max / 1000;
 	}

@@ -949,5 +949,11 @@ int cpufreq_generic_init(struct cpufreq_policy *policy,
 		unsigned int transition_latency);
 extern bool cpufreq_suspended;
 
-struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu);
+struct cpufreq_frequency_table *cpufreq_frequency_get_table(void)
+{
+	struct cpufreq_policy *policy;
+	policy = cpufreq_cpu_get_raw(0);
+	return policy != NULL ? policy->freq_table : NULL;
+}
+EXPORT_SYMBOL_GPL(cpufreq_frequency_get_table);
 #endif /* _LINUX_CPUFREQ_H */
