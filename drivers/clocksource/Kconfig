@@ -32,3 +32,9 @@ config CLKSRC_DBX500_PRCMU_SCHED_CLOCK
 
 config ARM_ARCH_TIMER
 	bool
+
+config UPSTREAM_QCOM_TIMER
+	bool "Upstream Timer"
+	depends on (!DOWNSTREAM_QCOM_TIMER)
+	help
+	  Upstream timer

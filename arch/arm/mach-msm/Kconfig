@@ -2627,6 +2627,12 @@ config MSM_EVENT_TIMER
 		events that require the core to be awake and ready to handle the
 		event.
 
+config DOWNSTREAM_QCOM_TIMER
+	bool "Downstream timer"
+	depends on (!UPSTREAM_QCOM_TIMER)
+	help
+		Downstream Timer
+
 config MSM_NOPM
 	default y if !PM
 	bool

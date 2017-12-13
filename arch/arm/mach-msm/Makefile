@@ -8,9 +8,7 @@ endif
 CFLAGS_scm.o :=$(call as-instr,.arch_extension sec,-DREQUIRES_SEC=1)
 
 obj-y += io.o dma.o memory.o
-ifndef CONFIG_ARM_ARCH_TIMER
-obj-y += timer.o
-endif
+obj-$(CONFIG_DOWNSTREAM_QCOM_TIMER) += timer.o
 obj-y += clock.o clock-voter.o clock-dummy.o
 obj-y += modem_notifier.o subsystem_map.o
 obj-$(CONFIG_DEBUG_FS) += nohlt.o clock-debug.o
