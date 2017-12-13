@@ -1036,10 +1036,11 @@ void __init msm_timer_init(void)
 
 		clockevents_register_device(ce);
 
+		pr_info("MSM Timer: %s physical base is 0x%x\n", cs->name, virt_to_phys(clock->regbase));
+		pr_info("MSM Timer: %s virtual base is 0x%pK\n", cs->name, clock->regbase);
 		pr_info("MSM Timer: %s irq is %u\n", cs->name, clock->irq);
-		pr_info("MSM Timer: %s base is %pK\n", cs->name, clock->regbase);
 		pr_info("MSM Timer: %s rating is %d\n", cs->name, ce->rating);
-		pr_info("MSM Timer: %s mask is %llu\n", cs->name, cs->mask);
+		pr_info("MSM Timer: %s mask is 0x%llx\n", cs->name, cs->mask);
 		pr_info("MSM Timer: %s freq is %u\n", cs->name, clock->freq);
 		pr_info("MSM Timer: %s write_delay is %u\n", cs->name, clock->write_delay);
 		pr_info("MSM Timer: %s shift is %u\n", cs->name, ce->shift);
