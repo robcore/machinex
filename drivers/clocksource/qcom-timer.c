@@ -25,6 +25,7 @@
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
 #include <linux/sched_clock.h>
+#include <asm/user_accessible_timer.h>
 
 #include <asm/delay.h>
 
@@ -164,6 +165,7 @@ static int __init msm_timer_init(u32 dgt_hz, int sched_bits, int irq,
 {
 	struct clocksource *cs = &msm_clocksource;
 	int res = 0;
+	void __iomem *addr;
 
 	msm_timer_irq = irq;
 	msm_timer_has_ppi = percpu;
@@ -201,6 +203,13 @@ err:
 	msm_delay_timer.freq = dgt_hz;
 	register_current_timer_delay(&msm_delay_timer);
 
+	if (use_user_accessible_timers()) {
+		addr = event_base +
+			0x0004 + 0x1000;
+		setup_user_timer_offset(virt_to_phys(addr)&0xfff);
+		set_user_accessible_timer_flag(true);
+	}
+
 	return res;
 }
 
@@ -234,17 +243,11 @@ static notrace cycle_t msm_read_timer_count_shift(struct clocksource *cs)
 void __init jf_timer_init(void)
 {
 	struct clocksource *cs = &msm_clocksource;
-	if (msm_timer_map(0x0200A000, 0x24, 0x00001000, 0x0088))
+	if (msm_timer_map(0x0200A000, 0x0, 0x24, 0x0088))
 		return;
 
 	writel_relaxed(DGT_CLK_CTL_DIV_4, event_base + DGT_CLK_CTL);
 	msm_timer_init(27000000 / 4, 32, 17, true);
-
-	cs->read = msm_read_timer_count_shift;
-	cs->mask = CLOCKSOURCE_MASK((32 - MSM_DGT_SHIFT));
-	/* 600 KHz */
-	msm_timer_init(19200000 >> MSM_DGT_SHIFT, 32 - MSM_DGT_SHIFT, 17,
-			false);
 }
  
 void __init msm7x01_timer_init(void)
@@ -259,18 +262,3 @@ void __init msm7x01_timer_init(void)
 	msm_timer_init(19200000 >> MSM_DGT_SHIFT, 32 - MSM_DGT_SHIFT, 7,
 			false);
 }
- 
-void __init msm7x30_timer_init(void)
-{
-	if (msm_timer_map(0xc0100000, 0x4, 0x24, 0x80))
-		return;
-	msm_timer_init(24576000 / 4, 32, 1, false);
-}
- 
-void __init qsd8x50_timer_init(void)
-{
-	if (msm_timer_map(0xAC100000, 0x0, 0x10, 0x34))
-		return;
-	msm_timer_init(19200000 / 4, 32, 7, false);
-}
-
