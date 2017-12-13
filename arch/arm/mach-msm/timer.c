@@ -958,6 +958,7 @@ void __init msm_timer_init(void)
 		if (!soc_class_is_msm8930() && !cpu_is_msm8960ab()) {
 			gpt->flags |= MSM_CLOCK_FLAGS_UNSTABLE_COUNT;
 			dgt->flags |= MSM_CLOCK_FLAGS_UNSTABLE_COUNT;
+			pr_info("MSM Timers flagged as unstable\n");
 		}
 	} else {
 		WARN(1, "Timer running on unknown hardware. Configure this! "
@@ -1058,7 +1059,6 @@ void __init msm_timer_init(void)
 	msm_delay_timer.freq = dgt->freq;
 	msm_delay_timer.read_current_timer = &msm_read_current_timer;
 	register_current_timer_delay(&msm_delay_timer);
-
 
 	if (use_user_accessible_timers()) {
 		struct msm_clock *gtclock = &msm_clocks[MSM_CLOCK_GPT];
