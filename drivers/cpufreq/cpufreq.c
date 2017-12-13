@@ -367,6 +367,14 @@ EXPORT_SYMBOL_GPL(cpufreq_cpu_put);
 static int cpufreq_set_policy(struct cpufreq_policy *policy,
 				struct cpufreq_policy *new_policy);
 
+struct cpufreq_frequency_table *cpufreq_frequency_get_table(void)
+{
+	struct cpufreq_policy *policy;
+	policy = cpufreq_cpu_get_raw(0);
+	return policy != NULL ? policy->freq_table : NULL;
+}
+EXPORT_SYMBOL_GPL(cpufreq_frequency_get_table);
+
 /* Yank555.lu : CPU Hardlimit - Hook to force scaling_min/max_freq to be updated on Hardlimit change */
 #ifdef CONFIG_CPUFREQ_HARDLIMIT
 /* Disable Input boost while thermal limiting */
