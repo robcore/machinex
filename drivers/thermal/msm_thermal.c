@@ -40,7 +40,6 @@
 
 #define MAX_IDX 14
 #define SHUTOFF_TEMP 85
-static ktime_t last_tempcheck;
 
 static struct msm_thermal_data msm_thermal_info = {
 	.poll_ms = 240,
@@ -50,7 +49,6 @@ static struct msm_thermal_data msm_thermal_info = {
 	.core_limit_temp_degC = 75,
 	.core_temp_hysteresis_degC = 10,
 };
-
 
 static int limit_idx[NR_CPUS];
 static int thermal_limit_low[NR_CPUS];
@@ -65,7 +63,6 @@ static bool core_control_enabled;
 static cpumask_t core_control_mask;
 static cpumask_t cores_offlined_mask;
 static DEFINE_MUTEX(core_control_mutex);
-static struct task_struct *mitigator;
 
 static struct cpufreq_frequency_table *therm_table;
 static bool thermal_suspended = false;
@@ -397,25 +394,16 @@ static long evaluate_any_temp(uint32_t sens_id)
 
 	return temp;
 }
-static int __ref mitigation_control(void *data)
+static int __ref mitigation_control(void)
 {
 	int ret = 0;
 	unsigned int cpu = smp_processor_id();
 	long freq_temp, core_temp, delta;
 	unsigned int resolve_max_freq[NR_CPUS];
 
-top:
-	set_current_state(TASK_INTERRUPTIBLE);
-
-	schedule();
-
-	if (kthread_should_stop())
-		return 0;
-
 	if (thermal_suspended)	
-		goto top;
+		return -EINVAL;
 
-	set_current_state(TASK_RUNNING);
 	delta = (msm_thermal_info.limit_temp_degC -
 			 msm_thermal_info.temp_hysteresis_degC);
 
@@ -464,10 +452,13 @@ top:
 			set_thermal_policy(cpu, resolve_max_freq[cpu]);
 	}
 
+	if (thermal_suspended)
+		return -EINVAL;
+
 	if (!core_control_enabled || intelli_init() ||
-		 thermal_suspended || !thermal_is_throttling() ||
+		 !thermal_is_throttling() ||
 		 cpumask_empty(&core_control_mask)) {
-		goto top;
+		return 0;
 	}
 
 	delta = (msm_thermal_info.core_limit_temp_degC -
@@ -507,76 +498,21 @@ top:
 		}
 	}
 	mutex_unlock(&core_control_mutex);
-
-	goto top;
+	return 0;
 }
 
 static void __ref check_temp(struct work_struct *work)
 {
-	ktime_t delta;
 	int ret = 0;
 
 	if (thermal_suspended)
 		return;
+	ret = mitigation_control();
+	if (ret)
+		return;
 
-	if (last_tempcheck == 0) {
-		wake_up_process(mitigator);
-		last_tempcheck = ktime_get();
-		goto reschedule;
-	}
-
-	delta = ktime_sub(ktime_get(), last_tempcheck);
-	if (ktime_compare(delta, ms_to_ktime(msm_thermal_info.poll_ms)) < 0)
-		goto reschedule;
-
-	wake_up_process(mitigator);
-	last_tempcheck = ktime_get();
-reschedule:
-		queue_delayed_work(intellithermal_wq, &check_temp_work,
-				msecs_to_jiffies(msm_thermal_info.poll_ms));
-}
-#if 0
-static int msm_thermal_notifier(struct notifier_block *self, unsigned long val,
-		void *v)
-{
-	struct sched_param defparam = { .sched_priority = DEFAULT_PRIO };
-	struct sched_param rtparam = { .sched_priority = MAX_USER_RT_PRIO / 2 };
-
-	switch (val) {
-	case THROTTLING_ON:
-		sched_setscheduler_nocheck(mitigator, SCHED_FIFO, &rtparam);
-		break;
-	case THROTTLING_OFF:
-		sched_setscheduler_nocheck(mitigator, SCHED_NORMAL, &defparam);
-		break;
-	default:
-		break;
-	}
-	return NOTIFY_OK;
-}
-
-static struct notifier_block msm_therm_nb = {
-	.notifier_call = msm_thermal_notifier,
-};
-#endif
-static int setup_mitigator(void)
-{
-	struct sched_param rtparam = { .sched_priority = MAX_USER_RT_PRIO / 2 };
-	mitigator = kthread_create(mitigation_control,
-						  NULL, "mx_thermal");
-	if (IS_ERR(mitigator)) {
-		pr_err("MSM THERMAL: Failed to create kthread! Driver is broken!\n");
-		return -ENOMEM;
-	}
-	kthread_bind(mitigator, 0);
-	sched_setscheduler_nocheck(mitigator, SCHED_FIFO, &rtparam);
-	get_task_struct(mitigator);
-	wake_up_process(mitigator);
-	last_tempcheck = ktime_get();
-#if 0
-	register_thermal_notifier(&msm_therm_nb);
-#endif
-	return 0;
+	queue_delayed_work(intellithermal_wq, &check_temp_work,
+			msecs_to_jiffies(msm_thermal_info.poll_ms));
 }
 
 static void __ref get_table(struct work_struct *work)
@@ -590,12 +526,8 @@ static void __ref get_table(struct work_struct *work)
 	if (ret)
 		goto reschedule;
 
-	if (!setup_mitigator()) {
-		queue_delayed_work(intellithermal_wq, &check_temp_work, 0);
-		return;
-	}
-
-	panic("NO THERMAL DRIVER\n");
+	queue_delayed_work(intellithermal_wq, &check_temp_work, 0);
+	return;
 reschedule:
 		schedule_work(&get_table_work);
 }
