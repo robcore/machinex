@@ -1021,12 +1021,10 @@ void __init msm_timer_init(void)
 		if (res)
 			pr_err("msm_timer_init: request_irq failed for %s\n",
 			       ce->name);
-		else {
+		else
 			enable_percpu_irq(ce->irq,
 					 IRQ_TYPE_EDGE_RISING);
-			pr_info("msm_timer_init: request_irq failed for %s\n",
-			       ce->name);
-		}
+
 		chip = irq_get_chip(clock->irq);
 		if (chip && chip->irq_mask)
 			chip->irq_mask(irq_get_irq_data(clock->irq));
