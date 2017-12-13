@@ -1047,7 +1047,7 @@ const char *buf, size_t count)			\
 		return -EINVAL;	\
 	if (!sscanf(buf, "%u", &new_hardlimit))	\
 		return -EINVAL;	\
-	permtable = cpufreq_frequency_get_table(0);	\
+	permtable = cpufreq_frequency_get_table();	\
 	if (permtable == NULL)	\
 		return -EINVAL;	\
 	for (i = 0; (permtable[i].frequency != CPUFREQ_TABLE_END); i++)	\
@@ -1072,7 +1072,7 @@ const char *buf, size_t count)			\
 		return -EINVAL;	\
 	if (!sscanf(buf, "%u", &new_hardlimit))	\
 		return -EINVAL;	\
-	permtable = cpufreq_frequency_get_table(0);	\
+	permtable = cpufreq_frequency_get_table();	\
 	if (permtable == NULL)	\
 		return -EINVAL;	\
 	for (i = 0; (permtable[i].frequency != CPUFREQ_TABLE_END); i++)	\
