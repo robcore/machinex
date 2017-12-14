@@ -164,10 +164,11 @@ module_param_named(ldo_retention_enabled,
 	msm_pm_ldo_retention_enabled, bool, 0664);
 static bool screen_off_sched_clock = false;
 module_param(screen_off_sched_clock, bool, 0644);
-static bool msm_pm_use_sync_timer = false;
+static bool msm_pm_use_sync_timer = true;
 module_param_named(use_sync_timer,
 	msm_pm_use_sync_timer, bool, 0444);
 
+#if 0
 static void msmpm_suspend(struct power_suspend *h)
 {
 	if (screen_off_sched_clock)
@@ -185,7 +186,7 @@ static struct power_suspend msmpm_suspend_data =
 	.suspend = msmpm_suspend,
 	.resume = msmpm_resume,
 };
-
+#endif
 static int msm_pm_retention_tz_call;
 static void *msm_pm_idle_rs_limits;
 int msm_pm_pc_hotplug(void);
@@ -1327,7 +1328,7 @@ static int __init msm_pm_init(void)
 		return rc;
 	}
 
-	register_power_suspend(&msmpm_suspend_data);
+	//register_power_suspend(&msmpm_suspend_data);
 
 	return 0;
 }
