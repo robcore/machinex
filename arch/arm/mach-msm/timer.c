@@ -1057,10 +1057,15 @@ void __init msm_timer_init(void)
 		pr_info("MSM Timer: %s shift is %u\n", cs->name, ce->shift);
 	}
 
-#ifdef CONFIG_LOCAL_TIMERS
-	broadcast_timer_setup();
-#endif
 	msm_sched_clock_init();
+
+	if (use_user_accessible_timers()) {
+		struct msm_clock *gtclock = &msm_clocks[MSM_CLOCK_GPT];
+		void __iomem *addr = gtclock->regbase +
+			TIMER_COUNT_VAL + global_timer_offset;
+		setup_user_timer_offset(virt_to_phys(addr)&0xfff);
+		set_user_accessible_timer_flag(true);
+	}
 
 #ifdef HAVE_ARCH_HAS_CURRENT_TIMER
 	__raw_writel(1,
@@ -1070,13 +1075,9 @@ void __init msm_timer_init(void)
 	msm_delay_timer.read_current_timer = &msm_read_current_timer;
 	register_current_timer_delay(&msm_delay_timer);
 
-	if (use_user_accessible_timers()) {
-		struct msm_clock *gtclock = &msm_clocks[MSM_CLOCK_GPT];
-		void __iomem *addr = gtclock->regbase +
-			TIMER_COUNT_VAL + global_timer_offset;
-		setup_user_timer_offset(virt_to_phys(addr)&0xfff);
-		set_user_accessible_timer_flag(true);
-	}
+#ifdef CONFIG_LOCAL_TIMERS
+	broadcast_timer_setup();
+#endif
 	//register_pm_notifier(&msm_timer_notifier);
 	pr_info("Global Timer Val:0x%x", global_timer_offset);
 }
