@@ -1026,11 +1026,15 @@ void __init msm_timer_init(void)
 		if (chip && chip->irq_mask)
 			chip->irq_mask(irq_get_irq_data(clock->irq));
 
-		if (clock->status_mask)
+		if (clock->status_mask) {
 			while (__raw_readl(MSM_TMR_BASE + TIMER_STATUS) &
 			       clock->status_mask)
 				;
-
+			unsigned long masked_status = (__raw_readl(MSM_TMR_BASE + TIMER_STATUS) &
+				       clock->status_mask);
+			pr_info("MSM_TIMER: Status Mask %u\n", clock->status_mask);
+			pr_info("MSM_TIMER: Masked Status %lu\n", masked_status);
+		}
 		clockevents_register_device(ce);
 
 		pr_info("MSM Timer: %s physical base is 0x%x\n", cs->name, virt_to_phys(clock->regbase));

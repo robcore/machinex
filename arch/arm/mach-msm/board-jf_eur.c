@@ -5529,7 +5529,11 @@ MACHINE_START(JF, "SAMSUNG JF")
 	.reserve = apq8064_reserve,
 	.init_irq = apq8064_init_irq,
 	.handle_irq = gic_handle_irq,
+#ifdef CONFIG_UPSTREAM_QCOM_TIMER
 	.init_time	= jf_timer_init,
+#else
+	.init_time	= msm_timer_init,
+#endif
 	.init_machine = samsung_jf_init,
 	.init_early = apq8064_allocate_memory_regions,
 	.init_very_early = apq8064_early_reserve,

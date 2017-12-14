@@ -36,7 +36,7 @@
 #define TIMER_ENABLE_CLR_ON_MATCH_EN	BIT(1)
 #define TIMER_ENABLE_EN			BIT(0)
 #define TIMER_CLEAR			0x000C
-#define DGT_CLK_CTL			0x10
+#define DGT_CLK_CTL			0x34
 #define DGT_CLK_CTL_DIV_4		0x3
 #define TIMER_STS_GPT0_CLR_PEND		BIT(10)
 
@@ -244,7 +244,7 @@ static notrace cycle_t msm_read_timer_count_shift(struct clocksource *cs)
 void __init jf_timer_init(void)
 {
 	struct clocksource *cs = &msm_clocksource;
-	if (msm_timer_map(0x0200A000, 0x0, 0x24, 0x0088))
+	BUG_ON(msm_timer_map(0x0200a000, 0x04, 0x24, 0x0088));
 		return;
 
 	writel_relaxed(DGT_CLK_CTL_DIV_4, event_base + DGT_CLK_CTL);
