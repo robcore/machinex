@@ -46,10 +46,17 @@ enum {
 	MSM_TIMER_DEBUG_SYNC = 1U << 0,
 };
 
-#define DG_TIMER_RATING 100
+#ifdef CONFIG_MSM7X00A_USE_GP_TIMER
+	#define DG_TIMER_RATING 100
+#else
+	#define DG_TIMER_RATING 300
+#endif
 
-#define DGT_HZ (27000000 / 4) /* 27 MHz (PXO) / 4 by default */
-#define MSM_DGT_SHIFT (0)
+#ifndef MSM_TMR0_BASE
+#define MSM_TMR0_BASE MSM_TMR_BASE
+#endif
+
+#define MSM_DGT_SHIFT (5)
 
 #define TIMER_MATCH_VAL         0x0000
 #define TIMER_COUNT_VAL         0x0004
@@ -156,6 +163,13 @@ static struct msm_clock msm_clocks[] = {
 			.set_state_oneshot = msm_timer_oneshot,
 			.tick_resume = msm_timer_shutdown,
 		},
+		.clocksource = {
+			.name           = "gp_timer",
+			.rating         = 200,
+			.read           = msm_gpt_read,
+			.mask           = CLOCKSOURCE_MASK(32),
+			.flags          = CLOCK_SOURCE_IS_CONTINUOUS,
+		},
 		.irq = INT_GP_TIMER_EXP,
 		.regbase = MSM_TMR_BASE + 0x4,
 		.freq = 32768,
@@ -163,6 +177,16 @@ static struct msm_clock msm_clocks[] = {
 		.write_delay = 9,
 	},
 	[MSM_CLOCK_DGT] = {
+		.clockevent = {
+			.name           = "dg_timer",
+			.features       = CLOCK_EVT_FEAT_ONESHOT,
+			.shift          = 32,
+			.rating         = DG_TIMER_RATING,
+			.set_next_event = msm_timer_set_next_event,
+			.set_state_shutdown = msm_timer_shutdown,
+			.set_state_oneshot = msm_timer_oneshot,
+			.tick_resume = msm_timer_shutdown,
+		},
 		.clocksource = {
 			.name           = "dg_timer",
 			.rating         = DG_TIMER_RATING,
@@ -174,8 +198,6 @@ static struct msm_clock msm_clocks[] = {
 		.regbase = MSM_TMR_BASE + 0x24,
 		.index = MSM_CLOCK_DGT,
 		.write_delay = 9,
-		.freq = DGT_HZ >> MSM_DGT_SHIFT,
-		.shift = MSM_DGT_SHIFT,
 	}
 };
 
@@ -256,6 +278,10 @@ static u64 msm_dgt_read(struct clocksource *cs)
 static struct msm_clock *clockevent_to_clock(struct clock_event_device *evt)
 {
 	int i;
+
+	if (!is_smp())
+		return container_of(evt, struct msm_clock, clockevent);
+
 	for (i = 0; i < NR_TIMERS; i++)
 		if (evt == &(msm_clocks[i].clockevent))
 			return &msm_clocks[i];
@@ -786,11 +812,11 @@ static int msm_local_timer_starting_cpu(unsigned int cpu)
 		__raw_writel(0, clock->regbase  + TIMER_ENABLE);
 		__raw_writel(0, clock->regbase + TIMER_CLEAR);
 		__raw_writel(~0, clock->regbase + TIMER_MATCH_VAL);
+		*raw_cpu_ptr(&first_boot) = false;
 		if (clock->status_mask)
 			while (__raw_readl(MSM_TMR_BASE + TIMER_STATUS) &
 			       clock->status_mask)
 				;
-		*raw_cpu_ptr(&first_boot) = false;
 	}
 	evt->irq = clock->irq;
 	evt->name = "local_timer";
@@ -902,16 +928,54 @@ void __init msm_timer_init(void)
 	struct msm_clock *gpt = &msm_clocks[MSM_CLOCK_GPT];
 	u32 masked_status;
 
-	global_timer_offset = MSM_TMR0_BASE - MSM_TMR_BASE;
-	dgt->freq = 6750000;
-	__raw_writel(DGT_CLK_CTL_DIV_4, MSM_TMR_BASE + DGT_CLK_CTL);
-	gpt->status_mask = BIT(10);
-	dgt->status_mask = BIT(2);
+	if (cpu_is_msm8x60()) {
+		global_timer_offset = MSM_TMR0_BASE - MSM_TMR_BASE;
+		gpt->status_mask = BIT(10);
+		dgt->status_mask = BIT(2);
+		dgt->freq = 6750000;
+		__raw_writel(DGT_CLK_CTL_DIV_4, MSM_TMR_BASE + DGT_CLK_CTL);
+		pr_info("MSM_TIMER: Setting up msm8x60\n");
+	} else if (cpu_is_msm9615()) {
+		dgt->freq = 6750000;
+		__raw_writel(DGT_CLK_CTL_DIV_4, MSM_TMR_BASE + DGT_CLK_CTL);
+		gpt->status_mask = BIT(10);
+		dgt->status_mask = BIT(2);
+		gpt->freq = 32765;
+		gpt_hz = 32765;
+		sclk_hz = 32765;
+		gpt->flags |= MSM_CLOCK_FLAGS_UNSTABLE_COUNT;
+		dgt->flags |= MSM_CLOCK_FLAGS_UNSTABLE_COUNT;
+		pr_info("MSM_TIMER: Setting up msm9615\n");
+	} else if (soc_class_is_msm8960() || soc_class_is_apq8064() ||
+		   soc_class_is_msm8930()) {
+		pr_info("MSM_TIMER: Setting up msm8960/apq8064/msm8930\n");
+		global_timer_offset = MSM_TMR0_BASE - MSM_TMR_BASE;
+		dgt->freq = 6750000;
+		__raw_writel(DGT_CLK_CTL_DIV_4, MSM_TMR_BASE + DGT_CLK_CTL);
+		gpt->status_mask = BIT(10);
+		dgt->status_mask = BIT(2);
+		if (!soc_class_is_apq8064()) {
+			gpt->freq = 32765;
+			gpt_hz = 32765;
+			sclk_hz = 32765;
+		}
+		if (!soc_class_is_msm8930() && !cpu_is_msm8960ab()) {
+			gpt->flags |= MSM_CLOCK_FLAGS_UNSTABLE_COUNT;
+			dgt->flags |= MSM_CLOCK_FLAGS_UNSTABLE_COUNT;
+			pr_info("MSM Timers flagged as unstable\n");
+		}
+	} else {
+		WARN(1, "Timer running on unknown hardware. Configure this! "
+			"Assuming default configuration.\n");
+		dgt->freq = 6750000;
+	}
 
-	gpt->flags |= MSM_CLOCK_FLAGS_UNSTABLE_COUNT;
-	dgt->flags |= MSM_CLOCK_FLAGS_UNSTABLE_COUNT;
+	if (msm_clocks[MSM_CLOCK_GPT].clocksource.rating > DG_TIMER_RATING)
+		msm_global_timer = MSM_CLOCK_GPT;
+	else
+		msm_global_timer = MSM_CLOCK_DGT;
 
-	msm_global_timer = MSM_CLOCK_GPT;
+	pr_info("MSM_TIMER: Initial Global Timer is %s\n", msm_global_timer == MSM_CLOCK_GPT ? "GP Timer" : "DG Timer");
 
 	for (i = 0; i < NR_TIMERS; i++) {
 		struct msm_clock *clock = &msm_clocks[i];
@@ -932,6 +996,7 @@ void __init msm_timer_init(void)
 
 			clock->rollover_offset = (uint32_t) temp;
 		}
+		pr_info("MSM Timer: %s Rollover Offset is 0x%x\n", cs->name, clock->rollover_offset);
 		ce->mult = div_sc(clock->freq, NSEC_PER_SEC, ce->shift);
 		/* allow at least 10 seconds to notice that the timer wrapped */
 		ce->max_delta_ns =
@@ -981,7 +1046,7 @@ void __init msm_timer_init(void)
 			pr_info("MSM_TIMER: Masked Status 0x%x\n", masked_status);
 		}
 		clockevents_register_device(ce);
-		pr_info("MSM Timer: %s Rollover Offset is 0x%x\n", cs->name, clock->rollover_offset);
+
 		pr_info("MSM Timer: %s physical base is 0x%x\n", cs->name, virt_to_phys(clock->regbase));
 		pr_info("MSM Timer: %s virtual base is 0x%pK\n", cs->name, clock->regbase);
 		pr_info("MSM Timer: %s irq is %u\n", cs->name, clock->irq);
