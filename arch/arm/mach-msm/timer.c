@@ -802,8 +802,6 @@ static int msm_local_timer_starting_cpu(unsigned int cpu)
 	struct clock_event_device *evt = per_cpu_ptr(msm_evt, cpu);
 	struct msm_clock *clock = &msm_clocks[msm_global_timer];
 
-	*raw_cpu_ptr(clock->percpu_evt) = evt;
-
 	/* Use existing clock_event for cpu 0 */
 	if (cpu == 0)
 		return 0;
@@ -821,15 +819,25 @@ static int msm_local_timer_starting_cpu(unsigned int cpu)
 				;
 	}
 	evt->irq = clock->irq;
-	evt->name = "msm_timer";
+	evt->name = "local_timer";
 	evt->features = CLOCK_EVT_FEAT_ONESHOT;
 	evt->rating = clock->clockevent.rating;
 	evt->set_state_shutdown = msm_timer_shutdown;
 	evt->set_state_oneshot = msm_timer_oneshot;
 	evt->tick_resume = msm_timer_shutdown;
 	evt->set_next_event = msm_timer_set_next_event;
+	evt->shift = clock->clockevent.shift;
+	evt->mult = div_sc(clock->freq, NSEC_PER_SEC, evt->shift);
+	evt->max_delta_ns =
+		clockevent_delta2ns(0xf0000000 >> clock->shift, evt);
+	evt->max_delta_ticks = 0xf0000000 >> clock->shift;
+	evt->min_delta_ns = clockevent_delta2ns(4, evt);
+	evt->min_delta_ticks = 4;
 	evt->cpumask = cpumask_of(cpu);
-	clockevents_config_and_register(evt, gpt_hz, 4, 0xffffffff);
+
+	*raw_cpu_ptr(clock->percpu_evt) = evt;
+
+	clockevents_register_device(evt);
 	enable_percpu_irq(evt->irq, IRQ_TYPE_EDGE_RISING);
 
 	return 0;
@@ -1049,15 +1057,11 @@ void __init msm_timer_init(void)
 		pr_info("MSM Timer: %s shift is %u\n", cs->name, ce->shift);
 	}
 
+#ifdef CONFIG_LOCAL_TIMERS
+	broadcast_timer_setup();
+#endif
 	msm_sched_clock_init();
 
-	if (use_user_accessible_timers()) {
-		struct msm_clock *gtclock = &msm_clocks[MSM_CLOCK_GPT];
-		void __iomem *addr = gtclock->regbase +
-			TIMER_COUNT_VAL + global_timer_offset;
-		setup_user_timer_offset(virt_to_phys(addr)&0xfff);
-		set_user_accessible_timer_flag(true);
-	}
 #ifdef HAVE_ARCH_HAS_CURRENT_TIMER
 	__raw_writel(1,
 	msm_clocks[MSM_CLOCK_DGT].regbase + TIMER_ENABLE);
@@ -1066,9 +1070,13 @@ void __init msm_timer_init(void)
 	msm_delay_timer.read_current_timer = &msm_read_current_timer;
 	register_current_timer_delay(&msm_delay_timer);
 
-#ifdef CONFIG_LOCAL_TIMERS
-	broadcast_timer_setup();
-#endif
+	if (use_user_accessible_timers()) {
+		struct msm_clock *gtclock = &msm_clocks[MSM_CLOCK_GPT];
+		void __iomem *addr = gtclock->regbase +
+			TIMER_COUNT_VAL + global_timer_offset;
+		setup_user_timer_offset(virt_to_phys(addr)&0xfff);
+		set_user_accessible_timer_flag(true);
+	}
 	//register_pm_notifier(&msm_timer_notifier);
 	pr_info("Global Timer Val:0x%x", global_timer_offset);
 }
