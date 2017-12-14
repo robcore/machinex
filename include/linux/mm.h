@@ -2175,6 +2175,9 @@ static inline int get_user_timer_page(struct vm_area_struct *vma,
 	return 0;
 }
 #endif
+#ifdef CONFIG_UPSTREAM_QCOM_TIMER
+extern void jf_timer_init(void);
+#endif
 
 #ifdef CONFIG_SYSCTL
 extern int sysctl_drop_caches;

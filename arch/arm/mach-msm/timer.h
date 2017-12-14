@@ -14,11 +14,10 @@
 #ifndef _ARCH_ARM_MACH_MSM_TIMER_H_
 #define _ARCH_ARM_MACH_MSM_TIMER_H_
 
-extern void msm_timer_init(void);
-
 uint32_t msm_timer_get_sclk_ticks(void);
 int msm_timer_init_time_sync(void (*timeout)(void));
 #ifdef DOWNSTREAM_QCOM_TIMER
+extern void msm_timer_init(void);
 void __iomem *msm_timer_get_timer0_base(void);
 int64_t msm_timer_enter_idle(void);
 void msm_timer_exit_idle(int low_power);
