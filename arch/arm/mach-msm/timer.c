@@ -278,10 +278,6 @@ static u64 msm_dgt_read(struct clocksource *cs)
 static struct msm_clock *clockevent_to_clock(struct clock_event_device *evt)
 {
 	int i;
-
-	if (!is_smp())
-		return container_of(evt, struct msm_clock, clockevent);
-
 	for (i = 0; i < NR_TIMERS; i++)
 		if (evt == &(msm_clocks[i].clockevent))
 			return &msm_clocks[i];
@@ -352,8 +348,8 @@ static int msm_timer_shutdown(struct clock_event_device *evt)
 	if (chip && chip->irq_mask)
 		chip->irq_mask(irq_get_irq_data(clock->irq));
 
-	if (!is_smp() || clock != &msm_clocks[MSM_CLOCK_DGT]
-			|| smp_processor_id() > 0)
+	if (clock != &msm_clocks[MSM_CLOCK_DGT]
+			|| smp_processor_id() != 0)
 	__raw_writel(0, clock->regbase + TIMER_ENABLE);
 
 	if (msm_global_timer == MSM_CLOCK_DGT &&
