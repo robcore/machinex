@@ -996,7 +996,7 @@ void __init msm_timer_init(void)
 
 			clock->rollover_offset = (uint32_t) temp;
 		}
-		pr_info("MSM Timer: %s Rollover Offset is %u\n", cs->name, clock->rollover_offset);
+		pr_info("MSM Timer: %s Rollover Offset is 0x%x\n", cs->name, clock->rollover_offset);
 		ce->mult = div_sc(clock->freq, NSEC_PER_SEC, ce->shift);
 		/* allow at least 10 seconds to notice that the timer wrapped */
 		ce->max_delta_ns =
@@ -1042,8 +1042,8 @@ void __init msm_timer_init(void)
 				;
 			masked_status = (__raw_readl(MSM_TMR_BASE + TIMER_STATUS) &
 				       clock->status_mask);
-			pr_info("MSM_TIMER: Status Mask %u\n", clock->status_mask);
-			pr_info("MSM_TIMER: Masked Status %u\n", masked_status);
+			pr_info("MSM_TIMER: Status Mask 0x%x\n", clock->status_mask);
+			pr_info("MSM_TIMER: Masked Status 0x%x\n", masked_status);
 		}
 		clockevents_register_device(ce);
 
@@ -1065,6 +1065,8 @@ void __init msm_timer_init(void)
 			TIMER_COUNT_VAL + global_timer_offset;
 		setup_user_timer_offset(virt_to_phys(addr)&0xfff);
 		set_user_accessible_timer_flag(true);
+		pr_info("MSM Timer: User Timer Address is 0x%x\n", virt_to_phys(addr));
+		pr_info("MSM Timer: User Timer Offset is 0x%x\n", virt_to_phys(addr)&0xfff);
 	}
 
 #ifdef HAVE_ARCH_HAS_CURRENT_TIMER
