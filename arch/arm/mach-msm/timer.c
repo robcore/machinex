@@ -46,14 +46,11 @@ enum {
 	MSM_TIMER_DEBUG_SYNC = 1U << 0,
 };
 
-#if 0
 #ifdef CONFIG_MSM7X00A_USE_GP_TIMER
 	#define DG_TIMER_RATING 100
 #else
 	#define DG_TIMER_RATING 300
 #endif
-#endif
-#define DG_TIMER_RATING 300
 
 #ifndef MSM_TMR0_BASE
 #define MSM_TMR0_BASE MSM_TMR_BASE
