@@ -26,6 +26,7 @@
 #include <linux/of_irq.h>
 #include <linux/sched_clock.h>
 #include <asm/user_accessible_timer.h>
+#include <linux/mm.h>
 
 #include <asm/delay.h>
 
