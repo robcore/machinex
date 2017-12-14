@@ -18,7 +18,7 @@ extern void msm_timer_init(void);
 
 uint32_t msm_timer_get_sclk_ticks(void);
 int msm_timer_init_time_sync(void (*timeout)(void));
-#ifndef CONFIG_ARM_ARCH_TIMER
+#ifdef DOWNSTREAM_QCOM_TIMER
 void __iomem *msm_timer_get_timer0_base(void);
 int64_t msm_timer_enter_idle(void);
 void msm_timer_exit_idle(int low_power);
