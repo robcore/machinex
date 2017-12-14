@@ -99,7 +99,7 @@ static notrace u64 msm_read_timer_count(struct clocksource *cs)
 
 static struct clocksource msm_clocksource = {
 	.name	= "dg_timer",
-	.rating	= 300,
+	.rating	= 100,
 	.read	= msm_read_timer_count,
 	.mask	= CLOCKSOURCE_MASK(32),
 	.flags	= CLOCK_SOURCE_IS_CONTINUOUS,
@@ -123,7 +123,7 @@ static int msm_local_timer_starting_cpu(unsigned int cpu)
 	evt->set_next_event = msm_timer_set_next_event;
 	evt->cpumask = cpumask_of(cpu);
 
-	clockevents_config_and_register(evt, GPT_HZ, 4, 0xffffffff);
+	clockevents_config_and_register(evt, GPT_HZ, 4, 0xf0000000 >> 32);
 
 	if (msm_timer_has_ppi) {
 		enable_percpu_irq(evt->irq, IRQ_TYPE_EDGE_RISING);
@@ -205,8 +205,7 @@ err:
 	register_current_timer_delay(&msm_delay_timer);
 
 	if (use_user_accessible_timers()) {
-		addr = event_base +
-			0x0004 + 0x1000;
+		addr = event_base + 0x1000;
 		setup_user_timer_offset(virt_to_phys(addr)&0xfff);
 		set_user_accessible_timer_flag(true);
 	}
@@ -244,9 +243,9 @@ static notrace cycle_t msm_read_timer_count_shift(struct clocksource *cs)
 void __init jf_timer_init(void)
 {
 	struct clocksource *cs = &msm_clocksource;
-	BUG_ON(msm_timer_map(0x0200a000, 0x04, 0x24, 0x0088));
+	BUG_ON(msm_timer_map(0x0200a000, 0x00000004, 0x00000024, 0x00000088));
 		return;
 
 	writel_relaxed(DGT_CLK_CTL_DIV_4, event_base + DGT_CLK_CTL);
-	msm_timer_init(27000000 / 4, 32, 17, true);
+	msm_timer_init(6750000, 32, 18, true);
 }
