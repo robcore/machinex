@@ -35,6 +35,5 @@ config ARM_ARCH_TIMER
 
 config UPSTREAM_QCOM_TIMER
 	bool "Upstream Timer"
-	depends on (!DOWNSTREAM_QCOM_TIMER)
 	help
 	  Upstream timer

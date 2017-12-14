@@ -2629,7 +2629,6 @@ config MSM_EVENT_TIMER
 
 config DOWNSTREAM_QCOM_TIMER
 	bool "Downstream timer"
-	depends on (!UPSTREAM_QCOM_TIMER)
 	help
 		Downstream Timer
 
