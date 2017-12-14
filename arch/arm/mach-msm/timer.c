@@ -924,54 +924,15 @@ void __init msm_timer_init(void)
 	struct msm_clock *gpt = &msm_clocks[MSM_CLOCK_GPT];
 	u32 masked_status;
 
-	if (cpu_is_msm8x60()) {
-		global_timer_offset = MSM_TMR0_BASE - MSM_TMR_BASE;
-		gpt->status_mask = BIT(10);
-		dgt->status_mask = BIT(2);
-		dgt->freq = 6750000;
-		__raw_writel(DGT_CLK_CTL_DIV_4, MSM_TMR_BASE + DGT_CLK_CTL);
-		pr_info("MSM_TIMER: Setting up msm8x60\n");
-	} else if (cpu_is_msm9615()) {
-		dgt->freq = 6750000;
-		__raw_writel(DGT_CLK_CTL_DIV_4, MSM_TMR_BASE + DGT_CLK_CTL);
-		gpt->status_mask = BIT(10);
-		dgt->status_mask = BIT(2);
-		gpt->freq = 32765;
-		gpt_hz = 32765;
-		sclk_hz = 32765;
-		gpt->flags |= MSM_CLOCK_FLAGS_UNSTABLE_COUNT;
-		dgt->flags |= MSM_CLOCK_FLAGS_UNSTABLE_COUNT;
-		pr_info("MSM_TIMER: Setting up msm9615\n");
-	} else if (soc_class_is_msm8960() || soc_class_is_apq8064() ||
-		   soc_class_is_msm8930()) {
-		pr_info("MSM_TIMER: Setting up msm8960/apq8064/msm8930\n");
-		global_timer_offset = MSM_TMR0_BASE - MSM_TMR_BASE;
-		dgt->freq = 6750000;
-		__raw_writel(DGT_CLK_CTL_DIV_4, MSM_TMR_BASE + DGT_CLK_CTL);
-		gpt->status_mask = BIT(10);
-		dgt->status_mask = BIT(2);
-		if (!soc_class_is_apq8064()) {
-			gpt->freq = 32765;
-			gpt_hz = 32765;
-			sclk_hz = 32765;
-		}
-		if (!soc_class_is_msm8930() && !cpu_is_msm8960ab()) {
-			gpt->flags |= MSM_CLOCK_FLAGS_UNSTABLE_COUNT;
-			dgt->flags |= MSM_CLOCK_FLAGS_UNSTABLE_COUNT;
-			pr_info("MSM Timers flagged as unstable\n");
-		}
-	} else {
-		WARN(1, "Timer running on unknown hardware. Configure this! "
-			"Assuming default configuration.\n");
-		dgt->freq = 6750000;
-	}
+	global_timer_offset = MSM_TMR0_BASE - MSM_TMR_BASE;
+	msm_global_timer = MSM_CLOCK_GPT;
 
-	if (msm_clocks[MSM_CLOCK_GPT].clocksource.rating > DG_TIMER_RATING)
-		msm_global_timer = MSM_CLOCK_GPT;
-	else
-		msm_global_timer = MSM_CLOCK_DGT;
-
-	pr_info("MSM_TIMER: Initial Global Timer is %s\n", msm_global_timer == MSM_CLOCK_GPT ? "GP Timer" : "DG Timer");
+	dgt->freq = 6750000;
+	__raw_writel(DGT_CLK_CTL_DIV_4, MSM_TMR_BASE + DGT_CLK_CTL);
+	gpt->status_mask = BIT(10);
+	gpt->flags |= MSM_CLOCK_FLAGS_UNSTABLE_COUNT;
+	dgt->status_mask = BIT(2);
+	dgt->flags |= MSM_CLOCK_FLAGS_UNSTABLE_COUNT;
 
 	for (i = 0; i < NR_TIMERS; i++) {
 		struct msm_clock *clock = &msm_clocks[i];
@@ -992,7 +953,6 @@ void __init msm_timer_init(void)
 
 			clock->rollover_offset = (uint32_t) temp;
 		}
-		pr_info("MSM Timer: %s Rollover Offset is 0x%x\n", cs->name, clock->rollover_offset);
 		ce->mult = div_sc(clock->freq, NSEC_PER_SEC, ce->shift);
 		/* allow at least 10 seconds to notice that the timer wrapped */
 		ce->max_delta_ns =
@@ -1042,7 +1002,7 @@ void __init msm_timer_init(void)
 			pr_info("MSM_TIMER: Masked Status 0x%x\n", masked_status);
 		}
 		clockevents_register_device(ce);
-
+		pr_info("MSM Timer: %s Rollover Offset is 0x%x\n", cs->name, clock->rollover_offset);
 		pr_info("MSM Timer: %s physical base is 0x%x\n", cs->name, virt_to_phys(clock->regbase));
 		pr_info("MSM Timer: %s virtual base is 0x%pK\n", cs->name, clock->regbase);
 		pr_info("MSM Timer: %s irq is %u\n", cs->name, clock->irq);
@@ -1061,8 +1021,10 @@ void __init msm_timer_init(void)
 			TIMER_COUNT_VAL + global_timer_offset;
 		setup_user_timer_offset(virt_to_phys(addr)&0xfff);
 		set_user_accessible_timer_flag(true);
-		pr_info("MSM Timer: User Timer Address is 0x%x\n", virt_to_phys(addr));
-		pr_info("MSM Timer: User Timer Offset is 0x%x\n", virt_to_phys(addr)&0xfff);
+		pr_info("MSM Timer: User Timer Virt Address is 0x%pK\n", addr);
+		pr_info("MSM Timer: User Timer Virt Offset is 0x%x\n", ((int)addr & 0xfff));
+		pr_info("MSM Timer: User Timer Phys Address is 0x%x\n", virt_to_phys(addr));
+		pr_info("MSM Timer: User Timer Phys Offset is 0x%x\n", virt_to_phys(addr) & 0xfff);
 	}
 
 #ifdef HAVE_ARCH_HAS_CURRENT_TIMER
