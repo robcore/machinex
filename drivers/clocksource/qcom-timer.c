@@ -206,7 +206,7 @@ err:
 
 	if (use_user_accessible_timers()) {
 		addr = event_base + 0x1000;
-		setup_user_timer_offset(virt_to_phys(addr)&0xfff);
+		setup_user_timer_offset(virt_to_phys(addr) & 0xfff);
 		set_user_accessible_timer_flag(true);
 	}
 
