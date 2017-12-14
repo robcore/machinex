@@ -123,7 +123,7 @@ static int msm_local_timer_starting_cpu(unsigned int cpu)
 	evt->set_next_event = msm_timer_set_next_event;
 	evt->cpumask = cpumask_of(cpu);
 
-	clockevents_config_and_register(evt, GPT_HZ, 4, 0xf0000000 >> 32);
+	clockevents_config_and_register(evt, GPT_HZ, 4, 0xffffffff);
 
 	if (msm_timer_has_ppi) {
 		enable_percpu_irq(evt->irq, IRQ_TYPE_EDGE_RISING);
