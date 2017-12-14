@@ -164,7 +164,11 @@ module_param_named(ldo_retention_enabled,
 	msm_pm_ldo_retention_enabled, bool, 0664);
 static bool screen_off_sched_clock = false;
 module_param(screen_off_sched_clock, bool, 0644);
+#ifdef CONFIG_DOWNSTREAM_QCOM_TIMER
+static bool msm_pm_use_sync_timer = false;
+#else
 static bool msm_pm_use_sync_timer = true;
+#endif
 module_param_named(use_sync_timer,
 	msm_pm_use_sync_timer, bool, 0444);
 
