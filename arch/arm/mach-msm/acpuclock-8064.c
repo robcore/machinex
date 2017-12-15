@@ -32,8 +32,8 @@ static struct hfpll_data hfpll_data __initdata = {
 	.has_droop_ctl = true,
 	.droop_offset = 0x14,
 	.droop_val = 0x0108C000,
-	.low_vdd_l_max = 22,
-	.nom_vdd_l_max = 42,
+	.low_vdd_l_max = 37,
+	.nom_vdd_l_max = 74,
 	.vdd[HFPLL_VDD_NONE] =       0,
 	.vdd[HFPLL_VDD_LOW]  =  945000,
 	.vdd[HFPLL_VDD_NOM]  = 1050000,
@@ -99,6 +99,7 @@ static struct scalable scalable[] __initdata = {
  * The correct maximum rate for 8064ab in 600 MHZ.
  * We rely on the RPM rounding requests up here.
 */
+#if 0
 static struct msm_bus_paths bw_level_tbl[] __initdata = {
 	[0] =  BW_MBPS(640), /* At least  80 MHz on bus. */
 	[1] = BW_MBPS(1064), /* At least 133 MHz on bus. */
@@ -107,7 +108,16 @@ static struct msm_bus_paths bw_level_tbl[] __initdata = {
 	[4] = BW_MBPS(3200), /* At least 400 MHz on bus. */
 	[5] = BW_MBPS(4264), /* At least 533 MHz on bus. */
 };
-
+#else
+static struct msm_bus_paths bw_level_tbl[] __initdata = {
+	[0] =  BW_MBPS(640), /* At least  80 MHz on bus. */
+	[1] = BW_MBPS(1064), /* At least 133 MHz on bus. */
+	[2] = BW_MBPS(2000), /* At least 250 MHz on bus. */
+	[3] = BW_MBPS(2392), /* At least 299 MHz on bus. */
+	[4] = BW_MBPS(3600), /* At least 450 MHz on bus. */
+	[5] = BW_MBPS(4264), /* At least 533 MHz on bus. */
+};
+#endif
 static struct msm_bus_scale_pdata bus_scale_data __initdata = {
 	.usecase = bw_level_tbl,
 	.num_usecases = ARRAY_SIZE(bw_level_tbl),
@@ -131,7 +141,7 @@ static struct l2_level l2_freq_tbl[] __initdata = {
 	[12] = { { 1026000, HFPLL, 1, 0x26 }, 1150000, 1150000, 5 },
 	[13] = { { 1080000, HFPLL, 1, 0x28 }, 1150000, 1150000, 5 },
 	[14] = { { 1134000, HFPLL, 1, 0x2A }, 1150000, 1150000, 5 },
-	{ }
+	{ 0, { 0 } }
 };
 
 static struct acpu_level tbl_PVS0_2000MHz[] __initdata = {
@@ -291,13 +301,9 @@ static struct acpuclk_krait_params acpuclk_8064_params __initdata = {
 
 static int __init acpuclk_8064_probe(struct platform_device *pdev)
 {
-	if (cpu_is_apq8064ab() ||
-		SOCINFO_VERSION_MAJOR(socinfo_get_version()) == 2) {
-		acpuclk_8064_params.hfpll_data->low_vdd_l_max = 37;
-		acpuclk_8064_params.hfpll_data->nom_vdd_l_max = 74;
-		pr_info ("Adjusting nominal and max vdd calculation for chipset\n");
-	}
-
+	pr_info ("[%s] Low VDD: %d Nom VDD: %d\n", __func__, 
+		acpuclk_8064_params.hfpll_data->low_vdd_l_max,
+		acpuclk_8064_params.hfpll_data->nom_vdd_l_max);
 	return acpuclk_krait_init(&pdev->dev, &acpuclk_8064_params);
 }
 
