@@ -24,8 +24,6 @@
 
 #define BUILD_ID_LENGTH 32
 
-extern int g_speed_bin;
-extern int g_pvs_bin;
 enum {
 	HW_PLATFORM_UNKNOWN = 0,
 	HW_PLATFORM_SURF    = 1,

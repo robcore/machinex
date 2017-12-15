@@ -141,6 +141,8 @@ const int cpu_is_krait(void);
 const int cpu_is_krait_v1(void);
 const int cpu_is_krait_v2(void);
 const int cpu_is_krait_v3(void);
+extern int g_speed_bin;
+extern int g_pvs_bin;
 
 static inline int cpu_is_msm7x01(void)
 {
