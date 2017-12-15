@@ -90,7 +90,6 @@ static struct drv_data {
 	struct device *dev;
 } drv;
 
-static struct drv_data *drv_debug;
 static DEFINE_MUTEX(debug_lock);
 
 struct acg_action {
@@ -1006,8 +1005,8 @@ static void __init bus_init(const struct l2_level *l2_level)
 
 #ifdef CONFIG_CPU_VOLTAGE_TABLE
 
-#define HFPLL_MIN_VDD		 600000
-#define HFPLL_MAX_VDD		1450000
+#define HFPLL_MIN_VDD		 850000
+#define HFPLL_MAX_VDD		1300000
 
 ssize_t acpuclk_get_vdd_levels_str(char *buf) {
 
@@ -1045,6 +1044,7 @@ void acpuclk_set_vdd(unsigned int khz, int vdd_uv) {
 		else
 			continue;
 
+		sanitize_min_max(new_vdd_uv, HFPLL_MIN_VDD, HFPLL_MAX_VDD);
 		drv.freq_table[i].vdd_core = new_vdd_uv;
 	}
 	mutex_unlock(&driver_lock);
@@ -1286,6 +1286,11 @@ static void disable_acg(int sc_id)
 {
 	u32 regval;
 
+	if (sc_id != L2) {
+		if (!cpu_online(sc_id))
+			return;
+	}
+
 	if (sc_id == L2) {
 		regval = get_l2_indirect_reg(drv.scalable[sc_id].l2cpmr_iaddr);
 		l2_acg_en_val = regval & (0x3 << 10);
@@ -1301,6 +1306,11 @@ static void disable_acg(int sc_id)
 static void enable_acg(int sc_id)
 {
 	u32 regval;
+
+	if (sc_id != L2) {
+		if (!cpu_online(sc_id))
+			return;
+	}
 
 	if (sc_id == L2) {
 		regval = get_l2_indirect_reg(drv.scalable[sc_id].l2cpmr_iaddr);
@@ -1318,6 +1328,11 @@ static bool acg_is_enabled(int sc_id)
 {
 	u32 regval;
 
+	if (sc_id != L2) {
+		if (!cpu_online(sc_id))
+			return -ENOSYS;
+	}
+
 	if (sc_id == L2) {
 		regval = get_l2_indirect_reg(drv.scalable[sc_id].l2cpmr_iaddr);
 		return ((regval >> 10) & 0x3) != 0x3;
@@ -1333,6 +1348,11 @@ static int acg_set(void *data, u64 val)
 {
 	int ret = 0;
 	int sc_id = (int)data;
+
+	if (sc_id != L2) {
+		if (!cpu_online(sc_id))
+			return -ENOSYS;
+	}
 
 	mutex_lock(&debug_lock);
 	get_online_cpus();
@@ -1358,6 +1378,11 @@ static int acg_get(void *data, u64 *val)
 	int ret = 0;
 	int sc_id = (int)data;
 
+	if (sc_id != L2) {
+		if (!cpu_online(sc_id))
+			return -ENOSYS;
+	}
+
 	mutex_lock(&debug_lock);
 	get_online_cpus();
 	if (!sc_dir[sc_id]) {
@@ -1378,6 +1403,12 @@ DEFINE_SIMPLE_ATTRIBUTE(acgd_fops, acg_get, acg_set, "%lld\n");
 static int rate_get(void *data, u64 *val)
 {
 	int sc_id = (int)data;
+
+	if (sc_id != L2) {
+		if (!cpu_online(sc_id))
+			return -ENOSYS;
+	}
+
 	*val = drv.scalable[sc_id].cur_speed->khz;
 	return 0;
 }
@@ -1387,6 +1418,12 @@ DEFINE_SIMPLE_ATTRIBUTE(rate_fops, rate_get, NULL, "%lld\n");
 static int hfpll_l_get(void *data, u64 *val)
 {
 	int sc_id = (int)data;
+
+	if (sc_id != L2) {
+		if (!cpu_online(sc_id))
+			return -ENOSYS;
+	}
+
 	*val = drv.scalable[sc_id].cur_speed->pll_l_val;
 	return 0;
 }
@@ -1396,6 +1433,11 @@ DEFINE_SIMPLE_ATTRIBUTE(hfpll_l_fops, hfpll_l_get, NULL, "%lld\n");
 static int l2_vote_get(void *data, u64 *val)
 {
 	int level, sc_id = (int)data;
+
+	if (sc_id != L2) {
+		if (!cpu_online(sc_id))
+			return -ENOSYS;
+	}
 
 	level = drv.scalable[sc_id].l2_vote;
 	*val = drv.l2_freq_tbl[level].speed.khz;
@@ -1426,6 +1468,11 @@ static int src_name_show(struct seq_file *m, void *unused)
 		[PLL_8] = "PLL8",
 	};
 	int src, sc_id = (int)m->private;
+
+	if (sc_id != L2) {
+		if (!cpu_online(sc_id))
+			return -ENOSYS;
+	}
 
 	src = drv.scalable[sc_id].cur_speed->src;
 	if (src > ARRAY_SIZE(src_names))
@@ -1561,31 +1608,6 @@ static void remove_scalable_dir(int sc_id)
 	sc_dir[sc_id] = NULL;
 }
 
-static int debug_cpu_callback(struct notifier_block *nfb,
-			unsigned long action, void *hcpu)
-{
-	int cpu = (int)hcpu;
-
-	switch (action & ~CPU_TASKS_FROZEN) {
-	case CPU_DOWN_FAILED:
-	case CPU_UP_PREPARE:
-		add_scalable_dir(cpu);
-		break;
-	case CPU_UP_CANCELED:
-	case CPU_DOWN_PREPARE:
-		remove_scalable_dir(cpu);
-		break;
-	default:
-		break;
-	}
-
-	return NOTIFY_OK;
-}
-
-static struct notifier_block debug_cpu_notifier = {
-	.notifier_call = debug_cpu_callback,
-};
-
 void __init acpuclk_krait_debug_init(void)
 {
 	int cpu;
@@ -1600,11 +1622,9 @@ void __init acpuclk_krait_debug_init(void)
 	debugfs_create_file("acpu_table", S_IRUGO, base_dir, NULL,
 				&acpu_table_fops);
 
-	for_each_online_cpu(cpu)
+	for_each_possible_cpu(cpu)
 		add_scalable_dir(cpu);
 	add_scalable_dir(L2);
-
-	register_hotcpu_notifier(&debug_cpu_notifier);
 }
 
 int __init acpuclk_krait_init(struct device *dev,

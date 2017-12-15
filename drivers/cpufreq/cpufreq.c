@@ -1284,7 +1284,6 @@ static ssize_t store_vdd_levels(struct kobject *a, struct attribute *b, const ch
 
 ssize_t show_GPU_mV_table(struct kobject *a, struct attribute *b, char *buf)
 {
-	int modu = 0;
 	return get_gpu_vdd_levels_str(buf);
 }
 
