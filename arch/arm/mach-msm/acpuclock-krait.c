@@ -1342,6 +1342,7 @@ static struct cpufreq_frequency_table oc_freq_table[] = {
 	{ .frequency = 1782000 },
 	{ .frequency = 1890000 },
 	{ .frequency = 1998000 },
+	{ .frequency = 2106000 },
 	{ .frequency = CPUFREQ_TABLE_END }
 };
 
