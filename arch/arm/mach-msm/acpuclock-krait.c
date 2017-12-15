@@ -1039,23 +1039,6 @@ void acpuclk_set_vdd(unsigned int khz, int vdd_uv) {
 }
 #endif	/* CONFIG_CPU_VOTALGE_TABLE */
 
-static void __init cpufreq_table_init(void)
-{
-	pr_info("CPU Driver Init\n");
-	pr_info("CPU: 15 frequencies supported\n");
-}
-
-static void __init dcvs_freq_init(void)
-{
-	int i;
-
-	for (i = 0; drv.freq_table[i].speed.khz != 0; i++)
-		if (drv.freq_table[i].use_for_scaling)
-			msm_dcvs_register_cpu_freq(
-				drv.freq_table[i].speed.khz,
-				drv.freq_table[i].vdd_core / 1000);
-}
-
 static int acpuclk_cpu_callback(struct notifier_block *nfb,
 					    unsigned long action, void *hcpu)
 {
@@ -1272,8 +1255,6 @@ int __init acpuclk_krait_init(struct device *dev,
 {
 	drv_data_init(dev, params);
 	hw_init();
-	cpufreq_table_init();
-	dcvs_freq_init();
 	acpuclk_register(&acpuclk_krait_data);
 	register_hotcpu_notifier(&acpuclk_cpu_notifier);
 
