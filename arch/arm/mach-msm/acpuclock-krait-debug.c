@@ -28,7 +28,18 @@
 
 #include "acpuclock-krait.h"
 
-static struct drv_data *drv;
+static struct dbg_data {
+	struct acpu_level *freq_table;
+	const struct l2_level *l2_freq_tbl;
+	struct scalable *scalable;
+	struct hfpll_data *hfpll_data;
+	u32 bus_perf_client;
+	struct msm_bus_scale_pdata *bus_scale;
+	int boost_uv;
+	struct device *dev;
+}
+
+static struct dbg_data *drv;
 static DEFINE_MUTEX(debug_lock);
 
 struct acg_action {
@@ -363,10 +374,11 @@ static struct notifier_block debug_cpu_notifier = {
 	.notifier_call = debug_cpu_callback,
 };
 
-void __init acpuclk_krait_debug_init(struct drv_data *drv_data)
+void __init acpuclk_krait_debug_init(void)
 {
 	int cpu;
-	drv = drv_data;
+	struct dbg_data *dbg_data;
+	drv = dbg_data;
 
 	base_dir = debugfs_create_dir("acpuclk", NULL);
 	if (!base_dir)
