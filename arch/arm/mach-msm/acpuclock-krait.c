@@ -803,6 +803,7 @@ static int regulator_init(struct scalable *sc,
 			sc->vreg[VREG_CORE].name, ret);
 		goto err_core_conf;
 	}
+	pr_info("Max Vdd Voltage: %u\n", sc->vreg[VREG_CORE].max_vdd);
 	sc->vreg[VREG_CORE].cur_vdd = vdd_core;
 	ret = regulator_enable(sc->vreg[VREG_CORE].reg);
 	if (ret) {
@@ -957,10 +958,10 @@ static int per_cpu_init(unsigned int cpu)
 			ret = -ENODEV;
 			goto err_table;
 		}
-		dev_dbg(drv.dev, "CPU%d is running at an unknown rate. Defaulting to %lu KHz.\n",
+		pr_info("CPU%d is running at an unknown rate. Defaulting to %lu KHz.\n",
 			cpu, acpu_level->speed.khz);
 	} else {
-		dev_dbg(drv.dev, "CPU%d is running at %lu KHz\n", cpu,
+		pr_info("CPU%d is running at %lu KHz\n", cpu,
 			acpu_level->speed.khz);
 	}
 
