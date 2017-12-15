@@ -1730,12 +1730,12 @@ static inline int msm_cpufreq_init(struct cpufreq_policy *policy)
 	if (cpu_out_of_range(policy->cpu) ||
 		!cpu_online(policy->cpu))
 		return -ENODEV;
-
+#if 0
 	if (g_pvs_bin >= 2)
 		ret = cpufreq_table_validate_and_show(policy, oc_freq_table);
 	else
-		ret = cpufreq_table_validate_and_show(policy, mx_freq_table);
-
+#endif
+	ret = cpufreq_table_validate_and_show(policy, mx_freq_table);
 	if (ret) {
 		pr_err("%s: WARNING! Invalid frequency table!", __func__);
 		return ret;
