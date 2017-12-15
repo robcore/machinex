@@ -803,7 +803,7 @@ static int regulator_init(struct scalable *sc,
 			sc->vreg[VREG_CORE].name, ret);
 		goto err_core_conf;
 	}
-	pr_info("Max Vdd Voltage: %u\n", sc->vreg[VREG_CORE].max_vdd);
+	pr_info("%s Max Vdd Voltage: %u\n", __func__, sc->vreg[VREG_CORE].max_vdd);
 	sc->vreg[VREG_CORE].cur_vdd = vdd_core;
 	ret = regulator_enable(sc->vreg[VREG_CORE].reg);
 	if (ret) {
