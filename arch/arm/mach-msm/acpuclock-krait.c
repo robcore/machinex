@@ -1720,7 +1720,6 @@ static struct cpufreq_frequency_table oc_freq_table[] = {
 	{ .frequency = 1782000 },
 	{ .frequency = 1890000 },
 	{ .frequency = 1998000 },
-	{ .frequency = 2106000 },
 	{ .frequency = CPUFREQ_TABLE_END }
 };
 
@@ -1732,12 +1731,11 @@ static inline int msm_cpufreq_init(struct cpufreq_policy *policy)
 		!cpu_online(policy->cpu))
 		return -ENODEV;
 
-#if 0
-	if (g_pvs_bin >= 3)
+	if (g_pvs_bin >= 2)
 		ret = cpufreq_table_validate_and_show(policy, oc_freq_table);
 	else
-#endif
-	ret = cpufreq_table_validate_and_show(policy, mx_freq_table);
+		ret = cpufreq_table_validate_and_show(policy, mx_freq_table);
+
 	if (ret) {
 		pr_err("%s: WARNING! Invalid frequency table!", __func__);
 		return ret;

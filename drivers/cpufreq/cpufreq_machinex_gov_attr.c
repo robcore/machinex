@@ -102,13 +102,13 @@ store_one_cpu_clamp(dbs_ignore_nice_load, 0, 1);
 store_one_cpu_clamp(dbs_down_threshold, 1, 99);
 store_one_cpu_clamp(dbs_freq_step, 1, 5);
 store_one_cpu_clamp(su_rate_limit_us, 1000, 10000);
-store_one_cpu_clamp(iactive_hispeed_freq, 384000, 1890000);
+store_one_cpu_clamp(iactive_hispeed_freq, 384000, 1998000);
 store_one_long_cpu_clamp(iactive_go_hispeed_load, 1, 100);
 store_one_cpu_clamp(iactive_target_load, 1, 100);
-store_one_cpu_clamp(two_phase_freq, 0, 1890000);
+store_one_cpu_clamp(two_phase_freq, 0, 1998000);
 store_one_cpu_clamp(up_threshold_any_cpu_load, 1, 99);
-store_one_cpu_clamp(sync_freq, 0, 1890000);
-store_one_cpu_clamp(up_threshold_any_cpu_freq, 0, 1890000);
+store_one_cpu_clamp(sync_freq, 0, 1998000);
+store_one_cpu_clamp(up_threshold_any_cpu_freq, 0, 1998000);
 
 static ssize_t mx_cpufreq_governor_store
 (struct device *dev,
