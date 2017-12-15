@@ -52,7 +52,7 @@
 #include <mach/cpufreq.h>
 #include <mach/msm_bus.h>
 #include <linux/msm_thermal.h>
-
+#include <linux/debugfs.h>
 #include "acpuclock.h"
 #include "acpuclock-krait.h"
 #include "avs.h"
@@ -89,6 +89,17 @@ static struct drv_data {
 	int boost_uv;
 	struct device *dev;
 } drv;
+
+static struct drv_data *drv_debug;
+static DEFINE_MUTEX(debug_lock);
+
+struct acg_action {
+	bool set;
+	bool enable;
+};
+static int l2_acg_en_val;
+static struct dentry *base_dir;
+static struct dentry *sc_dir[MAX_SCALABLES];
 
 static unsigned long acpuclk_krait_get_rate(unsigned int cpu)
 {
@@ -1250,6 +1261,351 @@ static void __init hw_init(void)
 	bus_init(l2_level);
 }
 
+static void cpu_action(void *info)
+{
+	struct acg_action *action = info;
+
+	u32 val;
+	asm volatile ("mrc p15, 7, %[cpmr0], c15, c0, 5\n\t"
+			: [cpmr0]"=r" (val));
+	if (action->set) {
+		if (action->enable)
+			val &= ~BIT(0);
+		else
+			val |= BIT(0);
+		asm volatile ("mcr p15, 7, %[cpmr0], c15, c0, 5\n\t"
+				: : [cpmr0]"r" (val));
+	} else {
+		action->enable = !(val & BIT(0));
+	}
+}
+
+/* Disable auto clock-gating for a scalable. */
+static void disable_acg(int sc_id)
+{
+	u32 regval;
+
+	if (sc_id == L2) {
+		regval = get_l2_indirect_reg(drv.scalable[sc_id].l2cpmr_iaddr);
+		l2_acg_en_val = regval & (0x3 << 10);
+		regval |= (0x3 << 10);
+		set_l2_indirect_reg(drv.scalable[sc_id].l2cpmr_iaddr, regval);
+	} else {
+		struct acg_action action = { .set = true, .enable = false };
+		smp_call_function_single(sc_id, cpu_action, &action, 1);
+	}
+}
+
+/* Enable auto clock-gating for a scalable. */
+static void enable_acg(int sc_id)
+{
+	u32 regval;
+
+	if (sc_id == L2) {
+		regval = get_l2_indirect_reg(drv.scalable[sc_id].l2cpmr_iaddr);
+		regval &= ~(0x3 << 10);
+		regval |= l2_acg_en_val;
+		set_l2_indirect_reg(drv.scalable[sc_id].l2cpmr_iaddr, regval);
+	} else {
+		struct acg_action action = { .set = true, .enable = true };
+		smp_call_function_single(sc_id, cpu_action, &action, 1);
+	}
+}
+
+/* Check if auto clock-gating for a scalable. */
+static bool acg_is_enabled(int sc_id)
+{
+	u32 regval;
+
+	if (sc_id == L2) {
+		regval = get_l2_indirect_reg(drv.scalable[sc_id].l2cpmr_iaddr);
+		return ((regval >> 10) & 0x3) != 0x3;
+	} else {
+		struct acg_action action = { .set = false };
+		smp_call_function_single(sc_id, cpu_action, &action, 1);
+		return action.enable;
+	}
+}
+
+/* Enable/Disable auto clock gating. */
+static int acg_set(void *data, u64 val)
+{
+	int ret = 0;
+	int sc_id = (int)data;
+
+	mutex_lock(&debug_lock);
+	get_online_cpus();
+	if (!sc_dir[sc_id]) {
+		ret = -ENODEV;
+		goto out;
+	}
+
+	if (val == 0 && acg_is_enabled(sc_id))
+		disable_acg(sc_id);
+	else if (val == 1)
+		enable_acg(sc_id);
+out:
+	put_online_cpus();
+	mutex_unlock(&debug_lock);
+
+	return ret;
+}
+
+/* Get auto clock-gating state. */
+static int acg_get(void *data, u64 *val)
+{
+	int ret = 0;
+	int sc_id = (int)data;
+
+	mutex_lock(&debug_lock);
+	get_online_cpus();
+	if (!sc_dir[sc_id]) {
+		ret = -ENODEV;
+		goto out;
+	}
+
+	*val = acg_is_enabled(sc_id);
+out:
+	put_online_cpus();
+	mutex_unlock(&debug_lock);
+
+	return ret;
+}
+DEFINE_SIMPLE_ATTRIBUTE(acgd_fops, acg_get, acg_set, "%lld\n");
+
+/* Get the rate */
+static int rate_get(void *data, u64 *val)
+{
+	int sc_id = (int)data;
+	*val = drv.scalable[sc_id].cur_speed->khz;
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(rate_fops, rate_get, NULL, "%lld\n");
+
+/* Get the HFPLL's L-value. */
+static int hfpll_l_get(void *data, u64 *val)
+{
+	int sc_id = (int)data;
+	*val = drv.scalable[sc_id].cur_speed->pll_l_val;
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(hfpll_l_fops, hfpll_l_get, NULL, "%lld\n");
+
+/* Get the L2 rate vote. */
+static int l2_vote_get(void *data, u64 *val)
+{
+	int level, sc_id = (int)data;
+
+	level = drv.scalable[sc_id].l2_vote;
+	*val = drv.l2_freq_tbl[level].speed.khz;
+
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(l2_vote_fops, l2_vote_get, NULL, "%lld\n");
+
+/* Get the bandwidth vote. */
+static int bw_vote_get(void *data, u64 *val)
+{
+	struct l2_level *l;
+
+	l = container_of(drv.scalable[L2].cur_speed,
+			 struct l2_level, speed);
+	*val = drv.bus_scale->usecase[l->bw_level].vectors->ib;
+
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(bw_vote_fops, bw_vote_get, NULL, "%lld\n");
+
+/* Get the name of the currently-selected clock source. */
+static int src_name_show(struct seq_file *m, void *unused)
+{
+	const char *const src_names[NUM_SRC_ID] = {
+		[PLL_0] = "PLL0",
+		[HFPLL] = "HFPLL",
+		[PLL_8] = "PLL8",
+	};
+	int src, sc_id = (int)m->private;
+
+	src = drv.scalable[sc_id].cur_speed->src;
+	if (src > ARRAY_SIZE(src_names))
+		return -EINVAL;
+
+	seq_printf(m, "%s\n", src_names[src]);
+
+	return 0;
+}
+
+static int src_name_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, src_name_show, inode->i_private);
+}
+
+static const struct file_operations src_name_fops = {
+	.open		= src_name_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= seq_release,
+};
+
+/* Get speed_bin ID */
+static int speed_bin_get(void *data, u64 *val)
+{
+	*val = g_speed_bin;
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(speed_bin_fops, speed_bin_get, NULL, "%lld\n");
+
+/* Get pvs_bin ID */
+static int pvs_bin_get(void *data, u64 *val)
+{
+	*val = g_pvs_bin;
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(pvs_bin_fops, pvs_bin_get, NULL, "%lld\n");
+
+/* Get boost_uv */
+static int boost_get(void *data, u64 *val)
+{
+	*val = drv.boost_uv;
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(boost_fops, boost_get, NULL, "%lld\n");
+
+static int acpu_table_show(struct seq_file *m, void *unused)
+{
+	const struct acpu_level *level;
+
+	seq_printf(m, "CPU_KHz  PLL_L_Val   L2_KHz  VDD_Dig  VDD_Mem  ");
+	seq_printf(m, "BW_Mbps  VDD_Core  UA_Core  AVS\n");
+
+	for (level = drv.freq_table; level->speed.khz != 0; level++) {
+
+		const struct l2_level *l2 =
+					&drv.l2_freq_tbl[level->l2_level];
+		u32 bw = drv.bus_scale->usecase[l2->bw_level].vectors[0].ib;
+
+		if (!level->use_for_scaling)
+			continue;
+
+		/* CPU speed information */
+		seq_printf(m, "%7lu  %9u  ",
+				level->speed.khz,
+				level->speed.pll_l_val);
+
+		/* L2 level information */
+		seq_printf(m, "%7lu  %7d  %7d  %7u  ",
+				l2->speed.khz,
+				l2->vdd_dig,
+				l2->vdd_mem,
+				bw / 1000000);
+
+		/* Core voltage information */
+		seq_printf(m, "%8d  %7d  %3d\n",
+				level->vdd_core,
+				level->ua_core,
+				level->avsdscr_setting);
+	}
+
+	return 0;
+}
+
+static int acpu_table_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, acpu_table_show, inode->i_private);
+}
+
+static const struct file_operations acpu_table_fops = {
+	.open		= acpu_table_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= seq_release,
+};
+
+static void add_scalable_dir(int sc_id)
+{
+	char sc_name[8];
+
+	if (sc_id == L2)
+		snprintf(sc_name, sizeof(sc_name), "l2");
+	else
+		snprintf(sc_name, sizeof(sc_name), "cpu%d", sc_id);
+
+	sc_dir[sc_id] = debugfs_create_dir(sc_name, base_dir);
+	if (!sc_dir[sc_id])
+		return;
+
+	debugfs_create_file("auto_gating", S_IRUGO | S_IWUSR,
+			sc_dir[sc_id], (void *)sc_id, &acgd_fops);
+
+	debugfs_create_file("rate", S_IRUGO,
+			sc_dir[sc_id], (void *)sc_id, &rate_fops);
+
+	debugfs_create_file("hfpll_l", S_IRUGO,
+			sc_dir[sc_id], (void *)sc_id, &hfpll_l_fops);
+
+	debugfs_create_file("src", S_IRUGO,
+			sc_dir[sc_id], (void *)sc_id, &src_name_fops);
+
+	if (sc_id == L2)
+		debugfs_create_file("bw_ib_vote", S_IRUGO,
+			sc_dir[sc_id], (void *)sc_id, &bw_vote_fops);
+	else
+		debugfs_create_file("l2_vote", S_IRUGO,
+			sc_dir[sc_id], (void *)sc_id, &l2_vote_fops);
+}
+
+static void remove_scalable_dir(int sc_id)
+{
+	debugfs_remove_recursive(sc_dir[sc_id]);
+	sc_dir[sc_id] = NULL;
+}
+
+static int debug_cpu_callback(struct notifier_block *nfb,
+			unsigned long action, void *hcpu)
+{
+	int cpu = (int)hcpu;
+
+	switch (action & ~CPU_TASKS_FROZEN) {
+	case CPU_DOWN_FAILED:
+	case CPU_UP_PREPARE:
+		add_scalable_dir(cpu);
+		break;
+	case CPU_UP_CANCELED:
+	case CPU_DOWN_PREPARE:
+		remove_scalable_dir(cpu);
+		break;
+	default:
+		break;
+	}
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block debug_cpu_notifier = {
+	.notifier_call = debug_cpu_callback,
+};
+
+void __init acpuclk_krait_debug_init(void)
+{
+	int cpu;
+	base_dir = debugfs_create_dir("acpuclk", NULL);
+	if (!base_dir)
+		return;
+
+	debugfs_create_file("speed_bin", S_IRUGO, base_dir, NULL,
+							&speed_bin_fops);
+	debugfs_create_file("pvs_bin", S_IRUGO, base_dir, NULL, &pvs_bin_fops);
+	debugfs_create_file("boost_uv", S_IRUGO, base_dir, NULL, &boost_fops);
+	debugfs_create_file("acpu_table", S_IRUGO, base_dir, NULL,
+				&acpu_table_fops);
+
+	for_each_online_cpu(cpu)
+		add_scalable_dir(cpu);
+	add_scalable_dir(L2);
+
+	register_hotcpu_notifier(&debug_cpu_notifier);
+}
+
 int __init acpuclk_krait_init(struct device *dev,
 			      const struct acpuclk_krait_params *params)
 {
@@ -1257,6 +1613,7 @@ int __init acpuclk_krait_init(struct device *dev,
 	hw_init();
 	acpuclk_register(&acpuclk_krait_data);
 	register_hotcpu_notifier(&acpuclk_cpu_notifier);
+	acpuclk_krait_debug_init();
 	return 0;
 }
 
@@ -1306,7 +1663,7 @@ static unsigned int msm_cpufreq_get_freq(unsigned int cpu)
 		return 0;
 }
 
-static struct cpufreq_frequency_table freq_table[] = {
+static struct cpufreq_frequency_table mx_freq_table[] = {
 	{ .frequency = 384000 },
 	{ .frequency = 486000 },
 	{ .frequency = 594000 },
@@ -1359,7 +1716,7 @@ static inline int msm_cpufreq_init(struct cpufreq_policy *policy)
 		ret = cpufreq_table_validate_and_show(policy, oc_freq_table);
 	else
 #endif
-	ret = cpufreq_table_validate_and_show(policy, freq_table);
+	ret = cpufreq_table_validate_and_show(policy, mx_freq_table);
 	if (ret) {
 		pr_err("%s: WARNING! Invalid frequency table!", __func__);
 		return ret;
