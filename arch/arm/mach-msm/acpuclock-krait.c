@@ -1257,7 +1257,6 @@ int __init acpuclk_krait_init(struct device *dev,
 	hw_init();
 	acpuclk_register(&acpuclk_krait_data);
 	register_hotcpu_notifier(&acpuclk_cpu_notifier);
-
 	return 0;
 }
 
@@ -1266,15 +1265,13 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 {
 	int ret = 0;
 	struct cpufreq_freqs freqs;
-	unsigned long new_freq_copy;
 
+	freqs.cpu = policy->cpu;
 	freqs.old = policy->cur;
 	freqs.new = new_freq;
-	freqs.cpu = policy->cpu;
 
 	cpufreq_freq_transition_begin(policy, &freqs);
-	new_freq_copy = new_freq;
-	ret = acpuclk_set_rate(policy->cpu, new_freq_copy, SETRATE_CPUFREQ);
+	ret = acpuclk_set_rate(policy->cpu, (unsigned long)freqs.new, SETRATE_CPUFREQ);
 	cpufreq_freq_transition_end(policy, &freqs, ret);
 
 	return ret;
