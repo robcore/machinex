@@ -99,7 +99,7 @@ static struct scalable scalable[] __initdata = {
  * The correct maximum rate for 8064ab in 600 MHZ.
  * We rely on the RPM rounding requests up here.
 */
-#if 0
+
 static struct msm_bus_paths bw_level_tbl[] __initdata = {
 	[0] =  BW_MBPS(640), /* At least  80 MHz on bus. */
 	[1] = BW_MBPS(1064), /* At least 133 MHz on bus. */
@@ -108,16 +108,6 @@ static struct msm_bus_paths bw_level_tbl[] __initdata = {
 	[4] = BW_MBPS(3200), /* At least 400 MHz on bus. */
 	[5] = BW_MBPS(4264), /* At least 533 MHz on bus. */
 };
-#else
-static struct msm_bus_paths bw_level_tbl[] __initdata = {
-	[0] =  BW_MBPS(640), /* At least  80 MHz on bus. */
-	[1] = BW_MBPS(1064), /* At least 133 MHz on bus. */
-	[2] = BW_MBPS(2000), /* At least 250 MHz on bus. */
-	[3] = BW_MBPS(2392), /* At least 299 MHz on bus. */
-	[4] = BW_MBPS(3600), /* At least 450 MHz on bus. */
-	[5] = BW_MBPS(4264), /* At least 533 MHz on bus. */
-};
-#endif
 static struct msm_bus_scale_pdata bus_scale_data __initdata = {
 	.usecase = bw_level_tbl,
 	.num_usecases = ARRAY_SIZE(bw_level_tbl),
