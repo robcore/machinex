@@ -56,7 +56,7 @@ enum msm_pm_sleep_mode {
 	MSM_PM_SLEEP_MODE_NOT_SELECTED,
 };
 
-static char mode_to_string(enum msm_pm_sleep_mode mode)
+static char *mode_to_string(enum msm_pm_sleep_mode mode)
 {
 	switch (mode) {
 		case MSM_PM_SLEEP_MODE_WAIT_FOR_INTERRUPT:
@@ -66,7 +66,7 @@ static char mode_to_string(enum msm_pm_sleep_mode mode)
 		case MSM_PM_SLEEP_MODE_POWER_COLLAPSE_STANDALONE:
 			return "Standalone Power Collapse";
 		case MSM_PM_SLEEP_MODE_POWER_COLLAPSE:
-			return "Power Collapse"";
+			return "Power Collapse";
 		case MSM_PM_SLEEP_MODE_APPS_SLEEP:
 			return "Apps Sleep";
 		case MSM_PM_SLEEP_MODE_RETENTION:
