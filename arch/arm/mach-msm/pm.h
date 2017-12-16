@@ -68,9 +68,7 @@ static char *mode_to_string(enum msm_pm_sleep_mode mode)
 		case MSM_PM_SLEEP_MODE_POWER_COLLAPSE:
 			return "Power Collapse";
 		case MSM_PM_SLEEP_MODE_APPS_SLEEP:
-			return "Apps Sleep";
-		case MSM_PM_SLEEP_MODE_RETENTION:
-			return "Retention(Apps Sleep)";
+			return "Retention/Apps Sleep";
 		case MSM_PM_SLEEP_MODE_POWER_COLLAPSE_SUSPEND:
 			return "Power Collapse Suspend";
 		case MSM_PM_SLEEP_MODE_POWER_COLLAPSE_NO_XO_SHUTDOWN:
