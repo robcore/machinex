@@ -412,7 +412,7 @@ struct pm_irq_chip *  pm8821_irq_init(struct device *dev,
 			kfree(chip);
 			return ERR_PTR(rc);
 		} else{
-			irq_set_irq_wake(devirq, 1);
+			enable_irq_wake(devirq);
 			msm_mpm_set_pin_wake(MPM_PIN_FOR_8821_IRQ, 1);
 			msm_mpm_set_pin_type(MPM_PIN_FOR_8821_IRQ,
 				pdata->irq_trigger_flag);

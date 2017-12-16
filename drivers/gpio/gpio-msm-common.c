@@ -385,12 +385,12 @@ static int msm_gpio_irq_set_wake(struct irq_data *d, unsigned int on)
 
 	if (on) {
 		if (bitmap_empty(msm_gpio.wake_irqs, NR_MSM_GPIOS))
-			irq_set_irq_wake(TLMM_MSM_SUMMARY_IRQ, 1);
+			enable_irq_wake(TLMM_MSM_SUMMARY_IRQ);
 		set_bit(gpio, msm_gpio.wake_irqs);
 	} else {
 		clear_bit(gpio, msm_gpio.wake_irqs);
 		if (bitmap_empty(msm_gpio.wake_irqs, NR_MSM_GPIOS))
-			irq_set_irq_wake(TLMM_MSM_SUMMARY_IRQ, 0);
+			disable_irq_wake(TLMM_MSM_SUMMARY_IRQ);
 	}
 
 	if (msm_gpio_irq_extn.irq_set_wake)

@@ -543,7 +543,7 @@ int pm8xxx_batt_alarm_register_notifier(struct notifier_block *nb)
 	if (rc == 0) {
 		if (chip->notifier_count == 0) {
 			enable_irq(chip->irq);
-			rc = irq_set_irq_wake(chip->irq, 1);
+			rc = enable_irq_wake(chip->irq);
 		}
 
 		chip->notifier_count++;
@@ -578,7 +578,7 @@ int pm8xxx_batt_alarm_unregister_notifier(struct notifier_block *nb)
 		chip->notifier_count--;
 
 		if (chip->notifier_count == 0) {
-			rc = irq_set_irq_wake(chip->irq, 0);
+			rc = disable_irq_wake(chip->irq);
 			disable_irq(chip->irq);
 		}
 
@@ -766,7 +766,7 @@ static int pm8xxx_batt_alarm_remove(struct platform_device *pdev)
 
 	if (chip) {
 		platform_set_drvdata(pdev, NULL);
-		irq_set_irq_wake(chip->irq, 0);
+		disable_irq_wake(chip->irq);
 		free_irq(chip->irq, chip);
 		cancel_work_sync(&chip->irq_work);
 		srcu_cleanup_notifier_head(&chip->irq_notifier_list);

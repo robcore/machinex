@@ -2186,7 +2186,7 @@ static int msm_hs_startup(struct uart_port *uport)
 	mb();
 
 	if (use_low_power_wakeup(msm_uport)) {
-		ret = irq_set_irq_wake(msm_uport->wakeup.irq, 1);
+		ret = enable_irq_wake(msm_uport->wakeup.irq);
 		if (unlikely(ret)) {
 			pr_err("%s():Err setting wakeup irq\n", __func__);
 			goto unconfigure_uart_gpio;
@@ -2229,7 +2229,7 @@ static int msm_hs_startup(struct uart_port *uport)
 free_uart_irq:
 	free_irq(uport->irq, msm_uport);
 free_wake_irq:
-	irq_set_irq_wake(msm_uport->wakeup.irq, 0);
+	disable_irq_wake(msm_uport->wakeup.irq);
 unconfigure_uart_gpio:
 	if (pdata && pdata->config_gpio)
 		msm_hs_unconfig_uart_gpios(uport);
@@ -2679,7 +2679,7 @@ static void msm_hs_shutdown(struct uart_port *uport)
 			 UART_XMIT_SIZE, DMA_TO_DEVICE);
 
 	if (use_low_power_wakeup(msm_uport))
-		irq_set_irq_wake(msm_uport->wakeup.irq, 0);
+		disable_irq_wake(msm_uport->wakeup.irq);
 
 	/* Free the interrupt */
 	if (use_low_power_wakeup(msm_uport))

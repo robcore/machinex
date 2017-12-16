@@ -443,7 +443,7 @@ struct pm_irq_chip *  pm8xxx_irq_init(struct device *dev,
 			pr_err("failed to request_irq for %d rc=%d\n",
 								devirq, rc);
 		} else {
-			irq_set_irq_wake(devirq, 1);
+			enable_irq_wake(devirq);
 		}
 	}
 

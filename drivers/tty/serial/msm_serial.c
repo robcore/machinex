@@ -556,7 +556,7 @@ static int msm_startup(struct uart_port *port)
 	if (unlikely(ret))
 		return ret;
 
-	if (unlikely(irq_set_irq_wake(port->irq, 1))) {
+	if (unlikely(enable_irq_wake(port->irq))) {
 		free_irq(port->irq, port);
 		return -ENXIO;
 	}
@@ -598,7 +598,7 @@ static int msm_startup(struct uart_port *port)
 
 #ifdef CONFIG_SERIAL_MSM_RX_WAKEUP
 	if (use_low_power_wakeup(msm_port)) {
-		ret = irq_set_irq_wake(msm_port->wakeup.irq, 1);
+		ret = enable_irq_wake(msm_port->wakeup.irq);
 		if (unlikely(ret))
 			return ret;
 		ret = request_irq(msm_port->wakeup.irq, msm_rx_irq,
@@ -629,7 +629,7 @@ static void msm_shutdown(struct uart_port *port)
 
 #ifdef CONFIG_SERIAL_MSM_RX_WAKEUP
 	if (use_low_power_wakeup(msm_port)) {
-		irq_set_irq_wake(msm_port->wakeup.irq, 0);
+		disable_irq_wake(msm_port->wakeup.irq);
 		free_irq(msm_port->wakeup.irq, msm_port);
 	}
 #endif

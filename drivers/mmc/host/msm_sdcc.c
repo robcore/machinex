@@ -6741,7 +6741,7 @@ static int msmsdcc_remove(struct platform_device *pdev)
 	wake_lock_destroy(&host->sdio_suspend_wlock);
 	if (plat->sdiowakeup_irq) {
 		wake_lock_destroy(&host->sdio_wlock);
-		irq_set_irq_wake(plat->sdiowakeup_irq, 0);
+		disable_irq_wake(plat->sdiowakeup_irq);
 		free_irq(plat->sdiowakeup_irq, host);
 	}
 
