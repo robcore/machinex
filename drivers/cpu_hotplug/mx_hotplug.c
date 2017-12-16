@@ -401,7 +401,7 @@ void ignition(unsigned int status)
 			return;
 		}
 
-		INIT_DELAYED_WORK(&motor, mx_motor);
+		INIT_DEFERRABLE_WORK(&motor, mx_motor);
 		queue_delayed_work_on(0, mx_hp_engine, &motor, msecs_to_jiffies(sampling_rate));
 		register_power_suspend(&mx_suspend_data);
 		register_omniboost(&mx_nb);
