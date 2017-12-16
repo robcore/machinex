@@ -837,7 +837,6 @@ int msm_pm_idle_prepare(struct cpuidle_device *dev,
 int msm_pm_idle_enter(enum msm_pm_sleep_mode sleep_mode)
 {
 	int64_t time;
-	int exit_stat;
 
 #if 0
 	pr_info(" %s: CPU:%u mode: %s\n",
@@ -848,20 +847,13 @@ int msm_pm_idle_enter(enum msm_pm_sleep_mode sleep_mode)
 	switch (sleep_mode) {
 	case MSM_PM_SLEEP_MODE_WAIT_FOR_INTERRUPT:
 		msm_pm_swfi();
-		exit_stat = MSM_PM_STAT_IDLE_WFI;
 		break;
 
 	case MSM_PM_SLEEP_MODE_RETENTION:
 		msm_pm_retention();
-		exit_stat = MSM_PM_STAT_RETENTION;
 		break;
 
 	case MSM_PM_SLEEP_MODE_POWER_COLLAPSE_STANDALONE:
-		if (msm_pm_power_collapse_standalone(true))
-			exit_stat = MSM_PM_STAT_IDLE_STANDALONE_POWER_COLLAPSE;
-		else
-			exit_stat =
-			     MSM_PM_STAT_IDLE_FAILED_STANDALONE_POWER_COLLAPSE;
 		break;
 
 	case MSM_PM_SLEEP_MODE_POWER_COLLAPSE: {
@@ -884,10 +876,6 @@ int msm_pm_idle_enter(enum msm_pm_sleep_mode sleep_mode)
 						true, notify_rpm, collapsed);
 		}
 		msm_pm_timer_exit_idle(timer_halted);
-		if (collapsed)
-			exit_stat = MSM_PM_STAT_IDLE_POWER_COLLAPSE;
-		else
-			exit_stat = MSM_PM_STAT_IDLE_FAILED_POWER_COLLAPSE;
 		break;
 	}
 
@@ -901,7 +889,6 @@ int msm_pm_idle_enter(enum msm_pm_sleep_mode sleep_mode)
 	}
 
 	time = ktime_to_ns(ktime_get()) - time;
-	msm_pm_add_stat(exit_stat, time);
 
 	do_div(time, 1000);
 	return (int) time;
@@ -1063,11 +1050,6 @@ static int msm_pm_enter(suspend_state_t state)
 			pr_err("%s: cannot find the lowest power limit\n",
 				__func__);
 		}
-		time = msm_pm_timer_exit_suspend(time, period);
-		if (collapsed)
-			msm_pm_add_stat(MSM_PM_STAT_SUSPEND, time);
-		else
-			msm_pm_add_stat(MSM_PM_STAT_FAILED_SUSPEND, time);
 	} else if (allow[MSM_PM_SLEEP_MODE_POWER_COLLAPSE_STANDALONE]) {
 		if (MSM_PM_DEBUG_SUSPEND & msm_pm_debug_mask)
 			pr_info("%s: standalone power collapse\n", __func__);
@@ -1317,7 +1299,6 @@ static int __init msm_pm_init(void)
 	};
 
 	msm_pm_mode_sysfs_add();
-	msm_pm_add_stats(enable_stats, ARRAY_SIZE(enable_stats));
 
 	suspend_set_ops(&msm_pm_ops);
 	msm_pm_target_init();
