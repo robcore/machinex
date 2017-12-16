@@ -839,9 +839,8 @@ int msm_pm_idle_enter(enum msm_pm_sleep_mode sleep_mode)
 	int64_t time;
 	int exit_stat;
 
-	if (MSM_PM_DEBUG_IDLE & msm_pm_debug_mask)
-		pr_info("CPU%u: %s: mode %d\n",
-			smp_processor_id(), __func__, sleep_mode);
+	pr_info(" %s: CPU:%u mode: %s\n",
+		__func__, smp_processor_id(), mode_to_string(sleep_mode));
 
 	time = ktime_to_ns(ktime_get());
 

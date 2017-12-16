@@ -56,6 +56,36 @@ enum msm_pm_sleep_mode {
 	MSM_PM_SLEEP_MODE_NOT_SELECTED,
 };
 
+static char mode_to_string(enum msm_pm_sleep_mode mode)
+{
+	switch (mode) {
+		case MSM_PM_SLEEP_MODE_WAIT_FOR_INTERRUPT:
+			return "Wait For Interrupt";
+		case MSM_PM_SLEEP_MODE_RAMP_DOWN_AND_WAIT_FOR_INTERRUPT:
+			return "Ramp Down & WFI";
+		case MSM_PM_SLEEP_MODE_POWER_COLLAPSE_STANDALONE:
+			return "Standalone Power Collapse";
+		case MSM_PM_SLEEP_MODE_POWER_COLLAPSE:
+			return "Power Collapse"";
+		case MSM_PM_SLEEP_MODE_APPS_SLEEP:
+			return "Apps Sleep";
+		case MSM_PM_SLEEP_MODE_RETENTION:
+			return "Retention(Apps Sleep)";
+		case MSM_PM_SLEEP_MODE_POWER_COLLAPSE_SUSPEND:
+			return "Power Collapse Suspend";
+		case MSM_PM_SLEEP_MODE_POWER_COLLAPSE_NO_XO_SHUTDOWN:
+			return "Power Collapse No XO Shutdown";
+		case MSM_PM_SLEEP_MODE_NR:
+			return "Max";
+		case MSM_PM_SLEEP_MODE_NOT_SELECTED:
+			return "None Selected";
+		default:
+			return "None Selected";
+	}
+
+	return "None Selected";
+}
+
 enum msm_pm_l2_scm_flag {
 	MSM_SCM_L2_ON = 0,
 	MSM_SCM_L2_OFF = 1,
