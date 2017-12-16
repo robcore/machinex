@@ -839,9 +839,10 @@ int msm_pm_idle_enter(enum msm_pm_sleep_mode sleep_mode)
 	int64_t time;
 	int exit_stat;
 
+#if 0
 	pr_info(" %s: CPU:%u mode: %s\n",
 		__func__, smp_processor_id(), mode_to_string(sleep_mode));
-
+#endif
 	time = ktime_to_ns(ktime_get());
 
 	switch (sleep_mode) {
