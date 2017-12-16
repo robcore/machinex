@@ -2915,7 +2915,7 @@ static int sec_battery_probe(struct platform_device *pdev)
 
 	/* create work queue */
 	battery->monitor_wqueue =
-	    alloc_workqueue(dev_name(&pdev->dev), WQ_MEM_RECLAIM, 1);
+		create_singlethread_workqueue(dev_name(&pdev->dev));
 	if (!battery->monitor_wqueue) {
 		goto err_wake_lock;
 	}
@@ -3083,6 +3083,9 @@ static int sec_battery_prepare(struct device *dev)
 	default:
 		break;
 	}
+
+	/* monitor_wake_lock should be unlocked before cancle monitor_work */
+	wake_unlock(&battery->monitor_wake_lock);
 	cancel_work_sync(&battery->monitor_work);
 
 	battery->polling_in_sleep = true;
