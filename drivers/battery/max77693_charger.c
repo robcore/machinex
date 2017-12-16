@@ -32,7 +32,7 @@
 #define SIOP_CHARGING_LIMIT_CURRENT 1000
 #define DISCHARGE_CURRENT 460
 
-static unsigned int secbatt_debug = false;
+static unsigned int secbatt_debug = 0;
 module_param(secbatt_debug, uint, 0644);
 
 #define pr_secbatt(msg...)		\
@@ -425,21 +425,23 @@ static void max77693_set_charge_current(struct max77693_charger_data *charger,
 {
 	u8 reg_data = 0;
 
-	reg_data &= ~MAX77693_CHG_CC;
+	pr_secbatt("%s: set current value : %d\n", __func__, cur);
 
 	if (!cur) {
 		/* No charger */
 		max77693_write_reg(charger->max77693->i2c,
-				MAX77693_CHG_REG_CHG_CNFG_02, reg_data);
+			MAX77693_CHG_REG_CHG_CNFG_02, 0x0);
 	} else {
-		max77693_read_reg(charger->max77693->i2c,
-			MAX77693_CHG_REG_CHG_CNFG_02, &reg_data);
+		reg_data &= ~MAX77693_CHG_CC;
 		reg_data |= ((cur * 3 / 100) << 0);
+
+		pr_secbatt("%s: charge current %d mA, reg_data(0x%02x)\n",
+				__func__, cur, reg_data);
+
 		max77693_write_reg(charger->max77693->i2c,
-				MAX77693_CHG_REG_CHG_CNFG_02, reg_data);
+			MAX77693_CHG_REG_CHG_CNFG_02, reg_data);
 	}
-	pr_secbatt("%s: reg_data(0x%02x), charge(%d)\n",
-			__func__, reg_data, cur);
+
 }
 
 /*
