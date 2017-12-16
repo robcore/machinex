@@ -416,8 +416,6 @@ static void max77693_set_charge_current(struct max77693_charger_data *charger,
 {
 	u8 reg_data = 0;
 
-	max77693_read_reg(charger->max77693->i2c,
-		MAX77693_CHG_REG_CHG_CNFG_02, &reg_data);
 	reg_data &= ~MAX77693_CHG_CC;
 
 	if (!cur) {
@@ -425,6 +423,8 @@ static void max77693_set_charge_current(struct max77693_charger_data *charger,
 		max77693_write_reg(charger->max77693->i2c,
 				MAX77693_CHG_REG_CHG_CNFG_02, reg_data);
 	} else {
+		max77693_read_reg(charger->max77693->i2c,
+			MAX77693_CHG_REG_CHG_CNFG_02, &reg_data);
 		reg_data |= ((cur * 3 / 100) << 0);
 		max77693_write_reg(charger->max77693->i2c,
 				MAX77693_CHG_REG_CHG_CNFG_02, reg_data);
@@ -531,8 +531,10 @@ static void reduce_input_current(struct max77693_charger_data *charger, int cur)
 	set_reg = MAX77693_CHG_REG_CHG_CNFG_09;
 	if (!max77693_read_reg(charger->max77693->i2c,
 				set_reg, &set_value)) {
-		if ((set_value <= (MINIMUM_INPUT_CURRENT / 20)) ||
-		    (set_value <= (cur / 20)))
+		if ()
+			return;
+		if (set_value <= (MINIMUM_INPUT_CURRENT / 20) ||
+		    set_value <= (cur / 20) || set_value == 0)
 			return;
 		set_value -= (cur / 20);
 		set_value = (set_value < (MINIMUM_INPUT_CURRENT / 20)) ?
