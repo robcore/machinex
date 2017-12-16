@@ -861,12 +861,9 @@ static int sec_chg_set_property(struct power_supply *psy,
 			} else
 				set_charging_current_max =
 					charger->charging_current_max;
-#ifdef CONFIG_FORCE_FAST_CHARGE
+
 			if (screen_on_current_limit && charger->siop_level < 100 &&
-#else
-			if (charger->siop_level < 100 &&
-#endif
-					val->intval == POWER_SUPPLY_TYPE_MAINS) {
+				val->intval == POWER_SUPPLY_TYPE_MAINS) {
 				set_charging_current_max = SIOP_INPUT_LIMIT_CURRENT;
 				if (set_charging_current > SIOP_CHARGING_LIMIT_CURRENT)
 					set_charging_current = SIOP_CHARGING_LIMIT_CURRENT;
@@ -915,21 +912,13 @@ static int sec_chg_set_property(struct power_supply *psy,
 				current_now = usb_charging_current;
 
 			if (charger->cable_type == POWER_SUPPLY_TYPE_MAINS) {
-#ifdef CONFIG_FORCE_FAST_CHARGE
 				if (screen_on_current_limit && charger->siop_level < 100 )
-#else
-				if (charger->siop_level < 100 )
-#endif
 					set_charging_current_max =
 						SIOP_INPUT_LIMIT_CURRENT;
 				else
 					set_charging_current_max =
 						charger->charging_current_max;
-#ifdef CONFIG_FORCE_FAST_CHARGE
-				if (screen_on_current_limit && charger->siop_level < 100 && current_now > SIOP_CHARGING_LIMIT_CURRENT)
-#else
-				if (charger->siop_level < 100 && current_now > SIOP_CHARGING_LIMIT_CURRENT)
-#endif
+			if (screen_on_current_limit && charger->siop_level < 100 && current_now > SIOP_CHARGING_LIMIT_CURRENT)
 					current_now = SIOP_CHARGING_LIMIT_CURRENT;
 				max77693_set_input_current(charger,
 						set_charging_current_max);
@@ -943,29 +932,6 @@ static int sec_chg_set_property(struct power_supply *psy,
 		max77693_set_input_current(charger,
 				val->intval);
 		break;
-#if defined(CONFIG_SAMSUNG_BATTERY_ENG_TEST)
-	case POWER_SUPPLY_PROP_CHARGE_TYPE:
-		if(val->intval == POWER_SUPPLY_TYPE_WIRELESS) {
-			u8 reg_data;
-			max77693_read_reg(charger->max77693->i2c,
-				MAX77693_CHG_REG_CHG_CNFG_12, &reg_data);
-			reg_data &= ~(1 << 5);
-			max77693_write_reg(charger->max77693->i2c,
-				MAX77693_CHG_REG_CHG_CNFG_12, reg_data);
-			pr_debug("%s: charge only WC CNFG_12: 0x%x\n",
-					__func__, reg_data);
-		} else {
-			u8 reg_data;
-			max77693_read_reg(charger->max77693->i2c,
-				MAX77693_CHG_REG_CHG_CNFG_12, &reg_data);
-			reg_data |= (1 << 5);
-			max77693_write_reg(charger->max77693->i2c,
-				MAX77693_CHG_REG_CHG_CNFG_12, reg_data);
-			pr_debug("%s: set CNFG_12: 0x%x\n", __func__, reg_data);
-
-		}
-		break;
-#endif
 	default:
 		return -EINVAL;
 	}
