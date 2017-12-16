@@ -531,8 +531,6 @@ static void reduce_input_current(struct max77693_charger_data *charger, int cur)
 	set_reg = MAX77693_CHG_REG_CHG_CNFG_09;
 	if (!max77693_read_reg(charger->max77693->i2c,
 				set_reg, &set_value)) {
-		if ()
-			return;
 		if (set_value <= (MINIMUM_INPUT_CURRENT / 20) ||
 		    set_value <= (cur / 20) || set_value == 0)
 			return;
