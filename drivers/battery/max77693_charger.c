@@ -19,10 +19,13 @@
 #ifdef CONFIG_FORCE_FAST_CHARGE
 #include <linux/fastchg.h>
 #endif
+#include <linux/debugfs.h>
+#include <linux/seq_file.h>
 
 #define ENABLE 1
 #define DISABLE 0
 
+static struct dentry    *max77693_dentry;
 
 #define RECOVERY_DELAY		3000
 #define RECOVERY_CNT		5
@@ -1114,6 +1117,36 @@ static void sec_chg_isr_work(struct work_struct *work)
 	}
 }
 
+static int max77693_debugfs_show(struct seq_file *s, void *data)
+{
+	struct max77693_charger_data *charger = s->private;
+	u8 reg;
+	u8 reg_data;
+
+	seq_printf(s, "MAX77693 CHARGER IC :\n");
+	seq_printf(s, "==================\n");
+	for (reg = 0xB0; reg <= 0xC5; reg++) {
+		max77693_read_reg(charger->max77693->i2c, reg, &reg_data);
+		seq_printf(s, "0x%02x:\t0x%02x\n", reg, reg_data);
+	}
+
+	seq_printf(s, "\n");
+
+	return 0;
+}
+
+static int max77693_debugfs_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, max77693_debugfs_show, inode->i_private);
+}
+
+static const struct file_operations max77693_debugfs_fops = {
+	.open           = max77693_debugfs_open,
+	.read           = seq_read,
+	.llseek         = seq_lseek,
+	.release        = single_release,
+};
+
 static irqreturn_t sec_chg_irq_thread(int irq, void *irq_data)
 {
 	struct max77693_charger_data *charger = irq_data;
@@ -1555,6 +1588,9 @@ static int max77693_charger_probe(struct platform_device *pdev)
 	if (ret < 0)
 		pr_secbatt("%s: fail to request bypass IRQ: %d: %d\n",
 				__func__, charger->irq_bypass, ret);
+
+	max77693_dentry = debugfs_create_file("max77693-regs",
+			S_IRUSR, NULL, charger, &max77693_debugfs_fops);
 	return 0;
 
 #if defined(CONFIG_WIRELESS_CHARGING) ||\
@@ -1578,6 +1614,9 @@ static int max77693_charger_remove(struct platform_device *pdev)
 {
 	struct max77693_charger_data *charger =
 				platform_get_drvdata(pdev);
+
+	if (!IS_ERR_OR_NULL(max77693_dentry))
+		debugfs_remove(max77693_dentry);
 
 	destroy_workqueue(charger->wqueue);
 #if defined(CONFIG_WIRELESS_CHARGING)
