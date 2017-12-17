@@ -35,7 +35,7 @@ Copyright (C) 2012, Samsung Electronics. All rights reserved.
 #include "smart_mtp_2p2_gamma.h"
 
 
-#define SMART_DIMMING_DEBUG
+//#define SMART_DIMMING_DEBUG
 
 static char max_lux_table[GAMMA_SET_MAX];
 static char min_lux_table[GAMMA_SET_MAX];
