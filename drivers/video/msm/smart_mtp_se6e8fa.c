@@ -3729,6 +3729,12 @@ void generate_gamma(struct SMART_DIM *psmart, char *str, int size)
 				psmart->brightness_level);
 		memcpy(str, max_lux_table, size);
 	}
+
+#ifdef SMART_DIMMING_DEBUG
+	if (lux_loop != psmart->lux_table_max)
+		pr_info("%s searching ok index : %d lux : %d", __func__,
+			lux_loop, ptable[lux_loop].lux);
+#endif
 }
 static void gamma_cell_determine(int ldi_revision)
 {
