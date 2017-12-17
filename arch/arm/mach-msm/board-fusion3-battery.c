@@ -629,7 +629,7 @@ static struct battery_data_t fusion3_battery_data[] = {
 };
 #elif defined(CONFIG_MACH_JF_ATT) || defined(CONFIG_MACH_JF_TMO) || \
 	defined(CONFIG_MACH_JF_SPR) || defined(CONFIG_MACH_JF_USC) || \
-	defined(CONFIG_MACH_JF_VZW)
+	defined(CONFIG_MACH_JF_VZW) || defined(CONFIG_MACH_JF_EUR)
 /* for MAX17048 */
 static struct battery_data_t fusion3_battery_data[] = {
 	/* SDI battery data (High voltage 4.35V) */
