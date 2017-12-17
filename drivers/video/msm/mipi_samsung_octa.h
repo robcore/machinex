@@ -118,7 +118,7 @@ struct mipi_panel_data {
 
 	int *lux_table;
 	int lux_table_max_cnt;
-	struct SMART_DIM smart_se6e8fa;
+	struct smart_dim smart_se6e8fa;
 
 	void(*reset_bl_level)(void);
 	int brightness_level;

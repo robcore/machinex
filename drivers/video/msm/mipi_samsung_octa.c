@@ -464,8 +464,8 @@ static void read_mtp(char srcReg, int readFrom, int srcLength, char *destBuffer,
 static void execute_panel_init(struct msm_fb_data_type *mfd)
 {
 	int i;
-	struct SMART_DIM *psmart = &(msd.mpd->smart_se6e8fa);
-	char *mtp_buffer = (char *)&(msd.mpd->smart_se6e8fa.MTP_ORIGN);
+	struct smart_dim *psmart = &(msd.mpd->smart_se6e8fa);
+	char *mtp_buffer = (char *)&(msd.mpd->smart_se6e8fa.mtp_origin);
 	char *mtp_buffer1 = (char *)&(msd.mpd->smart_se6e8fa.hbm_reg.c8_reg_1);
 	/* LSI */
 	char *mtp_buffer2 = (char *)&(msd.mpd->smart_se6e8fa.hbm_reg.c8_reg_2);

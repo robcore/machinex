@@ -178,7 +178,7 @@ enum {
 	V255_INDEX = 9,
 };
 
-struct GAMMA_LEVEL {
+struct gamma_level {
 	int level_0;
 	int level_1;
 	int level_3;
@@ -192,44 +192,44 @@ struct GAMMA_LEVEL {
 	int level_255;
 } __packed;
 
-struct RGB_OUTPUT_VOLTARE {
-	struct GAMMA_LEVEL R_VOLTAGE;
-	struct GAMMA_LEVEL G_VOLTAGE;
-	struct GAMMA_LEVEL B_VOLTAGE;
+struct rgb_output_voltage {
+	struct gamma_level r_voltage;
+	struct gamma_level g_voltage;
+	struct gamma_level b_voltage;
 } __packed;
 
-struct GRAY_VOLTAGE {
+struct gray_voltage {
 	/*
 		This voltage value use 14bit right shit
 		it means voltage is divied by 16384.
 	*/
-	int R_Gray;
-	int G_Gray;
-	int B_Gray;
+	int r_gray;
+	int g_gray;
+	int b_gray;
 } __packed;
 
-struct GRAY_SCALE {
-	struct GRAY_VOLTAGE TABLE[S6E8FA_GRAY_SCALE_MAX];
-	struct GRAY_VOLTAGE VT_TABLE;
+struct gray_scale {
+	struct gray_voltage table[S6E8FA_GRAY_SCALE_MAX];
+	struct gray_voltage vt_table;
 } __packed;
 
 /*V0,V1,V3,V11,V23,V35,V51,V87,V151,V203,V255*/
 
-struct MTP_SET {
-	char OFFSET_255_MSB;
-	char OFFSET_255_LSB;
-	char OFFSET_203;
-	char OFFSET_151;
-	char OFFSET_87;
-	char OFFSET_51;
-	char OFFSET_35;
-	char OFFSET_23;
-	char OFFSET_11;
-	char OFFSET_3;
-	char OFFSET_1;
+struct mtp_set {
+	char offset_255_msb;
+	char offset_255_lsb;
+	char offset_203;
+	char offset_151;
+	char offset_87;
+	char offset_51;
+	char offset_35;
+	char offset_23;
+	char offset_11;
+	char offset_3;
+	char offset_1;
 } __packed;
 
-struct HBM_REG {
+struct hbm_reg {
 	/* LSI */
 	char c8_reg_1[7];	/*c8 34~40th reg*/
 	char c8_reg_2[15];  /*c8 73~87th reg*/
@@ -239,10 +239,10 @@ struct HBM_REG {
 	char b6_reg_magna[23];	/*b6 4~26th reg*/
 } __packed;
 
-struct MTP_OFFSET {
-	struct MTP_SET R_OFFSET;
-	struct MTP_SET G_OFFSET;
-	struct MTP_SET B_OFFSET;
+struct mtp_offset {
+	struct mtp_set r_offset;
+	struct mtp_set g_offset;
+	struct mtp_set b_offset;
 } __packed;
 
 struct illuminance_table {
@@ -250,12 +250,12 @@ struct illuminance_table {
 	char gamma_setting[GAMMA_SET_MAX];
 } __packed;
 
-struct SMART_DIM {
-	struct HBM_REG hbm_reg;
-	struct MTP_OFFSET MTP_ORIGN;
-	struct MTP_OFFSET MTP;
-	struct RGB_OUTPUT_VOLTARE RGB_OUTPUT;
-	struct GRAY_SCALE GRAY;
+struct smart_dim {
+	struct hbm_reg hbm_reg;
+	struct mtp_offset mtp_origin;
+	struct mtp_offset mtp;
+	struct rgb_output_voltage rgb_output;
+	struct gray_scale gray;
 
 	/* Because of AID funtion, below members are added*/
 	int lux_table_max;
@@ -266,8 +266,8 @@ struct SMART_DIM {
 	int ldi_revision;
 } __packed;
 
-void generate_gamma(struct SMART_DIM *smart_dim, char *str, int size);
-int smart_dimming_init(struct SMART_DIM *psmart);
+void generate_gamma(struct smart_dim *smart_dim, char *str, int size);
+int smart_dimming_init(struct smart_dim *psmart);
 void get_min_lux_table(char *str, int size);
 
 #endif
