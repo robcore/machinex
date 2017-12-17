@@ -519,13 +519,6 @@ static struct platform_device apq8064_android_pmem_audio_device = {
 #endif /* CONFIG_MSM_MULTIMEDIA_USE_ION */
 #endif /* CONFIG_ANDROID_PMEM */
 
-#ifdef CONFIG_BATTERY_BCL
-static struct platform_device battery_bcl_device = {
-	.name = "battery_current_limit",
-	.id = -1,
-};
-#endif
-
 struct fmem_platform_data apq8064_fmem_pdata = {
 };
 
@@ -4054,9 +4047,6 @@ static struct platform_device *common_devices[] __initdata = {
 	&msm_8064_device_tspp,
 #ifdef CONFIG_SEC_FPGA
 	&barcode_i2c_gpio_device,
-#endif
-#ifdef CONFIG_BATTERY_BCL
-	&battery_bcl_device,
 #endif
 #ifdef CONFIG_VIBETONZ
 	&vibetonz_device,
