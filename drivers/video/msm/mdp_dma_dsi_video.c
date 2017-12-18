@@ -102,7 +102,7 @@ int mdp_dsi_video_on(struct platform_device *pdev)
 
 	if (mfd->key != MFD_KEY)
 		return -EINVAL;
-
+	prfunction();
 	fbi = mfd->fbi;
 	var = &fbi->var;
 
@@ -253,6 +253,7 @@ int mdp_dsi_video_on(struct platform_device *pdev)
 int mdp_dsi_video_off(struct platform_device *pdev)
 {
 	int ret = 0;
+	prfunction();
 	mdp_histogram_ctrl_all(FALSE);
 	/* MDP cmd block enable */
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
