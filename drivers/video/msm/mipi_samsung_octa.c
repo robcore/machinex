@@ -476,11 +476,10 @@ static void execute_panel_init(struct msm_fb_data_type *mfd)
 	char *mtp_buffer4 = (char *)&(msd.mpd->smart_se6e8fa.hbm_reg.b1_reg);
 	char *mtp_buffer5 = (char *)&(msd.mpd->smart_se6e8fa.hbm_reg.b6_reg_magna);
 
-	if (get_ldi_chip() == LDI_MAGNA) {
+	if (get_ldi_chip() == LDI_MAGNA)
 		mipi_set_tx_power_mode(LP_TX_MODE);
-		mipi_samsung_disp_send_cmd(mfd, PANEL_MTP_ENABLE, false);
-	} else
-		mipi_samsung_disp_send_cmd(mfd, PANEL_MTP_ENABLE, false);
+
+	mipi_samsung_disp_send_cmd(mfd, PANEL_MTP_ENABLE, false);
 
 	/* read LDi ID */
 	msd.mpd->manufacture_id = mipi_samsung_manufacture_id(mfd);
