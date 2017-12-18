@@ -107,9 +107,9 @@ int mdp4_overlay_writeback_on(struct platform_device *pdev)
 	int cndx = 0;
 
 	mfd = (struct msm_fb_data_type *)platform_get_drvdata(pdev);
-
-	if (!mfd)
-		return -ENODEV;
+	if (unlikely(!mfd))
+		return -ENOMEM;
+	pr_info("%s\n", __func__);
 
 	if (mfd->key != MFD_KEY)
 		return -EINVAL;
@@ -186,9 +186,10 @@ int mdp4_overlay_writeback_off(struct platform_device *pdev)
 	int undx;
 	struct vsync_update *vp;
 
-	pr_debug("%s+:\n", __func__);
-
 	mfd = (struct msm_fb_data_type *)platform_get_drvdata(pdev);
+	if (unlikely(!mfd))
+		return -ENOMEM;
+	pr_info("%s\n", __func__);
 
 	vctrl = &vsync_ctrl_db[cndx];
 	pipe = vctrl->base_pipe;

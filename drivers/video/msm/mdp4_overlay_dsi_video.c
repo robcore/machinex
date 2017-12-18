@@ -613,6 +613,9 @@ int mdp4_dsi_video_on(struct platform_device *pdev)
 
 	vctrl = &vsync_ctrl_db[cndx];
 	mfd = (struct msm_fb_data_type *)platform_get_drvdata(pdev);
+	if (unlikely(!mfd))
+		return -ENOMEM;
+	pr_info("%s\n", __func__);
 	pinfo = &mfd->panel_info;
 
 	if (!mfd)
@@ -821,7 +824,9 @@ int mdp4_dsi_video_off(struct platform_device *pdev)
 	int undx, need_wait = 0;
 
 	mfd = (struct msm_fb_data_type *)platform_get_drvdata(pdev);
-
+	if (unlikely(!mfd))
+		return -ENOMEM;
+	pr_info("%s\n", __func__);
 	mutex_lock(&mfd->dma->ov_mutex);
 	vctrl = &vsync_ctrl_db[cndx];
 	pipe = vctrl->base_pipe;
