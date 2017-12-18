@@ -50,7 +50,7 @@ static int i2c_mux_gpio_deselect(struct i2c_adapter *adap, void *data, u32 chan)
 	return 0;
 }
 
-static int __devinit i2c_mux_gpio_probe(struct platform_device *pdev)
+static int i2c_mux_gpio_probe(struct platform_device *pdev)
 {
 	struct gpiomux *mux;
 	struct i2c_mux_gpio_platform_data *pdata;
@@ -138,7 +138,7 @@ alloc_failed:
 	return ret;
 }
 
-static int __devexit i2c_mux_gpio_remove(struct platform_device *pdev)
+static int i2c_mux_gpio_remove(struct platform_device *pdev)
 {
 	struct gpiomux *mux = platform_get_drvdata(pdev);
 	int i;
@@ -159,7 +159,7 @@ static int __devexit i2c_mux_gpio_remove(struct platform_device *pdev)
 
 static struct platform_driver i2c_mux_gpio_driver = {
 	.probe	= i2c_mux_gpio_probe,
-	.remove	= __devexit_p(i2c_mux_gpio_remove),
+	.remove	= i2c_mux_gpio_remove,
 	.driver	= {
 		.owner	= THIS_MODULE,
 		.name	= "i2c-mux-gpio",
