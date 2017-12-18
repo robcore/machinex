@@ -358,7 +358,7 @@ config I2C_DESIGNWARE_CORE
 	tristate
 
 config I2C_DESIGNWARE_PLATFORM
-	tristate "Synopsys DesignWare Platfrom"
+	tristate "Synopsys DesignWare Platform"
 	depends on HAVE_CLK
 	select I2C_DESIGNWARE_CORE
 	help
