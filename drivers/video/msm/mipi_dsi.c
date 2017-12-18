@@ -179,7 +179,10 @@ static int mipi_dsi_off(struct platform_device *pdev)
 		mutex_unlock(&mfd->dma->ov_mutex);
 	else
 		up(&mfd->dma->mutex);
-
+#ifdef CONFIG_PROMETHEUS
+	 /*Yank555.lu : hook to handle powersuspend tasks (sleep)*/
+	prometheus_panel_beacon(POWER_SUSPEND_ACTIVE);
+#endif
 	return ret;
 }
 
@@ -447,7 +450,10 @@ static int mipi_dsi_on(struct platform_device *pdev)
 		mutex_unlock(&mfd->dma->ov_mutex);
 	else
 		up(&mfd->dma->mutex);
-
+#ifdef CONFIG_PROMETHEUS
+		/* Yank555.lu : hook to handle powersuspend tasks (wakeup) */
+	prometheus_panel_beacon(POWER_SUSPEND_INACTIVE);
+#endif
 	return ret;
 }
 
