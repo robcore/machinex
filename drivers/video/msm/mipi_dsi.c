@@ -99,7 +99,10 @@ static int mipi_dsi_off(struct platform_device *pdev)
 	struct msm_panel_info *pinfo;
 	uint32 dsi_ctrl;
 
-	pr_info("%s+:\n", __func__);
+	prfunction();
+
+	if (backtrace_panel_state)
+		smp_send_all_cpu_backtrace();
 
 	mfd = platform_get_drvdata(pdev);
 	pinfo = &mfd->panel_info;
@@ -201,7 +204,9 @@ static int mipi_dsi_on(struct platform_device *pdev)
 	static int is_booting = 1;
 #endif
 
-	pr_info("%s+:\n", __func__);
+	prfunction();
+	if (backtrace_panel_state)
+		smp_send_all_cpu_backtrace();
 
 #if defined(CONFIG_MIPI_SAMSUNG_ESD_REFRESH) || defined(CONFIG_ESD_ERR_FG_RECOVERY)
 	pdev_for_esd = pdev;

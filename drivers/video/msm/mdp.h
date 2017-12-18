@@ -25,7 +25,7 @@
 #include <linux/memory_alloc.h>
 #include <mach/hardware.h>
 #include <linux/msm_ion.h>
-
+#include <asm/smp.h>
 #ifdef CONFIG_MSM_BUS_SCALING
 #include <mach/msm_bus.h>
 #include <mach/msm_bus_board.h>
@@ -53,6 +53,7 @@ extern int mdp_lut_i;
 extern int mdp_lut_push;
 extern int mdp_lut_push_i;
 extern spinlock_t mdp_lut_push_lock;
+extern unsigned int backtrace_panel_state;
 
 #define MDP4_REVISION_V1		0
 #define MDP4_REVISION_V2		1

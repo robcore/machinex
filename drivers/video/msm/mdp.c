@@ -65,7 +65,8 @@
 /* Check if LCD was connected. */
 #include "mipi_samsung_octa.h"
 #endif
-
+unsigned int backtrace_panel_state;
+module_param(backtrace_panel_state, uint, 0644);
 uint32 mdp4_extn_disp;
 u32 mdp_iommu_max_map_size;
 static struct clk *mdp_clk;
@@ -2395,6 +2396,12 @@ static int mdp_off(struct platform_device *pdev)
 	mfd = platform_get_drvdata(pdev);
 	if (!mfd)
 		return -ENOMEM;
+
+	prfunction();
+
+	if (backtrace_panel_state)
+		smp_send_all_cpu_backtrace();
+
 	mdp_histogram_ctrl_all(FALSE);
 	atomic_set(&vsync_cntrl.suspend, 1);
 	atomic_set(&vsync_cntrl.vsync_resume, 0);
@@ -2425,7 +2432,6 @@ static int mdp_off(struct platform_device *pdev)
 #endif
 	mdp_bus_scale_update_request(0, 0, 0, 0);
 #endif
-	prfunction();
 	printk("The answer is beneath us\n");
 	WRITE_ONCE(display_on, false);
 #ifdef CONFIG_PROMETHEUS
@@ -2460,6 +2466,10 @@ static int mdp_on(struct platform_device *pdev)
 	if (!mfd)
 		return -ENOMEM;
 	prfunction();
+
+	if (backtrace_panel_state)
+		smp_send_all_cpu_backtrace();
+
 	if (unlikely(mx_is_booting)) {
 		mx_is_booting = 0;
 		pr_info("Hello? I'm different.\n");
