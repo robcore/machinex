@@ -1072,7 +1072,7 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 					info->fix.smem_len);
 
 			ret = pdata->off(mfd->pdev);
-			pr_info("%s: msm_fb_panel is %s\n", __func__, ret == 0 ? "on" : "off");
+			pr_info("%s: msm_fb_panel is %s\n", __func__, ret == 0 ? "off" : "on");
 			if (ret)
 				mfd->panel_power_on = curr_pwr_state;
 
