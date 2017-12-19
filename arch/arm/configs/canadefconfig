@@ -2246,7 +2246,9 @@ CONFIG_SLIMBUS_MSM_CTRL=y
 #
 # Enable Device Drivers -> PPS to see the PTP clock options.
 #
+CONFIG_ARCH_HAVE_CUSTOM_GPIO_H=y
 CONFIG_ARCH_REQUIRE_GPIOLIB=y
+CONFIG_GPIO_DEVRES=y
 CONFIG_GPIOLIB=y
 # CONFIG_DEBUG_GPIO is not set
 CONFIG_GPIO_SYSFS=y
@@ -3172,6 +3174,15 @@ CONFIG_HID_ZAGG=y
 CONFIG_HID_ZEROPLUS=y
 # CONFIG_ZEROPLUS_FF is not set
 CONFIG_HID_ZYDACRON=y
+
+#
+# I2C HID support
+#
+# CONFIG_I2C_HID is not set
+
+#
+# Input core support is needed for HID over I2C input layer
+#
 # CONFIG_USB_ARCH_HAS_OHCI is not set
 CONFIG_USB_ARCH_HAS_EHCI=y
 # CONFIG_USB_ARCH_HAS_XHCI is not set
