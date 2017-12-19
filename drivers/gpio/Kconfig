@@ -2,6 +2,9 @@
 # GPIO infrastructure and drivers
 #
 
+config GPIOLIB
+	bool
+
 config ARCH_HAVE_CUSTOM_GPIO_H
 	bool
 	help
@@ -22,7 +25,6 @@ config ARCH_WANT_OPTIONAL_GPIOLIB
 
 config ARCH_REQUIRE_GPIOLIB
 	bool
-	select GPIOLIB
 	help
 	  Platforms select gpiolib if they use this infrastructure
 	  for all their GPIOs, usually starting with ones integrated
@@ -38,7 +40,6 @@ config GPIO_DEVRES
 menuconfig GPIOLIB
 	bool "GPIO Support"
 	depends on ARCH_WANT_OPTIONAL_GPIOLIB || ARCH_REQUIRE_GPIOLIB
-	select GPIOLIB
 	help
 	  This enables GPIO support through the generic GPIO library.
 	  You only need to enable this, if you also want to enable
