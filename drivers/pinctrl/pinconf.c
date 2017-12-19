@@ -28,11 +28,17 @@ int pinconf_check_ops(struct pinctrl_dev *pctldev)
 	const struct pinconf_ops *ops = pctldev->desc->confops;
 
 	/* We must be able to read out pin status */
-	if (!ops->pin_config_get && !ops->pin_config_group_get)
+	if (!ops->pin_config_get && !ops->pin_config_group_get) {
+		dev_err(pctldev->dev,
+			"pinconf must be able to read out pin status\n");
 		return -EINVAL;
+	}
 	/* We have to be able to config the pins in SOME way */
-	if (!ops->pin_config_set && !ops->pin_config_group_set)
+	if (!ops->pin_config_set && !ops->pin_config_group_set) {
+		dev_err(pctldev->dev,
+			"pinconf has to be able to set a pins config\n");
 		return -EINVAL;
+	}
 	return 0;
 }
 
@@ -44,9 +50,9 @@ int pinconf_validate_map(struct pinctrl_map const *map, int i)
 		return -EINVAL;
 	}
 
-	if (map->data.configs.num_configs &&
+	if (!map->data.configs.num_configs ||
 			!map->data.configs.configs) {
-		pr_err("failed to register map %s (%d): no configs ptr given\n",
+		pr_err("failed to register map %s (%d): no configs given\n",
 		       map->name, i);
 		return -EINVAL;
 	}

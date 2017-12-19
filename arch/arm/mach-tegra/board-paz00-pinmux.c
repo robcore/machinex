@@ -2,6 +2,7 @@
  * arch/arm/mach-tegra/board-paz00-pinmux.c
  *
  * Copyright (C) 2010 Marc Dietrich <marvin24@gmx.de>
+ * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and

@@ -109,7 +109,7 @@ static struct resource pinmux_resource[] = {
 };
 
 struct platform_device tegra_pinmux_device = {
-	.name		= "tegra-pinmux",
+	.name		= "tegra20-pinctrl",
 	.id		= -1,
 	.resource	= pinmux_resource,
 	.num_resources	= ARRAY_SIZE(pinmux_resource),

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011,2012, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -94,10 +94,10 @@ static struct platform_device *devices[] = {
 void tegra_board_pinmux_init(struct tegra_board_pinmux_conf *conf_a,
 			     struct tegra_board_pinmux_conf *conf_b)
 {
-	confs[0] = conf_a;
-	confs[1] = conf_b;
-
-	bus_register_notifier(&platform_bus_type, &nb);
+	if (conf_a)
+		pinctrl_register_mappings(conf_a->maps, conf_a->map_count);
+	if (conf_b)
+		pinctrl_register_mappings(conf_b->maps, conf_b->map_count);
 
 	if (!of_machine_is_compatible("nvidia,tegra20"))
 		platform_add_devices(devices, ARRAY_SIZE(devices));
