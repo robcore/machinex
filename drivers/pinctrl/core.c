@@ -1096,8 +1096,8 @@ int pinctrl_register_map(struct pinctrl_map const *maps, unsigned num_maps,
 		mutex_unlock(&pinctrl_mutex);
 
 	return 0;
- }
- 
+}
+
 /**
  * pinctrl_register_mappings() - register a set of pin controller mappings
  * @maps: the pincontrol mappings table to register. This should probably be
@@ -1122,66 +1122,6 @@ void pinctrl_unregister_map(struct pinctrl_map const *map)
 		}
 	}
 }
-
-#ifdef CONFIG_PM
-/**
- * pinctrl_pm_select_default_state() - select default pinctrl state for PM
- * @dev: device to select default state for
- */
-int pinctrl_pm_select_default_state(struct device *dev)
-{
-	struct dev_pin_info *pins = dev->pins;
-	int ret;
-
-	if (!pins)
-		return 0;
-	if (IS_ERR(pins->default_state))
-		return 0; /* No default state */
-	ret = pinctrl_select_state(pins->p, pins->default_state);
-	if (ret)
-		dev_err(dev, "failed to activate default pinctrl state\n");
-	return ret;
-}
-
-/**
- * pinctrl_pm_select_sleep_state() - select sleep pinctrl state for PM
- * @dev: device to select sleep state for
- */
-int pinctrl_pm_select_sleep_state(struct device *dev)
-{
-	struct dev_pin_info *pins = dev->pins;
-	int ret;
-
-	if (!pins)
-		return 0;
-	if (IS_ERR(pins->sleep_state))
-		return 0; /* No sleep state */
-	ret = pinctrl_select_state(pins->p, pins->sleep_state);
-	if (ret)
-		dev_err(dev, "failed to activate pinctrl sleep state\n");
-	return ret;
-}
-
-/**
- * pinctrl_pm_select_idle_state() - select idle pinctrl state for PM
- * @dev: device to select idle state for
- */
-int pinctrl_pm_select_idle_state(struct device *dev)
-{
-	struct dev_pin_info *pins = dev->pins;
-	int ret;
-
-	if (!pins)
-		return 0;
-	if (IS_ERR(pins->idle_state))
-		return 0; /* No idle state */
-	ret = pinctrl_select_state(pins->p, pins->idle_state);
-	if (ret)
-		dev_err(dev, "failed to activate pinctrl idle state\n");
-	return ret;
-}
-
-#endif
 
 /**
  * pinctrl_force_sleep() - turn a given controller device into sleep state

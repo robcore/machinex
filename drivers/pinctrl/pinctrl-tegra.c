@@ -30,8 +30,6 @@
 #include <linux/pinctrl/pinconf.h>
 #include <linux/slab.h>
 
-#include <mach/pinconf-tegra.h>
-
 #include "core.h"
 #include "pinctrl-tegra.h"
 
@@ -180,8 +178,9 @@ static int add_config(struct device *dev, unsigned long **configs,
 	return 0;
 }
 
-void tegra_pinctrl_dt_free_map(struct pinctrl_dev *pctldev,
-			       struct pinctrl_map *map, unsigned num_maps)
+static void tegra_pinctrl_dt_free_map(struct pinctrl_dev *pctldev,
+				      struct pinctrl_map *map,
+				      unsigned num_maps)
 {
 	int i;
 
@@ -202,6 +201,7 @@ static const struct cfg_param {
 	{"nvidia,open-drain",		TEGRA_PINCONF_PARAM_OPEN_DRAIN},
 	{"nvidia,lock",			TEGRA_PINCONF_PARAM_LOCK},
 	{"nvidia,io-reset",		TEGRA_PINCONF_PARAM_IORESET},
+	{"nvidia,rcv-sel",		TEGRA_PINCONF_PARAM_RCV_SEL},
 	{"nvidia,high-speed-mode",	TEGRA_PINCONF_PARAM_HIGH_SPEED_MODE},
 	{"nvidia,schmitt",		TEGRA_PINCONF_PARAM_SCHMITT},
 	{"nvidia,low-power-mode",	TEGRA_PINCONF_PARAM_LOW_POWER_MODE},
@@ -209,13 +209,14 @@ static const struct cfg_param {
 	{"nvidia,pull-up-strength",	TEGRA_PINCONF_PARAM_DRIVE_UP_STRENGTH},
 	{"nvidia,slew-rate-falling",	TEGRA_PINCONF_PARAM_SLEW_RATE_FALLING},
 	{"nvidia,slew-rate-rising",	TEGRA_PINCONF_PARAM_SLEW_RATE_RISING},
+	{"nvidia,drive-type",		TEGRA_PINCONF_PARAM_DRIVE_TYPE},
 };
 
-int tegra_pinctrl_dt_subnode_to_map(struct device *dev,
-				    struct device_node *np,
-				    struct pinctrl_map **map,
-				    unsigned *reserved_maps,
-				    unsigned *num_maps)
+static int tegra_pinctrl_dt_subnode_to_map(struct device *dev,
+					   struct device_node *np,
+					   struct pinctrl_map **map,
+					   unsigned *reserved_maps,
+					   unsigned *num_maps)
 {
 	int ret, i;
 	const char *function;
@@ -290,9 +291,10 @@ exit:
 	return ret;
 }
 
-int tegra_pinctrl_dt_node_to_map(struct pinctrl_dev *pctldev,
-				 struct device_node *np_config,
-				 struct pinctrl_map **map, unsigned *num_maps)
+static int tegra_pinctrl_dt_node_to_map(struct pinctrl_dev *pctldev,
+					struct device_node *np_config,
+					struct pinctrl_map **map,
+					unsigned *num_maps)
 {
 	unsigned reserved_maps;
 	struct device_node *np;
@@ -450,6 +452,12 @@ static int tegra_pinconf_reg(struct tegra_pmx *pmx,
 		*bit = g->ioreset_bit;
 		*width = 1;
 		break;
+	case TEGRA_PINCONF_PARAM_RCV_SEL:
+		*bank = g->rcv_sel_bank;
+		*reg = g->rcv_sel_reg;
+		*bit = g->rcv_sel_bit;
+		*width = 1;
+		break;
 	case TEGRA_PINCONF_PARAM_HIGH_SPEED_MODE:
 		*bank = g->drv_bank;
 		*reg = g->drv_reg;
@@ -491,6 +499,12 @@ static int tegra_pinconf_reg(struct tegra_pmx *pmx,
 		*reg = g->drv_reg;
 		*bit = g->slwr_bit;
 		*width = g->slwr_width;
+		break;
+	case TEGRA_PINCONF_PARAM_DRIVE_TYPE:
+		*bank = g->drvtype_bank;
+		*reg = g->drvtype_reg;
+		*bit = g->drvtype_bit;
+		*width = 2;
 		break;
 	default:
 		dev_err(pmx->dev, "Invalid config param %04x\n", param);
@@ -662,7 +676,7 @@ static void tegra_pinconf_config_dbg_show(struct pinctrl_dev *pctldev,
 }
 #endif
 
-struct pinconf_ops tegra_pinconf_ops = {
+static const struct pinconf_ops tegra_pinconf_ops = {
 	.pin_config_get = tegra_pinconf_get,
 	.pin_config_set = tegra_pinconf_set,
 	.pin_config_group_get = tegra_pinconf_group_get,
@@ -681,49 +695,18 @@ static struct pinctrl_gpio_range tegra_pinctrl_gpio_range = {
 };
 
 static struct pinctrl_desc tegra_pinctrl_desc = {
-	.name = DRIVER_NAME,
 	.pctlops = &tegra_pinctrl_ops,
 	.pmxops = &tegra_pinmux_ops,
 	.confops = &tegra_pinconf_ops,
 	.owner = THIS_MODULE,
 };
 
-static struct of_device_id tegra_pinctrl_of_match[] = {
-#ifdef CONFIG_PINCTRL_TEGRA20
-	{
-		.compatible = "nvidia,tegra20-pinmux",
-		.data = tegra20_pinctrl_init,
-	},
-#endif
-#ifdef CONFIG_PINCTRL_TEGRA30
-	{
-		.compatible = "nvidia,tegra30-pinmux",
-		.data = tegra30_pinctrl_init,
-	},
-#endif
-	{},
-};
-
-static int tegra_pinctrl_probe(struct platform_device *pdev)
+int tegra_pinctrl_probe(struct platform_device *pdev,
+			const struct tegra_pinctrl_soc_data *soc_data)
 {
-	const struct of_device_id *match;
-	tegra_pinctrl_soc_initf initf = NULL;
 	struct tegra_pmx *pmx;
 	struct resource *res;
 	int i;
-
-	match = of_match_device(tegra_pinctrl_of_match, &pdev->dev);
-	if (match)
-		initf = (tegra_pinctrl_soc_initf)match->data;
-#ifdef CONFIG_PINCTRL_TEGRA20
-	if (!initf)
-		initf = tegra20_pinctrl_init;
-#endif
-	if (!initf) {
-		dev_err(&pdev->dev,
-			"Could not determine SoC-specific init func\n");
-		return -EINVAL;
-	}
 
 	pmx = devm_kzalloc(&pdev->dev, sizeof(*pmx), GFP_KERNEL);
 	if (!pmx) {
@@ -731,10 +714,10 @@ static int tegra_pinctrl_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 	pmx->dev = &pdev->dev;
-
-	(*initf)(&pmx->soc);
+	pmx->soc = soc_data;
 
 	tegra_pinctrl_gpio_range.npins = pmx->soc->ngpios;
+	tegra_pinctrl_desc.name = dev_name(&pdev->dev);
 	tegra_pinctrl_desc.pins = pmx->soc->pins;
 	tegra_pinctrl_desc.npins = pmx->soc->npins;
 
@@ -776,9 +759,9 @@ static int tegra_pinctrl_probe(struct platform_device *pdev)
 	}
 
 	pmx->pctl = pinctrl_register(&tegra_pinctrl_desc, &pdev->dev, pmx);
-	if (IS_ERR(pmx->pctl)) {
+	if (!pmx->pctl) {
 		dev_err(&pdev->dev, "Couldn't register pinctrl driver\n");
-		return PTR_ERR(pmx->pctl);
+		return -ENODEV;
 	}
 
 	pinctrl_add_gpio_range(pmx->pctl, &tegra_pinctrl_gpio_range);
@@ -789,8 +772,9 @@ static int tegra_pinctrl_probe(struct platform_device *pdev)
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(tegra_pinctrl_probe);
 
-static int tegra_pinctrl_remove(struct platform_device *pdev)
+int tegra_pinctrl_remove(struct platform_device *pdev)
 {
 	struct tegra_pmx *pmx = platform_get_drvdata(pdev);
 

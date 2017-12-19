@@ -146,8 +146,7 @@ static int pin_request(struct pinctrl_dev *pctldev,
 		status = 0;
 
 	if (status) {
-		dev_err(pctldev->dev, "request on device %s failed for pin %d\n",
-		       pctldev->desc->name, pin);
+		dev_err(pctldev->dev, "request() failed for pin %d\n", pin);
 		module_put(pctldev->owner);
 	}
 
@@ -195,11 +194,6 @@ static const char *pin_free(struct pinctrl_dev *pctldev, int pin,
 	}
 
 	if (!gpio_range) {
-		/*
-		 * A pin should not be freed more times than allocated.
-		 */
-		if (WARN_ON(!desc->mux_usecount))
-			return NULL;
 		desc->mux_usecount--;
 		if (desc->mux_usecount)
 			return NULL;

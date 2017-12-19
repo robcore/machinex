@@ -3384,7 +3384,9 @@ static const struct tegra_function tegra30_functions[] = {
 		.ioreset_reg = PINGROUP_REG_##ior(r),		\
 		.ioreset_bank = 1,				\
 		.ioreset_bit = 8,				\
+		.rcv_sel_reg = -1,				\
 		.drv_reg = -1,					\
+		.drvtype_reg = -1,				\
 	}
 
 #define DRV_PINGROUP(pg_name, r, hsm_b, schmitt_b, lpmd_b,	\
@@ -3401,6 +3403,7 @@ static const struct tegra_function tegra30_functions[] = {
 		.odrain_reg = -1,				\
 		.lock_reg = -1,					\
 		.ioreset_reg = -1,				\
+		.rcv_sel_reg = -1,				\
 		.drv_reg = ((r) - DRV_PINGROUP_REG_A),		\
 		.drv_bank = 0,					\
 		.hsm_bit = hsm_b,				\
@@ -3414,6 +3417,7 @@ static const struct tegra_function tegra30_functions[] = {
 		.slwr_width = slwr_w,				\
 		.slwf_bit = slwf_b,				\
 		.slwf_width = slwf_w,				\
+		.drvtype_reg = -1,				\
 	}
 
 static const struct tegra_pingroup tegra30_groups[] = {
@@ -3722,7 +3726,39 @@ static const struct tegra_pinctrl_soc_data tegra30_pinctrl = {
 	.ngroups = ARRAY_SIZE(tegra30_groups),
 };
 
-void tegra30_pinctrl_init(const struct tegra_pinctrl_soc_data **soc)
+static int tegra30_pinctrl_probe(struct platform_device *pdev)
 {
-	*soc = &tegra30_pinctrl;
+	return tegra_pinctrl_probe(pdev, &tegra30_pinctrl);
 }
+
+static struct of_device_id tegra30_pinctrl_of_match[] = {
+	{ .compatible = "nvidia,tegra30-pinmux", },
+	{ },
+};
+
+static struct platform_driver tegra30_pinctrl_driver = {
+	.driver = {
+		.name = "tegra30-pinctrl",
+		.owner = THIS_MODULE,
+		.of_match_table = tegra30_pinctrl_of_match,
+	},
+	.probe = tegra30_pinctrl_probe,
+	.remove = tegra_pinctrl_remove,
+};
+
+static int __init tegra30_pinctrl_init(void)
+{
+	return platform_driver_register(&tegra30_pinctrl_driver);
+}
+arch_initcall(tegra30_pinctrl_init);
+
+static void __exit tegra30_pinctrl_exit(void)
+{
+	platform_driver_unregister(&tegra30_pinctrl_driver);
+}
+module_exit(tegra30_pinctrl_exit);
+
+MODULE_AUTHOR("Stephen Warren <swarren@nvidia.com>");
+MODULE_DESCRIPTION("NVIDIA Tegra30 pinctrl driver");
+MODULE_LICENSE("GPL v2");
+MODULE_DEVICE_TABLE(of, tegra30_pinctrl_of_match);

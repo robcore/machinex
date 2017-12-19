@@ -2,7 +2,7 @@
  * Driver for the ST Microelectronics SPEAr300 pinmux
  *
  * Copyright (C) 2012 ST Microelectronics
- * Viresh Kumar <viresh.kumar@st.com>
+ * Viresh Kumar <viresh.linux@gmail.com>
  *
  * This file is licensed under the terms of the GNU General Public
  * License version 2. This program is licensed "as is" without any
@@ -661,6 +661,8 @@ static int spear300_pinctrl_probe(struct platform_device *pdev)
 	spear3xx_machdata.ngroups = ARRAY_SIZE(spear300_pingroups);
 	spear3xx_machdata.functions = spear300_functions;
 	spear3xx_machdata.nfunctions = ARRAY_SIZE(spear300_functions);
+	spear3xx_machdata.gpio_pingroups = NULL;
+	spear3xx_machdata.ngpio_pingroups = 0;
 
 	spear3xx_machdata.modes_supported = true;
 	spear3xx_machdata.pmx_modes = spear300_pmx_modes;
@@ -675,7 +677,7 @@ static int spear300_pinctrl_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit spear300_pinctrl_remove(struct platform_device *pdev)
+static int spear300_pinctrl_remove(struct platform_device *pdev)
 {
 	return spear_pinctrl_remove(pdev);
 }
@@ -702,7 +704,7 @@ static void __exit spear300_pinctrl_exit(void)
 }
 module_exit(spear300_pinctrl_exit);
 
-MODULE_AUTHOR("Viresh Kumar <viresh.kumar@st.com>");
+MODULE_AUTHOR("Viresh Kumar <viresh.linux@gmail.com>");
 MODULE_DESCRIPTION("ST Microelectronics SPEAr300 pinctrl driver");
 MODULE_LICENSE("GPL v2");
 MODULE_DEVICE_TABLE(of, spear300_pinctrl_of_match);

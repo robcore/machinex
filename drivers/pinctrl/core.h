@@ -34,7 +34,6 @@ struct pinctrl_gpio_range;
  * @hog_default: default state for pins hogged by this device
  * @hog_sleep: sleep state for pins hogged by this device
  * @device_root: debugfs root for this device
- * @users: reference count
  */
 struct pinctrl_dev {
 	struct list_head node;
@@ -50,7 +49,6 @@ struct pinctrl_dev {
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *device_root;
 #endif
-	struct kref users;
 };
 
 /**
@@ -61,6 +59,7 @@ struct pinctrl_dev {
  * @state: the current state
  * @dt_maps: the mapping table chunks dynamically parsed from device tree for
  *	this device, if any
+ * @users: reference count
  */
 struct pinctrl {
 	struct list_head node;
@@ -68,6 +67,7 @@ struct pinctrl {
 	struct list_head states;
 	struct pinctrl_state *state;
 	struct list_head dt_maps;
+	struct kref users;
 };
 
 /**
