@@ -306,7 +306,7 @@ static int ocores_i2c_probe(struct platform_device *pdev)
 		return -EIO;
 	}
 
-	pdata = pdev->dev.platform_data;
+	pdata = dev_get_platdata(&pdev->dev);
 	if (pdata) {
 		i2c->regstep = pdata->regstep;
 		i2c->clock_khz = pdata->clock_khz;
