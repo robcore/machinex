@@ -11,6 +11,7 @@ obj-y     = fork.o exec_domain.o panic.o \
 	    kthread.o sys_ni.o nsproxy.o \
 	    notifier.o ksysfs.o mxsysfs.o cred.o reboot.o \
 	    async.o range.o groups.o smpboot.o
+obj-y += irq/
 
 ifdef CONFIG_FUNCTION_TRACER
 # Do not trace debug files and internal ftrace files
@@ -66,7 +67,6 @@ obj-$(CONFIG_KPROBES) += kprobes.o
 obj-$(CONFIG_KGDB) += debug/
 obj-$(CONFIG_DETECT_HUNG_TASK) += hung_task.o
 obj-$(CONFIG_LOCKUP_DETECTOR) += watchdog.o
-obj-$(CONFIG_GENERIC_HARDIRQS) += irq/
 obj-$(CONFIG_SECCOMP) += seccomp.o
 obj-$(CONFIG_RELAY) += relay.o
 obj-$(CONFIG_SYSCTL) += utsname_sysctl.o
