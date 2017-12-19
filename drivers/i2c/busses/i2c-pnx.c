@@ -767,7 +767,6 @@ static int i2c_pnx_remove(struct platform_device *pdev)
 	release_mem_region(i2c_pnx->base, I2C_PNX_REGION_SIZE);
 	clk_put(alg_data->clk);
 	kfree(alg_data);
-	platform_set_drvdata(pdev, NULL);
 
 	return 0;
 }
