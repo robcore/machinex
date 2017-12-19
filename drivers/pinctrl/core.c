@@ -794,6 +794,24 @@ struct pinctrl *pinctrl_get(struct device *dev)
 }
 EXPORT_SYMBOL_GPL(pinctrl_get);
 
+static void pinctrl_free_setting(bool disable_setting,
+				 struct pinctrl_setting *setting)
+{
+	switch (setting->type) {
+	case PIN_MAP_TYPE_MUX_GROUP:
+		if (disable_setting)
+			pinmux_disable_setting(setting);
+		pinmux_free_setting(setting);
+		break;
+	case PIN_MAP_TYPE_CONFIGS_PIN:
+	case PIN_MAP_TYPE_CONFIGS_GROUP:
+		pinconf_free_setting(setting);
+		break;
+	default:
+		break;
+	}
+}
+
 static void pinctrl_put_locked(struct pinctrl *p, bool inlist)
 {
 	struct pinctrl_state *state, *n1;
@@ -801,19 +819,7 @@ static void pinctrl_put_locked(struct pinctrl *p, bool inlist)
 
 	list_for_each_entry_safe(state, n1, &p->states, node) {
 		list_for_each_entry_safe(setting, n2, &state->settings, node) {
-			switch (setting->type) {
-			case PIN_MAP_TYPE_MUX_GROUP:
-				if (state == p->state)
-					pinmux_disable_setting(setting);
-				pinmux_free_setting(setting);
-				break;
-			case PIN_MAP_TYPE_CONFIGS_PIN:
-			case PIN_MAP_TYPE_CONFIGS_GROUP:
-				pinconf_free_setting(setting);
-				break;
-			default:
-				break;
-			}
+			pinctrl_free_setting(state == p->state, setting);
 			list_del(&setting->node);
 			kfree(setting);
 		}
@@ -891,6 +897,7 @@ static int pinctrl_select_state_locked(struct pinctrl *p,
 				       struct pinctrl_state *state)
 {
 	struct pinctrl_setting *setting, *setting2;
+	struct pinctrl_state *old_state = p->state;
 	int ret;
 
 	if (p->state == state)
@@ -924,7 +931,7 @@ static int pinctrl_select_state_locked(struct pinctrl *p,
 		}
 	}
 
-	p->state = state;
+	p->state = NULL;
 
 	/* Apply all the settings for the new state */
 	list_for_each_entry(setting, &state->settings, node) {
@@ -940,13 +947,52 @@ static int pinctrl_select_state_locked(struct pinctrl *p,
 			ret = -EINVAL;
 			break;
 		}
+
 		if (ret < 0) {
-			/* FIXME: Difficult to return to prev state */
-			return ret;
+			goto unapply_new_state;
 		}
 	}
 
+	p->state = state;
+
 	return 0;
+
+unapply_new_state:
+	pr_info("Error applying setting, reverse things back\n");
+
+	/*
+	 * If the loop stopped on the 1st entry, nothing has been enabled,
+	 * so jump directly to the 2nd phase
+	 */
+	if (list_entry(&setting->node, typeof(*setting), node) ==
+	    list_first_entry(&state->settings, typeof(*setting), node))
+		goto reapply_old_state;
+
+	list_for_each_entry(setting2, &state->settings, node) {
+		if (&setting2->node == &setting->node)
+			break;
+		pinctrl_free_setting(true, setting2);
+	}
+reapply_old_state:
+	if (old_state) {
+		list_for_each_entry(setting, &old_state->settings, node) {
+			bool found = false;
+			if (setting->type != PIN_MAP_TYPE_MUX_GROUP)
+				continue;
+			list_for_each_entry(setting2, &state->settings, node) {
+				if (setting2->type != PIN_MAP_TYPE_MUX_GROUP)
+					continue;
+				if (setting2->data.mux.group ==
+						setting->data.mux.group) {
+					found = true;
+					break;
+				}
+			}
+			if (!found)
+				pinmux_enable_setting(setting);
+		}
+	}
+	return ret;
 }
 
 /**
