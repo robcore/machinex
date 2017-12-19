@@ -100,9 +100,6 @@ config MIGHT_HAVE_PCI
 config SYS_SUPPORTS_APM_EMULATION
 	bool
 
-config GPIOLIB
-	bool
-
 config HAVE_TCM
 	bool
 	select GENERIC_ALLOCATOR
@@ -719,7 +716,6 @@ config ARCH_TEGRA
 	select CLKDEV_LOOKUP
 	select CLKSRC_MMIO
 	select GENERIC_CLOCKEVENTS
-	select GPIOLIB
 	select HAVE_CLK
 	select HAVE_SMP
 	select MIGHT_HAVE_CACHE_L2X0
@@ -737,7 +733,6 @@ config ARCH_PICOXCELL
 	select CPU_V6K
 	select DW_APB_TIMER
 	select GENERIC_CLOCKEVENTS
-	select GPIOLIB
 	select HAVE_TCM
 	select NO_IOPORT
 	select SPARSE_IRQ
@@ -781,7 +776,6 @@ config ARCH_MSM
 	select ARCH_REQUIRE_GPIOLIB
 	select CLKDEV_LOOKUP
 	select ARCH_HAS_CPUFREQ
-	select GPIOLIB
 	select GENERIC_TIME
 	select GENERIC_ALLOCATOR
 	select HAVE_SCHED_CLOCK
@@ -849,7 +843,6 @@ config ARCH_SA1100
 
 config ARCH_S3C24XX
 	bool "Samsung S3C24XX SoCs"
-	select GPIOLIB
 	select ARCH_HAS_CPUFREQ
 	select HAVE_CLK
 	select CLKDEV_LOOKUP
@@ -890,7 +883,6 @@ config ARCH_S3C64XX
 config ARCH_S5P64X0
 	bool "Samsung S5P6440 S5P6450"
 	select CPU_V6
-	select GPIOLIB
 	select HAVE_CLK
 	select CLKDEV_LOOKUP
 	select CLKSRC_MMIO
@@ -904,7 +896,6 @@ config ARCH_S5P64X0
 
 config ARCH_S5PC100
 	bool "Samsung S5PC100"
-	select GPIOLIB
 	select HAVE_CLK
 	select CLKDEV_LOOKUP
 	select CPU_V7
@@ -920,7 +911,6 @@ config ARCH_S5PV210
 	select CPU_V7
 	select ARCH_SPARSEMEM_ENABLE
 	select ARCH_HAS_HOLES_MEMORYMODEL
-	select GPIOLIB
 	select HAVE_CLK
 	select CLKDEV_LOOKUP
 	select CLKSRC_MMIO
@@ -938,7 +928,6 @@ config ARCH_EXYNOS
 	select CPU_V7
 	select ARCH_SPARSEMEM_ENABLE
 	select ARCH_HAS_HOLES_MEMORYMODEL
-	select GPIOLIB
 	select HAVE_CLK
 	select CLKDEV_LOOKUP
 	select ARCH_HAS_CPUFREQ
@@ -976,7 +965,6 @@ config ARCH_U300
 	select GENERIC_CLOCKEVENTS
 	select CLKDEV_LOOKUP
 	select HAVE_MACH_CLKDEV
-	select GPIOLIB
 	select ARCH_REQUIRE_GPIOLIB
 	help
 	  Support for ST-Ericsson U300 series mobile platforms.
@@ -1045,7 +1033,6 @@ config PLAT_SPEAR
 config ARCH_VT8500
 	bool "VIA/WonderMedia 85xx"
 	select CPU_ARM926T
-	select GPIOLIB
 	select ARCH_HAS_CPUFREQ
 	select GENERIC_CLOCKEVENTS
 	select ARCH_REQUIRE_GPIOLIB
