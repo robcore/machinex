@@ -248,13 +248,13 @@ int v4l2_chip_match_i2c_client(struct i2c_client *c, const struct v4l2_dbg_match
 
 	switch (match->type) {
 	case V4L2_CHIP_MATCH_I2C_DRIVER:
-		if (c->dev == NULL || c->dev.driver.name == NULL)
+		if (c->driver == NULL || c->driver->driver.name == NULL)
 			return 0;
-		len = strlen(c->dev.driver.name);
+		len = strlen(c->driver->driver.name);
 		/* legacy drivers have a ' suffix, don't try to match that */
-		if (len && c->dev.driver.name[len - 1] == '\'')
+		if (len && c->driver->driver.name[len - 1] == '\'')
 			len--;
-		return len && !strncmp(c->dev.driver.name, match->name, len);
+		return len && !strncmp(c->driver->driver.name, match->name, len);
 	case V4L2_CHIP_MATCH_I2C_ADDR:
 		return c->addr == match->addr;
 	default:
@@ -292,7 +292,6 @@ void v4l2_i2c_subdev_init(struct v4l2_subdev *sd, struct i2c_client *client,
 	sd->flags |= V4L2_SUBDEV_FL_IS_I2C;
 	/* the owner is the same as the i2c_client's driver owner */
 	sd->owner = client->dev.driver->owner;
-	sd->dev = &client->dev;
 	/* i2c_client and v4l2_subdev point to one another */
 	v4l2_set_subdevdata(sd, client);
 	i2c_set_clientdata(client, sd);
@@ -302,6 +301,8 @@ void v4l2_i2c_subdev_init(struct v4l2_subdev *sd, struct i2c_client *client,
 		client->addr);
 }
 EXPORT_SYMBOL_GPL(v4l2_i2c_subdev_init);
+
+
 
 /* Load an i2c sub-device. */
 struct v4l2_subdev *v4l2_i2c_new_subdev_board(struct v4l2_device *v4l2_dev,
@@ -329,11 +330,11 @@ struct v4l2_subdev *v4l2_i2c_new_subdev_board(struct v4l2_device *v4l2_dev,
 	   loaded. This delay-load mechanism doesn't work if other drivers
 	   want to use the i2c device, so explicitly loading the module
 	   is the best alternative. */
-	if (client == NULL || client->driver == NULL)
+	if (client == NULL || client->dev.driver == NULL)
 		goto error;
 
 	/* Lock the module so we can safely get the v4l2_subdev pointer */
-	if (!try_module_get(client->driver->driver.owner))
+	if (!try_module_get(client->dev.driver->owner))
 		goto error;
 	sd = i2c_get_clientdata(client);
 
@@ -342,7 +343,7 @@ struct v4l2_subdev *v4l2_i2c_new_subdev_board(struct v4l2_device *v4l2_dev,
 	if (v4l2_device_register_subdev(v4l2_dev, sd))
 		sd = NULL;
 	/* Decrease the module use count to match the first try_module_get. */
-	module_put(client->driver->driver.owner);
+	module_put(client->dev.driver->owner);
 
 error:
 	/* If we have a client but no subdev, then something went wrong and
