@@ -371,14 +371,14 @@ static struct spear_function *spear310_functions[] = {
 	&tdm_function,
 };
 
-static struct of_device_id spear310_pinctrl_of_match[] __devinitdata = {
+static struct of_device_id spear310_pinctrl_of_match[] = {
 	{
 		.compatible = "st,spear310-pinmux",
 	},
 	{},
 };
 
-static int __devinit spear310_pinctrl_probe(struct platform_device *pdev)
+static int spear310_pinctrl_probe(struct platform_device *pdev)
 {
 	int ret;
 
@@ -410,7 +410,7 @@ static struct platform_driver spear310_pinctrl_driver = {
 		.of_match_table = spear310_pinctrl_of_match,
 	},
 	.probe = spear310_pinctrl_probe,
-	.remove = __devexit_p(spear310_pinctrl_remove),
+	.remove = spear310_pinctrl_remove,
 };
 
 static int __init spear310_pinctrl_init(void)
