@@ -236,7 +236,7 @@ err0:
 EXPORT_SYMBOL(of_mm_gpiochip_add);
 
 #ifdef CONFIG_PINCTRL
-void of_gpiochip_add_pin_range(struct gpio_chip *chip)
+static void of_gpiochip_add_pin_range(struct gpio_chip *chip)
 {
 	struct device_node *np = chip->of_node;
 	struct gpio_pin_range *pin_range;
@@ -272,7 +272,7 @@ void of_gpiochip_add_pin_range(struct gpio_chip *chip)
 	} while (index++);
 }
 
-void of_gpiochip_remove_pin_range(struct gpio_chip *chip)
+static void of_gpiochip_remove_pin_range(struct gpio_chip *chip)
 {
 	struct gpio_pin_range *pin_range, *tmp;
 
@@ -283,8 +283,8 @@ void of_gpiochip_remove_pin_range(struct gpio_chip *chip)
 	}
 }
 #else
-void of_gpiochip_add_pin_range(struct gpio_chip *chip) {}
-void of_gpiochip_remove_pin_range(struct gpio_chip *chip) {}
+static void of_gpiochip_add_pin_range(struct gpio_chip *chip) {}
+static void of_gpiochip_remove_pin_range(struct gpio_chip *chip) {}
 #endif
 
 void of_gpiochip_add(struct gpio_chip *chip)
