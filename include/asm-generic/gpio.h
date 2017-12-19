@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 */
-#ifndef _ASM_GENERIC_GPIO_H
-#define _ASM_GENERIC_GPIO_H
+#ifndef _ASM_GPIOLIB_H
+#define _ASM_GPIOLIB_H
 
 #include <linux/kernel.h>
 #include <linux/types.h>
@@ -306,4 +306,4 @@ gpiochip_remove_pin_ranges(struct gpio_chip *chip)
 
 #endif /* CONFIG_PINCTRL */
 
-#endif /* _ASM_GENERIC_GPIO_H */
+#endif /* _ASM_GPIOLIB_H */

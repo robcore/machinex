@@ -27,7 +27,11 @@
 #include <linux/pinctrl/consumer.h>
 #include <linux/pinctrl/pinctrl.h>
 #include <linux/pinctrl/machine.h>
+
+#ifdef CONFIG_GPIOLIB
 #include <asm-generic/gpio.h>
+#endif
+
 #include "core.h"
 #include "devicetree.h"
 #include "pinmux.h"
@@ -290,6 +294,7 @@ pinctrl_match_gpio_range(struct pinctrl_dev *pctldev, unsigned gpio)
  * certain GPIO pin doesn't have back-end pinctrl device. If the return value
  * is false, it means that pinctrl device may not be ready.
  */
+#ifdef CONFIG_GPIOLIB
 static bool pinctrl_ready_for_gpio_range(unsigned gpio)
 {
 	struct pinctrl_dev *pctldev;
@@ -309,6 +314,9 @@ static bool pinctrl_ready_for_gpio_range(unsigned gpio)
 	}
 	return false;
 }
+#else
+static bool pinctrl_ready_for_gpio_range(unsigned gpio) { return true; }
+#endif
 
 /**
  * pinctrl_get_device_gpio_range() - find device for GPIO range
@@ -948,9 +956,8 @@ static int pinctrl_select_state_locked(struct pinctrl *p,
 			break;
 		}
 
-		if (ret < 0) {
+		if (ret < 0)
 			goto unapply_new_state;
-		}
 	}
 
 	p->state = state;
@@ -958,40 +965,26 @@ static int pinctrl_select_state_locked(struct pinctrl *p,
 	return 0;
 
 unapply_new_state:
-	pr_info("Error applying setting, reverse things back\n");
-
-	/*
-	 * If the loop stopped on the 1st entry, nothing has been enabled,
-	 * so jump directly to the 2nd phase
-	 */
-	if (list_entry(&setting->node, typeof(*setting), node) ==
-	    list_first_entry(&state->settings, typeof(*setting), node))
-		goto reapply_old_state;
+	dev_err(p->dev, "Error applying setting, reverse things back\n");
 
 	list_for_each_entry(setting2, &state->settings, node) {
 		if (&setting2->node == &setting->node)
 			break;
-		pinctrl_free_setting(true, setting2);
+		/*
+		 * All we can do here is pinmux_disable_setting.
+		 * That means that some pins are muxed differently now
+		 * than they were before applying the setting (We can't
+		 * "unmux a pin"!), but it's not a big deal since the pins
+		 * are free to be muxed by another apply_setting.
+		 */
+		if (setting2->type == PIN_MAP_TYPE_MUX_GROUP)
+			pinmux_disable_setting(setting2);
 	}
-reapply_old_state:
-	if (old_state) {
-		list_for_each_entry(setting, &old_state->settings, node) {
-			bool found = false;
-			if (setting->type != PIN_MAP_TYPE_MUX_GROUP)
-				continue;
-			list_for_each_entry(setting2, &state->settings, node) {
-				if (setting2->type != PIN_MAP_TYPE_MUX_GROUP)
-					continue;
-				if (setting2->data.mux.group ==
-						setting->data.mux.group) {
-					found = true;
-					break;
-				}
-			}
-			if (!found)
-				pinmux_enable_setting(setting);
-		}
-	}
+
+	/* There's no infinite recursive loop here because p->state is NULL */
+	if (old_state)
+		pinctrl_select_state_locked(p, old_state);
+
 	return ret;
 }
 

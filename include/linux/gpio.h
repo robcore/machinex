@@ -42,7 +42,7 @@ struct gpio {
 /* samsung flip cover hack */
 extern unsigned int flip_bypass;
 
-#ifdef CONFIG_GENERIC_GPIO
+#ifdef CONFIG_GPIOLIB
 
 #ifdef CONFIG_ARCH_HAVE_CUSTOM_GPIO_H
 #include <asm/gpio.h>
@@ -77,7 +77,7 @@ static inline int irq_to_gpio(unsigned int irq)
 
 #endif /* ! CONFIG_ARCH_HAVE_CUSTOM_GPIO_H */
 
-#else /* ! CONFIG_GENERIC_GPIO */
+#else /* ! CONFIG_GPIOLIB */
 
 #include <linux/kernel.h>
 #include <linux/types.h>
@@ -229,7 +229,7 @@ gpiochip_remove_pin_ranges(struct gpio_chip *chip)
 	WARN_ON(1);
 }
 
-#endif /* ! CONFIG_GENERIC_GPIO */
+#endif /* ! CONFIG_GPIOLIB */
 
 struct device;
 
