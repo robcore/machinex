@@ -231,8 +231,10 @@ static int pinctrl_register_one_pin(struct pinctrl_dev *pctldev,
 		pindesc->name = name;
 	} else {
 		pindesc->name = kasprintf(GFP_KERNEL, "PIN%u", number);
-		if (pindesc->name == NULL)
+		if (pindesc->name == NULL) {
+			kfree(pindesc);
 			return -ENOMEM;
+		}
 		pindesc->dynamic_name = true;
 	}
 
@@ -343,6 +345,33 @@ void pinctrl_add_gpio_ranges(struct pinctrl_dev *pctldev,
 		pinctrl_add_gpio_range(pctldev, &ranges[i]);
 }
 EXPORT_SYMBOL_GPL(pinctrl_add_gpio_ranges);
+
+struct pinctrl_dev *find_pinctrl_and_add_gpio_range(const char *devname,
+		struct pinctrl_gpio_range *range)
+{
+	struct pinctrl_dev *pctldev = get_pinctrl_dev_from_devname(devname);
+
+	if (!pctldev)
+		return NULL;
+
+	pinctrl_add_gpio_range(pctldev, range);
+	return pctldev;
+}
+EXPORT_SYMBOL_GPL(find_pinctrl_and_add_gpio_range);
+
+/**
+ * pinctrl_remove_gpio_range() - remove a range of GPIOs fro a pin controller
+ * @pctldev: pin controller device to remove the range from
+ * @range: the GPIO range to remove
+ */
+void pinctrl_remove_gpio_range(struct pinctrl_dev *pctldev,
+			       struct pinctrl_gpio_range *range)
+{
+	mutex_lock(&pinctrl_mutex);
+	list_del(&range->node);
+	mutex_unlock(&pinctrl_mutex);
+}
+EXPORT_SYMBOL_GPL(pinctrl_remove_gpio_range);
 
 /**
  * pinctrl_get_group_selector() - returns the group selector for a group
@@ -561,6 +590,8 @@ static int add_setting(struct pinctrl *p, struct pinctrl_map const *map)
 		 */
 		return -EPROBE_DEFER;
 	}
+
+	setting->dev_name = map->dev_name;
 
 	switch (map->type) {
 	case PIN_MAP_TYPE_MUX_GROUP:
@@ -1141,8 +1172,10 @@ static int pinctrl_groups_show(struct seq_file *s, void *what)
 			seq_printf(s, "group: %s\n", gname);
 			for (i = 0; i < num_pins; i++) {
 				pname = pin_get_name(pctldev, pins[i]);
-				if (WARN_ON(!pname))
+				if (WARN_ON(!pname)) {
+					mutex_unlock(&pinctrl_mutex);
 					return -EINVAL;
+				}
 				seq_printf(s, "pin %d (%s)\n", pins[i], pname);
 			}
 			seq_puts(s, "\n");

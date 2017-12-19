@@ -364,6 +364,9 @@ PINMUX interfaces
 These calls use the pinmux_* naming prefix.  No other calls should use that
 prefix.
 
+Calling pinctrl_add_gpio_range from pinctrl driver is DEPRECATED. Please see
+section 2.1 of Documentation/devicetree/bindings/gpio/gpio.txt on how to bind
+pinctrl and gpio drivers.
 
 What is pinmuxing?
 ==================
@@ -1250,4 +1253,6 @@ foo_switch()
 	...
 }
 
-The above has to be done from process context.
+The above has to be done from process context. The reservation of the pins
+will be done when the state is activated, so in effect one specific pin
+can be used by different functions at different times on a running system.
