@@ -1,0 +1,1 @@
+/media/root/robcore/android/linaro-8064-lt/kernel/patches/12patches/5426-driver-core-constify-data-for-class_find_device.patch
