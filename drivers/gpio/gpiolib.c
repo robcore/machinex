@@ -124,30 +124,25 @@ struct gpio_chip *gpio_to_chip(unsigned gpio)
 /* dynamic allocation of GPIOs, e.g. on a hotplugged device */
 static int gpiochip_find_base(int ngpio)
 {
-	int i;
-	int spare = 0;
-	int base = -ENOSPC;
+	struct gpio_chip *chip;
+	int base = ARCH_NR_GPIOS - ngpio;
 
-	for (i = ARCH_NR_GPIOS - 1; i >= 0 ; i--) {
-		struct gpio_desc *desc = &gpio_desc[i];
-		struct gpio_chip *chip = desc->chip;
-
-		if (!chip) {
-			spare++;
-			if (spare == ngpio) {
-				base = i;
-				break;
-			}
-		} else {
-			spare = 0;
-			if (chip)
-				i -= chip->ngpio - 1;
-		}
+	list_for_each_entry_reverse(chip, &gpio_chips, list) {
+		/* found a free space? */
+		if (chip->base + chip->ngpio <= base)
+			break;
+		else
+			/* nope, check the space right before the chip */
+			base = chip->base - ngpio;
 	}
 
-	if (gpio_is_valid(base))
+	if (gpio_is_valid(base)) {
 		pr_debug("%s: found new base at %d\n", __func__, base);
-	return base;
+		return base;
+	} else {
+		pr_err("%s: cannot find free range\n", __func__);
+		return -ENOSPC;
+	}
 }
 
 /* caller ensures gpio is valid and requested, chip->get_direction may sleep  */
@@ -1200,20 +1195,17 @@ struct gpio_chip *gpiochip_find(void *data,
 				int (*match)(struct gpio_chip *chip,
 					     void *data))
 {
-	struct gpio_chip *chip = NULL;
+	struct gpio_chip *chip;
 	unsigned long flags;
-	int i;
 
 	spin_lock_irqsave(&gpio_lock, flags);
-	for (i = 0; i < ARCH_NR_GPIOS; i++) {
-		if (!gpio_desc[i].chip)
-			continue;
-
-		if (match(gpio_desc[i].chip, data)) {
-			chip = gpio_desc[i].chip;
+	list_for_each_entry(chip, &gpio_chips, list)
+		if (match(chip, data))
 			break;
-		}
-	}
+
+	/* No match? */
+	if (&chip->list == &gpio_chips)
+		chip = NULL;
 	spin_unlock_irqrestore(&gpio_lock, flags);
 
 	return chip;
@@ -1898,45 +1890,28 @@ static void gpiolib_dbg_show(struct seq_file *s, struct gpio_chip *chip)
 static void *gpiolib_seq_start(struct seq_file *s, loff_t *pos)
 {
 	struct gpio_chip *chip = NULL;
-	unsigned int gpio;
-	void *ret = NULL;
-	loff_t index = 0;
+	loff_t index = *pos;
 
 	/* REVISIT this isn't locked against gpio_chip removal ... */
 
-	for (gpio = 0; gpio_is_valid(gpio); gpio++) {
-		if (gpio_desc[gpio].chip == chip)
-			continue;
-
-		chip = gpio_desc[gpio].chip;
-		if (!chip)
-			continue;
-
-		if (index++ >= *pos) {
-			ret = chip;
-			break;
-		}
-	}
-
 	s->private = "";
 
-	return ret;
+	list_for_each_entry(chip, &gpio_chips, list)
+		if (index-- == 0)
+			return chip;
+
+	return NULL;
 }
 
 static void *gpiolib_seq_next(struct seq_file *s, void *v, loff_t *pos)
 {
 	struct gpio_chip *chip = v;
-	unsigned int gpio;
 	void *ret = NULL;
 
-	/* skip GPIOs provided by the current chip */
-	for (gpio = chip->base + chip->ngpio; gpio_is_valid(gpio); gpio++) {
-		chip = gpio_desc[gpio].chip;
-		if (chip) {
-			ret = chip;
-			break;
-		}
-	}
+	if (list_is_last(&chip->list, &gpio_chips))
+		ret = NULL;
+	else
+		ret = list_entry(chip->list.next, struct gpio_chip, list);
 
 	s->private = "\n";
 	++*pos;
