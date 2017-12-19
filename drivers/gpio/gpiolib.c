@@ -14,6 +14,8 @@
 #include <linux/slab.h>
 #include <linux/gpio/driver.h>
 
+#include "gpiolib.h"
+
 #define CREATE_TRACE_POINTS
 #include <trace/events/gpio.h>
 
@@ -1076,7 +1078,7 @@ static void gpiochip_unexport(struct gpio_chip *chip)
 	if (dev) {
 		put_device(dev);
 		device_unregister(dev);
-		chip->exported = 0;
+		chip->exported = false;
 		status = 0;
 	} else
 		status = -ENODEV;
@@ -1228,27 +1230,32 @@ int gpiochip_add(struct gpio_chip *chip)
 				? (1 << FLAG_IS_OUT)
 				: 0;
 		}
+	}
+
+	spin_unlock_irqrestore(&gpio_lock, flags);
+
 #ifdef CONFIG_PINCTRL
 	INIT_LIST_HEAD(&chip->pin_ranges);
 #endif
 
-		of_gpiochip_add(chip);
-	}
+	of_gpiochip_add(chip);
+	acpi_gpiochip_add(chip);
 
-unlock:
-	spin_unlock_irqrestore(&gpio_lock, flags);
+	if (status)
+		goto fail;
 
 	status = gpiochip_export(chip);
-	if (status) {
-		of_gpiochip_remove(chip);
+	if (status)
 		goto fail;
-	}
 
 	pr_debug("%s: registered GPIOs %d to %d on device: %s\n", __func__,
 		chip->base, chip->base + chip->ngpio - 1,
 		chip->label ? : "generic");
 
 	return 0;
+
+unlock:
+	spin_unlock_irqrestore(&gpio_lock, flags);
 fail:
 	/* failures here can mean systems won't boot... */
 	pr_err("%s: GPIOs %d..%d (%s) failed to register\n", __func__,
@@ -1274,6 +1281,7 @@ int gpiochip_remove(struct gpio_chip *chip)
 
 	gpiochip_remove_pin_ranges(chip);
 	of_gpiochip_remove(chip);
+	acpi_gpiochip_remove(chip);
 
 	for (id = 0; id < chip->ngpio; id++) {
 		if (test_bit(FLAG_REQUESTED, &chip->desc[id].flags)) {
@@ -1342,6 +1350,53 @@ static struct gpio_chip *find_chip_by_name(const char *name)
 }
 
 #ifdef CONFIG_PINCTRL
+
+/**
+ * gpiochip_add_pingroup_range() - add a range for GPIO <-> pin mapping
+ * @chip: the gpiochip to add the range for
+ * @pinctrl: the dev_name() of the pin controller to map to
+ * @gpio_offset: the start offset in the current gpio_chip number space
+ * @pin_group: name of the pin group inside the pin controller
+ */
+int gpiochip_add_pingroup_range(struct gpio_chip *chip,
+			struct pinctrl_dev *pctldev,
+			unsigned int gpio_offset, const char *pin_group)
+{
+	struct gpio_pin_range *pin_range;
+	int ret;
+
+	pin_range = kzalloc(sizeof(*pin_range), GFP_KERNEL);
+	if (!pin_range) {
+		chip_err(chip, "failed to allocate pin ranges\n");
+		return -ENOMEM;
+	}
+
+	/* Use local offset as range ID */
+	pin_range->range.id = gpio_offset;
+	pin_range->range.gc = chip;
+	pin_range->range.name = chip->label;
+	pin_range->range.base = chip->base + gpio_offset;
+	pin_range->pctldev = pctldev;
+
+	ret = pinctrl_get_group_pins(pctldev, pin_group,
+					&pin_range->range.pins,
+					&pin_range->range.npins);
+	if (ret < 0) {
+		kfree(pin_range);
+		return ret;
+	}
+
+	pinctrl_add_gpio_range(pctldev, &pin_range->range);
+
+	chip_dbg(chip, "created GPIO range %d->%d ==> %s PINGRP %s\n",
+		 gpio_offset, gpio_offset + pin_range->range.npins - 1,
+		 pinctrl_dev_get_devname(pctldev), pin_group);
+
+	list_add_tail(&pin_range->node, &chip->pin_ranges);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(gpiochip_add_pingroup_range);
 
 /**
  * gpiochip_add_pin_range() - add a range for GPIO <-> pin mapping
@@ -2347,6 +2402,23 @@ static struct gpio_desc *of_find_gpio(struct device *dev, const char *con_id,
 }
 #endif
 
+static struct gpio_desc *acpi_find_gpio(struct device *dev, const char *con_id,
+					unsigned int idx,
+					enum gpio_lookup_flags *flags)
+{
+	struct acpi_gpio_info info;
+	struct gpio_desc *desc;
+
+	desc = acpi_get_gpiod_by_index(dev, idx, &info);
+	if (IS_ERR(desc))
+		return desc;
+
+	if (info.gpioint && info.active_low)
+		*flags |= GPIO_ACTIVE_LOW;
+
+	return desc;
+}
+
 static struct gpiod_lookup_table *gpiod_find_lookup_table(struct device *dev)
 {
 	const char *dev_id = dev ? dev_name(dev) : NULL;
@@ -2467,6 +2539,9 @@ struct gpio_desc *__must_check gpiod_get_index(struct device *dev,
 	if (IS_ENABLED(CONFIG_OF) && dev && dev->of_node) {
 		dev_dbg(dev, "using device tree for GPIO lookup\n");
 		desc = of_find_gpio(dev, con_id, idx, &flags);
+	} else if (IS_ENABLED(CONFIG_ACPI) && dev && ACPI_HANDLE(dev)) {
+		dev_dbg(dev, "using ACPI for GPIO lookup\n");
+		desc = acpi_find_gpio(dev, con_id, idx, &flags);
 	}
 
 	/*
