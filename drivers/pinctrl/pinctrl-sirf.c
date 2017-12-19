@@ -879,7 +879,7 @@ static void sirfsoc_pin_dbg_show(struct pinctrl_dev *pctldev, struct seq_file *s
 	seq_printf(s, " " DRIVER_NAME);
 }
 
-static struct pinctrl_ops sirfsoc_pctrl_ops = {
+static const struct pinctrl_ops sirfsoc_pctrl_ops = {
 	.get_groups_count = sirfsoc_get_groups_count,
 	.get_group_name = sirfsoc_get_group_name,
 	.get_group_pins = sirfsoc_get_group_pins,
@@ -1065,7 +1065,7 @@ static int sirfsoc_pinmux_request_gpio(struct pinctrl_dev *pmxdev,
 	return 0;
 }
 
-static struct pinmux_ops sirfsoc_pinmux_ops = {
+static const struct pinmux_ops sirfsoc_pinmux_ops = {
 	.enable = sirfsoc_pinmux_enable,
 	.disable = sirfsoc_pinmux_disable,
 	.get_functions_count = sirfsoc_pinmux_get_funcs_count,
