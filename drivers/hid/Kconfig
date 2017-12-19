@@ -684,6 +684,8 @@ config HID_ZYDACRON
 	---help---
 	Support for Zydacron remote control.
 
+source "drivers/hid/i2c-hid/Kconfig"
+
 endmenu
 
 endif # HID_SUPPORT
