@@ -247,6 +247,14 @@ int v4l2_chip_match_i2c_client(struct i2c_client *c, const struct v4l2_dbg_match
 		return 0;
 
 	switch (match->type) {
+	case V4L2_CHIP_MATCH_I2C_DRIVER:
+		if (c->dev == NULL || c->dev.driver.name == NULL)
+			return 0;
+		len = strlen(c->dev.driver.name);
+		/* legacy drivers have a ' suffix, don't try to match that */
+		if (len && c->dev.driver.name[len - 1] == '\'')
+			len--;
+		return len && !strncmp(c->dev.driver.name, match->name, len);
 	case V4L2_CHIP_MATCH_I2C_ADDR:
 		return c->addr == match->addr;
 	default:
@@ -283,18 +291,17 @@ void v4l2_i2c_subdev_init(struct v4l2_subdev *sd, struct i2c_client *client,
 	v4l2_subdev_init(sd, ops);
 	sd->flags |= V4L2_SUBDEV_FL_IS_I2C;
 	/* the owner is the same as the i2c_client's driver owner */
-	sd->owner = client->driver->driver.owner;
+	sd->owner = client->dev.driver->owner;
+	sd->dev = &client->dev;
 	/* i2c_client and v4l2_subdev point to one another */
 	v4l2_set_subdevdata(sd, client);
 	i2c_set_clientdata(client, sd);
 	/* initialize name */
 	snprintf(sd->name, sizeof(sd->name), "%s %d-%04x",
-		client->driver->driver.name, i2c_adapter_id(client->adapter),
+		client->dev.driver->name, i2c_adapter_id(client->adapter),
 		client->addr);
 }
 EXPORT_SYMBOL_GPL(v4l2_i2c_subdev_init);
-
-
 
 /* Load an i2c sub-device. */
 struct v4l2_subdev *v4l2_i2c_new_subdev_board(struct v4l2_device *v4l2_dev,
