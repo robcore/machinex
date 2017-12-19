@@ -93,7 +93,6 @@ void devm_gpio_free(struct device *dev, unsigned int gpio);
 
 #include <linux/kernel.h>
 #include <linux/types.h>
-#include <linux/errno.h>
 #include <linux/bug.h>
 
 struct device;
