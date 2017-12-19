@@ -128,6 +128,7 @@ static int ce4100_i2c_probe(struct pci_dev *dev,
 	return 0;
 
 err_dev_add:
+	pci_set_drvdata(dev, NULL);
 	kfree(sds);
 err_mem:
 	pci_disable_device(dev);
@@ -140,6 +141,7 @@ static void ce4100_i2c_remove(struct pci_dev *dev)
 	unsigned int i;
 
 	sds = pci_get_drvdata(dev);
+	pci_set_drvdata(dev, NULL);
 
 	for (i = 0; i < ARRAY_SIZE(sds->pdev); i++)
 		platform_device_unregister(sds->pdev[i]);

@@ -436,6 +436,8 @@ err_unmap:
 err:
 	kfree(dev);
 
+	platform_set_drvdata(pdev, NULL);
+
 	return ret;
 }
 
@@ -450,6 +452,8 @@ static int highlander_i2c_remove(struct platform_device *pdev)
 
 	iounmap(dev->base);
 	kfree(dev);
+
+	platform_set_drvdata(pdev, NULL);
 
 	return 0;
 }

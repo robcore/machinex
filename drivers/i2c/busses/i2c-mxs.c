@@ -391,6 +391,8 @@ static int mxs_i2c_remove(struct platform_device *pdev)
 
 	writel(MXS_I2C_CTRL0_SFTRST, i2c->regs + MXS_I2C_CTRL0_SET);
 
+	platform_set_drvdata(pdev, NULL);
+
 	return 0;
 }
 

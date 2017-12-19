@@ -107,6 +107,41 @@ err0:
 EXPORT_SYMBOL(of_get_named_gpio_flags);
 
 /**
+ * of_gpio_named_count - Count GPIOs for a device
+ * @np:		device node to count GPIOs for
+ * @propname:	property name containing gpio specifier(s)
+ *
+ * The function returns the count of GPIOs specified for a node.
+ *
+ * Note that the empty GPIO specifiers counts too. For example,
+ *
+ * gpios = <0
+ *          &pio1 1 2
+ *          0
+ *          &pio2 3 4>;
+ *
+ * defines four GPIOs (so this function will return 4), two of which
+ * are not specified.
+ */
+unsigned int of_gpio_named_count(struct device_node *np, const char* propname)
+{
+	unsigned int cnt = 0;
+
+	do {
+		int ret;
+
+		ret = of_parse_phandle_with_args(np, propname, "#gpio-cells",
+						 cnt, NULL);
+		/* A hole in the gpios = <> counts anyway. */
+		if (ret < 0 && ret != -EEXIST)
+			break;
+	} while (++cnt);
+
+	return cnt;
+}
+EXPORT_SYMBOL(of_gpio_named_count);
+
+/**
  * of_gpio_simple_xlate - translate gpio_spec to the GPIO number and flags
  * @gc:		pointer to the gpio_chip structure
  * @np:		device node of the GPIO chip
@@ -211,7 +246,7 @@ static void of_gpiochip_add_pin_range(struct gpio_chip *chip)
 	if (!np)
 		return;
 
-	for (;; index++) {
+	do {
 		ret = of_parse_phandle_with_args(np, "gpio-ranges",
 				"#gpio-range-cells", index, &pinspec);
 		if (ret)
@@ -221,15 +256,27 @@ static void of_gpiochip_add_pin_range(struct gpio_chip *chip)
 		if (!pctldev)
 			break;
 
+		/*
+		 * This assumes that the n GPIO pins are consecutive in the
+		 * GPIO number space, and that the pins are also consecutive
+		 * in their local number space. Currently it is not possible
+		 * to add different ranges for one and the same GPIO chip,
+		 * as the code assumes that we have one consecutive range
+		 * on both, mapping 1-to-1.
+		 *
+		 * TODO: make the OF bindings handle multiple sparse ranges
+		 * on the same GPIO chip.
+		 */
 		ret = gpiochip_add_pin_range(chip,
 					     pinctrl_dev_get_devname(pctldev),
+					     0, /* offset in gpiochip */
 					     pinspec.args[0],
-					     pinspec.args[1],
-					     pinspec.args[2]);
+					     pinspec.args[1]);
 
 		if (ret)
 			break;
-	}
+
+	} while (index++);
 }
 
 #else

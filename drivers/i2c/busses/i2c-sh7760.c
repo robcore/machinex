@@ -546,6 +546,7 @@ static int sh7760_i2c_remove(struct platform_device *pdev)
 	release_resource(id->ioarea);
 	kfree(id->ioarea);
 	kfree(id);
+	platform_set_drvdata(pdev, NULL);
 
 	return 0;
 }

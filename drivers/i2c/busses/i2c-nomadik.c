@@ -1047,6 +1047,7 @@ static int nmk_i2c_remove(struct platform_device *pdev)
 	if (dev->regulator)
 		regulator_put(dev->regulator);
 	pm_runtime_disable(&adev->dev);
+	amba_set_drvdata(adev, NULL);
 	kfree(dev);
 
 	return 0;

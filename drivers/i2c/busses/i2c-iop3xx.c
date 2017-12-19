@@ -414,6 +414,8 @@ iop3xx_i2c_remove(struct platform_device *pdev)
 	kfree(adapter_data);
 	kfree(padapter);
 
+	platform_set_drvdata(pdev, NULL);
+
 	return 0;
 }
 

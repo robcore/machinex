@@ -349,6 +349,7 @@ static int pmcmsptwi_probe(struct platform_device *pldev)
 	return 0;
 
 ret_unmap:
+	platform_set_drvdata(pldev, NULL);
 	if (pmcmsptwi_data.irq) {
 		pmcmsptwi_writel(0,
 			pmcmsptwi_data.iobase + MSP_TWI_INT_MSK_REG_OFFSET);
@@ -373,6 +374,7 @@ static int pmcmsptwi_remove(struct platform_device *pldev)
 
 	i2c_del_adapter(&pmcmsptwi_adapter);
 
+	platform_set_drvdata(pldev, NULL);
 	if (pmcmsptwi_data.irq) {
 		pmcmsptwi_writel(0,
 			pmcmsptwi_data.iobase + MSP_TWI_INT_MSK_REG_OFFSET);

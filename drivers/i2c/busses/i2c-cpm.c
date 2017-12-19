@@ -682,6 +682,7 @@ static int cpm_i2c_probe(struct platform_device *ofdev)
 out_shut:
 	cpm_i2c_shutdown(cpm);
 out_free:
+	dev_set_drvdata(&ofdev->dev, NULL);
 	kfree(cpm);
 
 	return result;
@@ -695,6 +696,7 @@ static int cpm_i2c_remove(struct platform_device *ofdev)
 
 	cpm_i2c_shutdown(cpm);
 
+	dev_set_drvdata(&ofdev->dev, NULL);
 	kfree(cpm);
 
 	return 0;

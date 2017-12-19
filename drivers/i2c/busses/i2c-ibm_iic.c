@@ -773,6 +773,7 @@ error_cleanup:
 	if (dev->vaddr)
 		iounmap(dev->vaddr);
 
+	dev_set_drvdata(&ofdev->dev, NULL);
 	kfree(dev);
 	return ret;
 }
@@ -783,6 +784,8 @@ error_cleanup:
 static int iic_remove(struct platform_device *ofdev)
 {
 	struct ibm_iic_private *dev = dev_get_drvdata(&ofdev->dev);
+
+	dev_set_drvdata(&ofdev->dev, NULL);
 
 	i2c_del_adapter(&dev->adap);
 
