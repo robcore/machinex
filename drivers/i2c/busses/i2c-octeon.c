@@ -588,7 +588,7 @@ static int octeon_i2c_probe(struct platform_device *pdev)
 	result = i2c_add_numbered_adapter(&i2c->adap);
 	if (result < 0) {
 		dev_err(i2c->dev, "failed to add adapter\n");
-		goto fail_add;
+		goto out;
 	}
 
 	dev_info(i2c->dev, "version %s\n", DRV_VERSION);
