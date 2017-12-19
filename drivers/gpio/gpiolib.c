@@ -35,8 +35,11 @@
  *
  * Otherwise, minimize overhead in what may be bitbanging codepaths.
  */
-
+#ifdef	DEBUG
+#define	extra_checks	1
+#else
 #define	extra_checks	0
+#endif
 
 /* gpio_lock prevents conflicts during gpio_desc[] table updates.
  * While any GPIO is requested, its gpio_chip is not removable;
@@ -716,6 +719,7 @@ static ssize_t unexport_store(struct class *class,
 				const char *buf, size_t len)
 {
 	long	gpio;
+	struct gpio_desc	*desc;
 	int	status;
 
 	status = kstrtol(buf, 0, &gpio);
@@ -1223,21 +1227,23 @@ int gpiochip_add(struct gpio_chip *chip)
 				? (1 << FLAG_IS_OUT)
 				: 0;
 		}
+	}
+
 #ifdef CONFIG_PINCTRL
 	INIT_LIST_HEAD(&chip->pin_ranges);
 #endif
 
-		of_gpiochip_add(chip);
-	}
+	of_gpiochip_add(chip);
 
 unlock:
 	spin_unlock_irqrestore(&gpio_lock, flags);
 
-	status = gpiochip_export(chip);
-	if (status) {
-		of_gpiochip_remove(chip);
+	if (status)
 		goto fail;
-	}
+
+	status = gpiochip_export(chip);
+	if (status)
+		goto fail;
 
 	pr_debug("gpiochip_add: registered GPIOs %d to %d on device: %s\n",
 		chip->base, chip->base + chip->ngpio - 1,
