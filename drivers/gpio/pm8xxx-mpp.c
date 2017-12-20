@@ -370,8 +370,7 @@ static int pm8xxx_mpp_probe(struct platform_device *pdev)
 	return 0;
 
 remove_chip:
-	if (gpiochip_remove(&mpp_chip->gpio_chip))
-		pr_err("failed to remove gpio chip\n");
+	gpiochip_remove(&mpp_chip->gpio_chip);
 reset_drvdata:
 	platform_set_drvdata(pdev, NULL);
 free_mpp_chip:
@@ -387,8 +386,7 @@ static int pm8xxx_mpp_remove(struct platform_device *pdev)
 	list_del(&mpp_chip->link);
 	mutex_unlock(&pm8xxx_mpp_chips_lock);
 	platform_set_drvdata(pdev, NULL);
-	if (gpiochip_remove(&mpp_chip->gpio_chip))
-		pr_err("failed to remove gpio chip\n");
+	gpiochip_remove(&mpp_chip->gpio_chip);
 	kfree(mpp_chip->ctrl_reg);
 	kfree(mpp_chip);
 

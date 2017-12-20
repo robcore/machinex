@@ -582,12 +582,8 @@ static struct of_device_id msm_gpio_of_match[] = {
 
 static int msm_gpio_remove(struct platform_device *pdev)
 {
-	int ret;
-
 	unregister_syscore_ops(&msm_gpio_syscore_ops);
-	ret = gpiochip_remove(&msm_gpio.gpio_chip);
-	if (ret < 0)
-		return ret;
+	gpiochip_remove(&msm_gpio.gpio_chip);
 	irq_set_handler(TLMM_MSM_SUMMARY_IRQ, NULL);
 
 	return 0;
