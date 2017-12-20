@@ -107,20 +107,6 @@ err0:
 }
 EXPORT_SYMBOL(of_get_named_gpio_flags);
 
-int of_get_named_gpio_flags(struct device_node *np, const char *list_name,
-			    int index, enum of_gpio_flags *flags)
-{
-	struct gpio_desc *desc;
-
-	desc = of_get_named_gpiod_flags(np, list_name, index, flags);
-
-	if (IS_ERR(desc))
-		return PTR_ERR(desc);
-	else
-		return desc_to_gpio(desc);
-}
-EXPORT_SYMBOL(of_get_named_gpio_flags);
-
 /**
  * of_gpio_named_count - Count GPIOs for a device
  * @np:		device node to count GPIOs for
