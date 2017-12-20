@@ -1916,6 +1916,7 @@ EXPORT_SYMBOL_GPL(__gpiod_get_index);
 struct gpio_desc *fwnode_get_named_gpiod(struct fwnode_handle *fwnode,
 					 const char *propname)
 {
+#ifdef CONFIG_OF
 	struct gpio_desc *desc = ERR_PTR(-ENODEV);
 	bool active_low = false;
 	int ret;
@@ -1951,6 +1952,9 @@ struct gpio_desc *fwnode_get_named_gpiod(struct fwnode_handle *fwnode,
 		set_bit(FLAG_ACTIVE_LOW, &desc->flags);
 
 	return desc;
+#else
+		return ERR_PTR(-EINVAL);
+#endif
 }
 EXPORT_SYMBOL_GPL(fwnode_get_named_gpiod);
 
