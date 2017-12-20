@@ -476,6 +476,7 @@ config I2C_MSM
 config I2C_QUP
 	tristate "I2C_QUP"
 	depends on ARCH_MSM
+	select I2C_SLAVE
 	help
 	  If you say yes to this option, support will be included for the
 	  built-in I2C interface on the MSM family processors.
