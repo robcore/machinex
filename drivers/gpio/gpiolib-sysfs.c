@@ -2,7 +2,6 @@
 #include <linux/mutex.h>
 #include <linux/device.h>
 #include <linux/sysfs.h>
-#include <linux/gpio.h>
 #include <linux/gpio/consumer.h>
 #include <linux/gpio/driver.h>
 #include <linux/interrupt.h>
@@ -162,7 +161,7 @@ static int gpio_setup_irq(struct gpio_desc *desc, struct device *dev,
 	desc->flags &= ~GPIO_TRIGGER_MASK;
 
 	if (!gpio_flags) {
-		gpio_unlock_as_irq(desc->chip, gpio_chip_hwgpio(desc));
+		gpiochip_unlock_as_irq(desc->chip, gpio_chip_hwgpio(desc));
 		ret = 0;
 		goto free_id;
 	}
@@ -201,7 +200,7 @@ static int gpio_setup_irq(struct gpio_desc *desc, struct device *dev,
 	if (ret < 0)
 		goto free_id;
 
-	ret = gpio_lock_as_irq(desc->chip, gpio_chip_hwgpio(desc));
+	ret = gpiochip_lock_as_irq(desc->chip, gpio_chip_hwgpio(desc));
 	if (ret < 0) {
 		gpiod_warn(desc, "failed to flag the GPIO for IRQ\n");
 		goto free_id;
@@ -597,7 +596,7 @@ int gpiod_export(struct gpio_desc *desc, bool direction_may_change)
 	dev = device_create_with_groups(&gpio_class, desc->chip->dev,
 					MKDEV(0, 0), desc, gpio_groups,
 					ioname ? ioname : "gpio%u",
-				    desc_to_gpio(desc));
+					desc_to_gpio(desc));
 	if (IS_ERR(dev)) {
 		status = PTR_ERR(dev);
 		goto fail_unlock;
