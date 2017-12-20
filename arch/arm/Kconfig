@@ -107,7 +107,7 @@ config HAVE_TCM
 config HAVE_PROC_CPU
 	bool
 
-config NO_IOPORT
+config NO_IOPORT_MAP
 	bool
 
 config EISA
@@ -384,7 +384,7 @@ config ARCH_VEXPRESS
 	select HAVE_CLK
 	select HAVE_PATA_PLATFORM
 	select ICST
-	select NO_IOPORT
+	select NO_IOPORT_MAP
 	select PLAT_VERSATILE
 	select PLAT_VERSATILE_CLCD
 	help
@@ -448,7 +448,7 @@ config ARCH_GEMINI
 config ARCH_PRIMA2
 	bool "CSR SiRFSoC PRIMA2 ARM Cortex A9 Platform"
 	select CPU_V7
-	select NO_IOPORT
+	select NO_IOPORT_MAP
 	select GENERIC_CLOCKEVENTS
 	select CLKDEV_LOOKUP
 	select GENERIC_IRQ_CHIP
@@ -462,7 +462,7 @@ config ARCH_EBSA110
 	bool "EBSA-110"
 	select CPU_SA110
 	select ISA
-	select NO_IOPORT
+	select NO_IOPORT_MAP
 	select ARCH_USES_GETTIMEOFFSET
 	select NEED_MACH_IO_H
 	select NEED_MACH_MEMORY_H
@@ -734,7 +734,7 @@ config ARCH_PICOXCELL
 	select DW_APB_TIMER
 	select GENERIC_CLOCKEVENTS
 	select HAVE_TCM
-	select NO_IOPORT
+	select NO_IOPORT_MAP
 	select SPARSE_IRQ
 	select USE_OF
 	help
@@ -798,7 +798,7 @@ config ARCH_SHMOBILE
 	select HAVE_SMP
 	select GENERIC_CLOCKEVENTS
 	select MIGHT_HAVE_CACHE_L2X0
-	select NO_IOPORT
+	select NO_IOPORT_MAP
 	select SPARSE_IRQ
 	select MULTI_IRQ_HANDLER
 	select PM_GENERIC_DOMAINS if PM
@@ -813,7 +813,7 @@ config ARCH_RPC
 	select ARCH_MAY_HAVE_PC_FDC
 	select HAVE_PATA_PLATFORM
 	select ISA_DMA_API
-	select NO_IOPORT
+	select NO_IOPORT_MAP
 	select ARCH_SPARSEMEM_ENABLE
 	select ARCH_USES_GETTIMEOFFSET
 	select HAVE_IDE
@@ -865,7 +865,7 @@ config ARCH_S3C64XX
 	select HAVE_CLK
 	select HAVE_TCM
 	select CLKDEV_LOOKUP
-	select NO_IOPORT
+	select NO_IOPORT_MAP
 	select ARCH_USES_GETTIMEOFFSET
 	select ARCH_HAS_CPUFREQ
 	select ARCH_REQUIRE_GPIOLIB
