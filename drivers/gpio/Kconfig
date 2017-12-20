@@ -67,7 +67,6 @@ config DEBUG_GPIO
 
 config GPIO_SYSFS
 	bool "/sys/class/gpio/... (sysfs interface)"
-	depends on SYSFS
 	help
 	  Say Y here to add a sysfs interface for GPIOs.
 

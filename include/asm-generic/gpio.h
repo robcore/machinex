@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 */
-#ifndef _ASM_GPIOLIB_H
-#define _ASM_GPIOLIB_H
+#ifndef _ASM_GENERIC_GPIO_H
+#define _ASM_GENERIC_GPIO_H
 
 #include <linux/kernel.h>
 #include <linux/types.h>
@@ -140,6 +140,53 @@ static inline void gpio_unexport(unsigned gpio)
 	gpiod_unexport(gpio_to_desc(gpio));
 }
 
+#ifdef CONFIG_PINCTRL
+
+/**
+ * struct gpio_pin_range - pin range controlled by a gpio chip
+ * @head: list for maintaining set of pin ranges, used internally
+ * @pctldev: pinctrl device which handles corresponding pins
+ * @range: actual range of pins controlled by a gpio controller
+ */
+
+struct gpio_pin_range {
+	struct list_head node;
+	struct pinctrl_dev *pctldev;
+	struct pinctrl_gpio_range range;
+};
+
+int gpiochip_add_pin_range(struct gpio_chip *chip, const char *pinctl_name,
+			   unsigned int gpio_offset, unsigned int pin_offset,
+			   unsigned int npins);
+int gpiochip_add_pingroup_range(struct gpio_chip *chip,
+			struct pinctrl_dev *pctldev,
+			unsigned int gpio_offset, const char *pin_group);
+void gpiochip_remove_pin_ranges(struct gpio_chip *chip);
+
+#else
+
+static inline int
+gpiochip_add_pin_range(struct gpio_chip *chip, const char *pinctl_name,
+		       unsigned int gpio_offset, unsigned int pin_offset,
+		       unsigned int npins)
+{
+	return 0;
+}
+static inline int
+gpiochip_add_pingroup_range(struct gpio_chip *chip,
+			struct pinctrl_dev *pctldev,
+			unsigned int gpio_offset, const char *pin_group)
+{
+	return 0;
+}
+
+static inline void
+gpiochip_remove_pin_ranges(struct gpio_chip *chip)
+{
+}
+
+#endif /* CONFIG_PINCTRL */
+
 #else	/* !CONFIG_GPIOLIB */
 
 static inline bool gpio_is_valid(int number)
@@ -171,41 +218,4 @@ static inline void gpio_set_value_cansleep(unsigned gpio, int value)
 
 #endif /* !CONFIG_GPIOLIB */
 
-#ifdef CONFIG_PINCTRL
-
-/**
- * struct gpio_pin_range - pin range controlled by a gpio chip
- * @head: list for maintaining set of pin ranges, used internally
- * @pctldev: pinctrl device which handles corresponding pins
- * @range: actual range of pins controlled by a gpio controller
- */
-
-struct gpio_pin_range {
-	struct list_head node;
-	struct pinctrl_dev *pctldev;
-	struct pinctrl_gpio_range range;
-};
-
-int gpiochip_add_pin_range(struct gpio_chip *chip, const char *pinctl_name,
-			   unsigned int gpio_offset, unsigned int pin_offset,
-			   unsigned int npins);
-void gpiochip_remove_pin_ranges(struct gpio_chip *chip);
-
-#else
-
-static inline int
-gpiochip_add_pin_range(struct gpio_chip *chip, const char *pinctl_name,
-		       unsigned int gpio_offset, unsigned int pin_offset,
-		       unsigned int npins)
-{
-	return 0;
-}
-
-static inline void
-gpiochip_remove_pin_ranges(struct gpio_chip *chip)
-{
-}
-
-#endif /* CONFIG_PINCTRL */
-
-#endif /* _ASM_GPIOLIB_H */
+#endif /* _ASM_GENERIC_GPIO_H */

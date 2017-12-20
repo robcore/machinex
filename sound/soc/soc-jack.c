@@ -14,6 +14,9 @@
 #include <sound/jack.h>
 #include <sound/soc.h>
 #include <linux/gpio.h>
+#include <linux/gpio/consumer.h>
+#include <linux/gpio/driver.h>
+#include <linux/gpio/machine.h>
 #include <linux/interrupt.h>
 #include <linux/workqueue.h>
 #include <linux/delay.h>
