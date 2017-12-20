@@ -46,6 +46,8 @@ acpi_get_gpiod_by_index(struct device *dev, int index,
 int gpiochip_request_own_desc(struct gpio_desc *desc, const char *label);
 void gpiochip_free_own_desc(struct gpio_desc *desc);
 
+struct gpio_desc *gpiochip_get_desc(struct gpio_chip *chip, u16 hwnum);
+
 extern struct spinlock gpio_lock;
 extern struct list_head gpio_chips;
 
