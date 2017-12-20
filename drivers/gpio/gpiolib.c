@@ -326,6 +326,8 @@ void gpiochip_remove(struct gpio_chip *chip)
 	unsigned long	flags;
 	unsigned	id;
 
+	gpiochip_unexport(chip);
+
 	gpiochip_irqchip_remove(chip);
 
 	acpi_gpiochip_remove(chip);
@@ -342,7 +344,6 @@ void gpiochip_remove(struct gpio_chip *chip)
 
 	list_del(&chip->list);
 	spin_unlock_irqrestore(&gpio_lock, flags);
-	gpiochip_unexport(chip);
 
 	kfree(chip->desc);
 	chip->desc = NULL;
