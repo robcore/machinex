@@ -249,12 +249,10 @@ err_request_sda:
 static int i2c_gpio_remove(struct platform_device *pdev)
 {
 	struct i2c_gpio_private_data *priv;
-	struct i2c_gpio_platform_data *pdata;
 	struct i2c_adapter *adap;
 
 	priv = platform_get_drvdata(pdev);
 	adap = &priv->adap;
-	pdata = &priv->pdata;
 
 	i2c_del_adapter(adap);
 	gpio_free(pdata->scl_pin);
