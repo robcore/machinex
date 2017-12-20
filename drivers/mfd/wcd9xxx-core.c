@@ -1534,6 +1534,7 @@ static int wcd9xxx_resume(struct wcd9xxx *wcd9xxx)
 {
 	int ret = 0;
 
+
 	pr_debug("%s: enter\n", __func__);
 	mutex_lock(&wcd9xxx->pm_lock);
 	if (wcd9xxx->pm_state == WCD9XXX_PM_ASLEEP) {
@@ -1550,25 +1551,35 @@ static int wcd9xxx_resume(struct wcd9xxx *wcd9xxx)
 	return ret;
 }
 
-static int wcd9xxx_slim_resume(struct slim_device *sldev)
+static int wcd9xxx_slim_resume(struct device *dev)
 {
-	struct wcd9xxx *wcd9xxx = slim_get_devicedata(sldev);
-	if (wcd9xxx != NULL)
-		return wcd9xxx_resume(wcd9xxx);
-	else
+	struct slim_device *sldev = dev_get_drvdata(dev);
+	struct wcd9xxx *wcd9xxx;
+	if (!sldev)
 		return 0;
-}
 
-static int wcd9xxx_i2c_resume(struct i2c_client *i2cdev)
-{
-	struct wcd9xxx *wcd9xxx = dev_get_drvdata(&i2cdev->dev);
+	wcd9xxx = slim_get_devicedata(sldev);
 	if (wcd9xxx)
 		return wcd9xxx_resume(wcd9xxx);
 	else
 		return 0;
 }
 
-static int wcd9xxx_suspend(struct wcd9xxx *wcd9xxx, pm_message_t pmesg)
+static int wcd9xxx_i2c_resume(struct device *dev)
+{
+	struct wcd9xxx *wcd9xxx;
+
+	if (!dev->driver)
+		return 0;
+
+	wcd9xxx = dev_get_drvdata(dev);
+	if (wcd9xxx)
+		return wcd9xxx_resume(wcd9xxx);
+
+	return 0;
+}
+
+static int wcd9xxx_suspend(struct wcd9xxx *wcd9xxx)
 {
 	int ret = 0;
 
@@ -1612,23 +1623,38 @@ static int wcd9xxx_suspend(struct wcd9xxx *wcd9xxx, pm_message_t pmesg)
 	return ret;
 }
 
-static int wcd9xxx_slim_suspend(struct slim_device *sldev, pm_message_t pmesg)
+static int wcd9xxx_slim_suspend(struct device *dev)
 {
-	struct wcd9xxx *wcd9xxx = slim_get_devicedata(sldev);
-	if (wcd9xxx != NULL)
-		return wcd9xxx_suspend(wcd9xxx, pmesg);
+	struct slim_device *sldev = dev_get_drvdata(dev);
+	struct wcd9xxx *wcd9xxx;
+	if (!sldev)
+		return 0;
+
+	wcd9xxx = slim_get_devicedata(sldev);
+	if (wcd9xxx)
+		return wcd9xxx_suspend(wcd9xxx);
 	else
 		return 0;
 }
 
-static int wcd9xxx_i2c_suspend(struct i2c_client *i2cdev, pm_message_t pmesg)
+static int wcd9xxx_i2c_suspend(struct device *dev)
 {
-	struct wcd9xxx *wcd9xxx = dev_get_drvdata(&i2cdev->dev);
-	if (wcd9xxx != NULL)
-		return wcd9xxx_suspend(wcd9xxx, pmesg);
-	else
+	struct wcd9xxx *wcd9xxx;
+
+	if (!dev->driver)
 		return 0;
+
+	wcd9xxx = dev_get_drvdata(dev);
+	if (wcd9xxx)
+		return wcd9xxx_suspend(wcd9xxx);
+
+	return 0;
 }
+
+static const struct dev_pm_ops wcdxxx_slim_pm_ops = {
+       .resume = wcd9xxx_slim_resume,
+       .suspend = wcd9xxx_slim_suspend,
+};
 
 static const struct slim_device_id sitar_slimtest_id[] = {
 	{"sitar-slim", 0},
@@ -1638,12 +1664,11 @@ static struct slim_driver sitar_slim_driver = {
 	.driver = {
 		.name = "sitar-slim",
 		.owner = THIS_MODULE,
+		.pm = &wcdxxx_slim_pm_ops,
 	},
 	.probe = wcd9xxx_slim_probe,
 	.remove = wcd9xxx_slim_remove,
 	.id_table = sitar_slimtest_id,
-	.resume = wcd9xxx_slim_resume,
-	.suspend = wcd9xxx_slim_suspend,
 };
 
 static const struct slim_device_id sitar1p1_slimtest_id[] = {
@@ -1654,12 +1679,11 @@ static struct slim_driver sitar1p1_slim_driver = {
 	.driver = {
 		.name = "sitar1p1-slim",
 		.owner = THIS_MODULE,
+		.pm = &wcdxxx_slim_pm_ops,
 	},
 	.probe = wcd9xxx_slim_probe,
 	.remove = wcd9xxx_slim_remove,
 	.id_table = sitar1p1_slimtest_id,
-	.resume = wcd9xxx_slim_resume,
-	.suspend = wcd9xxx_slim_suspend,
 };
 
 static const struct slim_device_id slimtest_id[] = {
@@ -1671,12 +1695,11 @@ static struct slim_driver tabla_slim_driver = {
 	.driver = {
 		.name = "tabla-slim",
 		.owner = THIS_MODULE,
+		.pm = &wcdxxx_slim_pm_ops,
 	},
 	.probe = wcd9xxx_slim_probe,
 	.remove = wcd9xxx_slim_remove,
 	.id_table = slimtest_id,
-	.resume = wcd9xxx_slim_resume,
-	.suspend = wcd9xxx_slim_suspend,
 };
 
 static const struct slim_device_id slimtest2x_id[] = {
@@ -1688,12 +1711,11 @@ static struct slim_driver tabla2x_slim_driver = {
 	.driver = {
 		.name = "tabla2x-slim",
 		.owner = THIS_MODULE,
+		.pm = &wcdxxx_slim_pm_ops,
 	},
 	.probe = wcd9xxx_slim_probe,
 	.remove = wcd9xxx_slim_remove,
 	.id_table = slimtest2x_id,
-	.resume = wcd9xxx_slim_resume,
-	.suspend = wcd9xxx_slim_suspend,
 };
 
 static const struct slim_device_id taiko_slimtest_id[] = {
@@ -1705,12 +1727,11 @@ static struct slim_driver taiko_slim_driver = {
 	.driver = {
 		.name = "taiko-slim",
 		.owner = THIS_MODULE,
+		.pm = &wcdxxx_slim_pm_ops,
 	},
 	.probe = wcd9xxx_slim_probe,
 	.remove = wcd9xxx_slim_remove,
 	.id_table = taiko_slimtest_id,
-	.resume = wcd9xxx_slim_resume,
-	.suspend = wcd9xxx_slim_suspend,
 };
 
 static struct i2c_device_id wcd9xxx_id_table[] = {
@@ -1739,40 +1760,42 @@ static struct i2c_device_id sitar_id_table[] = {
 };
 MODULE_DEVICE_TABLE(i2c, tabla_id_table);
 
+static const struct dev_pm_ops wcdxxx_i2c_pm_ops = {
+       .resume = wcd9xxx_i2c_resume,
+       .suspend = wcd9xxx_i2c_suspend,
+};
+
 static struct i2c_driver tabla_i2c_driver = {
 	.driver = {
 	.owner = THIS_MODULE,
 	.name = "tabla-i2c-core",
+	.pm = &wcdxxx_i2c_pm_ops,
 	},
 	.id_table = tabla_id_table,
 	.probe = wcd9xxx_i2c_probe,
 	.remove = wcd9xxx_i2c_remove,
-	.resume	= wcd9xxx_i2c_resume,
-	.suspend = wcd9xxx_i2c_suspend,
 };
 
 static struct i2c_driver sitar_i2c_driver = {
 	.driver = {
 	.owner = THIS_MODULE,
 	.name = "sitar-i2c-core",
+	.pm = &wcdxxx_i2c_pm_ops,
 	},
 	.id_table = sitar_id_table,
 	.probe = wcd9xxx_i2c_probe,
 	.remove = wcd9xxx_i2c_remove,
-	.resume	= wcd9xxx_i2c_resume,
-	.suspend = wcd9xxx_i2c_suspend,
 };
 
 static struct i2c_driver wcd9xxx_i2c_driver = {
        .driver = {
 	   .owner= THIS_MODULE,
 	   .name = "wcd9xxx-i2c-core",
+		.pm = &wcdxxx_i2c_pm_ops,
        },
        .id_table = wcd9xxx_id_table,
        .probe = wcd9xxx_i2c_probe,
        .remove = wcd9xxx_i2c_remove,
-       .resume = wcd9xxx_i2c_resume,
-       .suspend = wcd9xxx_i2c_suspend,
 };
 
 static int __init wcd9xxx_init(void)
