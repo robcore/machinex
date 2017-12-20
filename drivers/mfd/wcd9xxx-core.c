@@ -1567,12 +1567,13 @@ static int wcd9xxx_slim_resume(struct device *dev)
 
 static int wcd9xxx_i2c_resume(struct device *dev)
 {
+	struct i2c_client *client = i2c_verify_client(dev);
 	struct wcd9xxx *wcd9xxx;
 
-	if (!dev->driver)
+	if (!client || !dev->driver)
 		return 0;
 
-	wcd9xxx = dev_get_drvdata(dev);
+	wcd9xxx = to_i2c_driver(dev->driver);
 	if (wcd9xxx)
 		return wcd9xxx_resume(wcd9xxx);
 
@@ -1639,12 +1640,13 @@ static int wcd9xxx_slim_suspend(struct device *dev)
 
 static int wcd9xxx_i2c_suspend(struct device *dev)
 {
+	struct i2c_client *client = i2c_verify_client(dev);
 	struct wcd9xxx *wcd9xxx;
 
-	if (!dev->driver)
+	if (!client || !dev->driver)
 		return 0;
 
-	wcd9xxx = dev_get_drvdata(dev);
+	wcd9xxx = to_i2c_driver(dev->driver);
 	if (wcd9xxx)
 		return wcd9xxx_suspend(wcd9xxx);
 
