@@ -373,6 +373,7 @@ out_removeirq:
 		stmpe_gpio_irq_remove(stmpe_gpio);
 out_disable:
 	stmpe_disable(stmpe, STMPE_BLOCK_GPIO);
+	gpiochip_remove(&stmpe_gpio->chip);
 out_free:
 	kfree(stmpe_gpio);
 	return ret;
