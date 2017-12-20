@@ -34,7 +34,7 @@ struct gpio_desc *acpi_get_gpiod_by_index(struct device *dev, int index,
 #else
 static inline void acpi_gpiochip_add(struct gpio_chip *chip) { }
 static inline void acpi_gpiochip_remove(struct gpio_chip *chip) { }
-
+static inline int ACPI_HANDLE(struct device *dev) { return 0; }
 static inline struct gpio_desc *
 acpi_get_gpiod_by_index(struct device *dev, int index,
 			struct acpi_gpio_info *info)
