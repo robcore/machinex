@@ -896,6 +896,7 @@ int gpiochip_request_own_desc(struct gpio_desc *desc, const char *label)
 
 	return __gpiod_request(desc, label);
 }
+EXPORT_SYMBOL_GPL(gpiochip_request_own_desc);
 
 /**
  * gpiochip_free_own_desc - Free GPIO requested by the chip driver
@@ -909,6 +910,7 @@ void gpiochip_free_own_desc(struct gpio_desc *desc)
 	if (desc)
 		__gpiod_free(desc);
 }
+EXPORT_SYMBOL_GPL(gpiochip_free_own_desc);
 
 /* Drivers MUST set GPIO direction before making get/set calls.  In
  * some cases this is done in early boot, before IRQs are enabled.
