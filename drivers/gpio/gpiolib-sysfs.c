@@ -2,6 +2,7 @@
 #include <linux/mutex.h>
 #include <linux/device.h>
 #include <linux/sysfs.h>
+#include <linux/gpio.h>
 #include <linux/gpio/consumer.h>
 #include <linux/gpio/driver.h>
 #include <linux/interrupt.h>
@@ -361,7 +362,6 @@ static umode_t gpio_is_visible(struct kobject *kobj, struct attribute *attr,
 {
 	struct device *dev = container_of(kobj, struct device, kobj);
 	struct gpio_desc *desc = dev_get_drvdata(dev);
-	unsigned gpio = desc - gpio_desc;
 	umode_t mode = attr->mode;
 	bool show_direction = test_bit(FLAG_SYSFS_DIR, &desc->flags);
 
@@ -369,7 +369,7 @@ static umode_t gpio_is_visible(struct kobject *kobj, struct attribute *attr,
 		if (!show_direction)
 			mode = 0;
 	} else if (attr == &dev_attr_edge.attr) {
-		if (gpio_to_irq(gpio) < 0)
+		if (gpiod_to_irq(desc) < 0)
 			mode = 0;
 		if (!show_direction && test_bit(FLAG_IS_OUT, &desc->flags))
 			mode = 0;
@@ -749,7 +749,7 @@ void gpiod_unexport(struct gpio_desc *desc)
 }
 EXPORT_SYMBOL_GPL(gpiod_unexport);
 
-static int gpiochip_export(struct gpio_chip *chip)
+int gpiochip_export(struct gpio_chip *chip)
 {
 	int		status;
 	struct device	*dev;
