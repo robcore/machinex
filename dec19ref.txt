@@ -1,1 +1,1 @@
-/media/root/robcore/android/linaro-8064-lt/kernel/patches/8patches/6269-drivers-i2c-busses-don-t-check-resource-with-devm_io.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/3patches/3405-gpio-move-sysfs-support-to-its-own-file.patch
