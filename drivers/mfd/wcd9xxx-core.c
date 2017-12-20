@@ -1573,7 +1573,7 @@ static int wcd9xxx_i2c_resume(struct device *dev)
 	if (!client || !dev->driver)
 		return 0;
 
-	wcd9xxx = to_i2c_driver(dev->driver);
+	wcd9xxx = to_i2c_driver(client->dev);
 	if (wcd9xxx)
 		return wcd9xxx_resume(wcd9xxx);
 
@@ -1646,7 +1646,7 @@ static int wcd9xxx_i2c_suspend(struct device *dev)
 	if (!client || !dev->driver)
 		return 0;
 
-	wcd9xxx = to_i2c_driver(dev->driver);
+	wcd9xxx = to_i2c_driver(&dev->driver);
 	if (wcd9xxx)
 		return wcd9xxx_suspend(wcd9xxx);
 
