@@ -1561,8 +1561,8 @@ static int wcd9xxx_slim_resume(struct device *dev)
 	wcd9xxx = slim_get_devicedata(sldev);
 	if (wcd9xxx)
 		return wcd9xxx_resume(wcd9xxx);
-	else
-		return 0;
+
+	return 0;
 }
 
 static int wcd9xxx_i2c_resume(struct device *dev)
