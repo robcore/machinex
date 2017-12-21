@@ -1880,12 +1880,12 @@ EXPORT_SYMBOL_GPL(gpiod_count);
  * dev, -ENOENT if no GPIO has been assigned to the requested function, or
  * another IS_ERR() code if an error occurred while trying to acquire the GPIO.
  */
-struct gpio_desc *__must_check __gpiod_get(struct device *dev, const char *con_id,
+struct gpio_desc *__must_check gpiod_get(struct device *dev, const char *con_id,
 					 enum gpiod_flags flags)
 {
 	return gpiod_get_index(dev, con_id, 0, flags);
 }
-EXPORT_SYMBOL_GPL(__gpiod_get);
+EXPORT_SYMBOL_GPL(gpiod_get);
 
 /**
  * gpiod_get_optional - obtain an optional GPIO for a given GPIO function
@@ -1897,13 +1897,13 @@ EXPORT_SYMBOL_GPL(__gpiod_get);
  * the requested function it will return NULL. This is convenient for drivers
  * that need to handle optional GPIOs.
  */
-struct gpio_desc *__must_check __gpiod_get_optional(struct device *dev,
+struct gpio_desc *__must_check gpiod_get_optional(struct device *dev,
 						  const char *con_id,
 						  enum gpiod_flags flags)
 {
 	return gpiod_get_index_optional(dev, con_id, 0, flags);
 }
-EXPORT_SYMBOL_GPL(__gpiod_get_optional);
+EXPORT_SYMBOL_GPL(gpiod_get_optional);
 
 
 /**
@@ -1960,7 +1960,7 @@ static int gpiod_configure_flags(struct gpio_desc *desc, const char *con_id,
  * requested function and/or index, or another IS_ERR() code if an error
  * occurred while trying to acquire the GPIO.
  */
-struct gpio_desc *__must_check __gpiod_get_index(struct device *dev,
+struct gpio_desc *__must_check gpiod_get_index(struct device *dev,
 					       const char *con_id,
 					       unsigned int idx,
 					       enum gpiod_flags flags)
@@ -2007,7 +2007,7 @@ struct gpio_desc *__must_check __gpiod_get_index(struct device *dev,
 
 	return desc;
 }
-EXPORT_SYMBOL_GPL(__gpiod_get_index);
+EXPORT_SYMBOL_GPL(gpiod_get_index);
 
 /**
  * fwnode_get_named_gpiod - obtain a GPIO from firmware node
@@ -2080,7 +2080,7 @@ EXPORT_SYMBOL_GPL(fwnode_get_named_gpiod);
  * specified index was assigned to the requested function it will return NULL.
  * This is convenient for drivers that need to handle optional GPIOs.
  */
-struct gpio_desc *__must_check __gpiod_get_index_optional(struct device *dev,
+struct gpio_desc *__must_check gpiod_get_index_optional(struct device *dev,
 							const char *con_id,
 							unsigned int index,
 							enum gpiod_flags flags)
@@ -2095,7 +2095,7 @@ struct gpio_desc *__must_check __gpiod_get_index_optional(struct device *dev,
 
 	return desc;
 }
-EXPORT_SYMBOL_GPL(__gpiod_get_index_optional);
+EXPORT_SYMBOL_GPL(gpiod_get_index_optional);
 
 /**
  * gpiod_hog - Hog the specified GPIO desc given the provided flags
