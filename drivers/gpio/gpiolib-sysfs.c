@@ -305,8 +305,8 @@ static int gpio_sysfs_set_active_low(struct device *dev, int value)
 		clear_bit(FLAG_ACTIVE_LOW, &desc->flags);
 
 	/* reconfigure poll(2) support if enabled on one edge only */
-	if (flags == GPIO_IRQF_TRIGGER_FALLING ||
-					flags == GPIO_IRQF_TRIGGER_RISING) {
+	if (dev != NULL && (flags == GPIO_IRQF_TRIGGER_FALLING ||
+					flags == GPIO_IRQF_TRIGGER_RISING)) {
 		gpio_sysfs_free_irq(dev);
 		status = gpio_sysfs_request_irq(dev, flags);
 	}
@@ -666,6 +666,50 @@ int gpiod_export_link(struct device *dev, const char *name,
 	return ret;
 }
 EXPORT_SYMBOL_GPL(gpiod_export_link);
+
+/**
+ * gpiod_sysfs_set_active_low - set the polarity of gpio sysfs value
+ * @gpio: gpio to change
+ * @value: non-zero to use active low, i.e. inverted values
+ *
+ * Set the polarity of /sys/class/gpio/gpioN/value sysfs attribute.
+ * The GPIO does not have to be exported yet.  If poll(2) support has
+ * been enabled for either rising or falling edge, it will be
+ * reconfigured to follow the new polarity.
+ *
+ * Returns zero on success, else an error.
+ */
+int gpiod_sysfs_set_active_low(struct gpio_desc *desc, int value)
+{
+	struct device		*dev = NULL;
+	int			status = -EINVAL;
+
+	if (!desc) {
+		pr_warn("%s: invalid GPIO\n", __func__);
+		return -EINVAL;
+	}
+
+	mutex_lock(&sysfs_lock);
+
+	if (test_bit(FLAG_EXPORT, &desc->flags)) {
+		dev = class_find_device(&gpio_class, NULL, desc, match_export);
+		if (dev == NULL) {
+			status = -ENODEV;
+			goto unlock;
+		}
+	}
+
+	status = sysfs_set_active_low(desc, dev, value);
+	put_device(dev);
+unlock:
+	mutex_unlock(&sysfs_lock);
+
+	if (status)
+		gpiod_dbg(desc, "%s: status %d\n", __func__, status);
+
+	return status;
+}
+EXPORT_SYMBOL_GPL(gpiod_sysfs_set_active_low);
 
 /**
  * gpiod_unexport - reverse effect of gpio_export()
