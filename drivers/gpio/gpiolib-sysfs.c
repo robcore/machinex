@@ -758,7 +758,6 @@ EXPORT_SYMBOL_GPL(gpiod_unexport);
 
 int gpiochip_export(struct gpio_chip *chip)
 {
-	int		status;
 	struct device	*dev;
 
 	/* Many systems register gpio chips for SOC support very early,
@@ -826,7 +825,7 @@ static int __init gpiolib_sysfs_init(void)
 	 */
 	spin_lock_irqsave(&gpio_lock, flags);
 	list_for_each_entry(chip, &gpio_chips, list) {
-		if (chip->exported)
+		if (chip->cdev)
 			continue;
 
 		/*
