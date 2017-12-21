@@ -1306,9 +1306,8 @@ static void gpio_chip_set_multiple(struct gpio_chip *chip,
 				continue;
 			}
 			/* set outputs if the corresponding mask bit is set */
-			if (__test_and_clear_bit(i, mask)) {
+			if (__test_and_clear_bit(i, mask))
 				chip->set(chip, i, test_bit(i, bits));
-			}
 		}
 	}
 }
@@ -1326,9 +1325,9 @@ static void gpiod_set_array_value_priv(bool raw, bool can_sleep,
 		unsigned long bits[BITS_TO_LONGS(chip->ngpio)];
 		int count = 0;
 
-		if (!can_sleep) {
+		if (!can_sleep)
 			WARN_ON(chip->can_sleep);
-		}
+
 		memset(mask, 0, sizeof(mask));
 		do {
 			struct gpio_desc *desc = desc_array[i];
@@ -1343,24 +1342,22 @@ static void gpiod_set_array_value_priv(bool raw, bool can_sleep,
 			 * open drain and open source outputs are set individually
 			 */
 			if (test_bit(FLAG_OPEN_DRAIN, &desc->flags)) {
-				_gpio_set_open_drain_value(desc,value);
+				_gpio_set_open_drain_value(desc, value);
 			} else if (test_bit(FLAG_OPEN_SOURCE, &desc->flags)) {
 				_gpio_set_open_source_value(desc, value);
 			} else {
 				__set_bit(hwgpio, mask);
-				if (value) {
+				if (value)
 					__set_bit(hwgpio, bits);
-				} else {
+				else
 					__clear_bit(hwgpio, bits);
-				}
 				count++;
 			}
 			i++;
 		} while ((i < array_size) && (desc_array[i]->chip == chip));
 		/* push collected bits to outputs */
-		if (count != 0) {
+		if (count != 0)
 			gpio_chip_set_multiple(chip, mask, bits);
-		}
 	}
 }
 
