@@ -46,8 +46,6 @@
  */
 DEFINE_SPINLOCK(gpio_lock);
 
-#define GPIO_OFFSET_VALID(chip, offset) (offset >= 0 && offset < chip->ngpio)
-
 static DEFINE_MUTEX(gpio_lookup_lock);
 static LIST_HEAD(gpio_lookup_list);
 LIST_HEAD(gpio_chips);
@@ -987,7 +985,7 @@ const char *gpiochip_is_requested(struct gpio_chip *chip, unsigned offset)
 {
 	struct gpio_desc *desc;
 
-	if (!GPIO_OFFSET_VALID(chip, offset))
+	if (offset >= chip->ngpio)
 		return NULL;
 
 	desc = &chip->desc[offset];
