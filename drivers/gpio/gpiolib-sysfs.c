@@ -195,28 +195,20 @@ static int gpio_setup_irq(struct gpio_desc *desc, struct device *dev,
 		}
 	}
 
-	/*
-	 * FIXME: This should be done in the irq_request_resources callback
-	 *        when the irq is requested, but a few drivers currently fail
-	 *        to do so.
-	 *
-	 *        Remove this redundant call (along with the corresponding
-	 *        unlock) when those drivers have been fixed.
-	 */
-	ret = gpiochip_lock_as_irq(desc->chip, gpio_chip_hwgpio(desc));
-	if (ret < 0)
-		goto free_id;
-
 	ret = request_any_context_irq(irq, gpio_sysfs_irq, irq_flags,
 				"gpiolib", value_sd);
 	if (ret < 0)
-		goto err_unlock;
+		goto free_id;
+
+	ret = gpiochip_lock_as_irq(desc->chip, gpio_chip_hwgpio(desc));
+	if (ret < 0) {
+		gpiod_warn(desc, "failed to flag the GPIO for IRQ\n");
+		goto free_id;
+	}
 
 	desc->flags |= gpio_flags;
 	return 0;
 
-err_unlock:
-	gpiochip_unlock_as_irq(desc->chip, gpio_chip_hwgpio(desc));
 free_id:
 	idr_remove(&dirent_idr, id);
 	desc->flags &= GPIO_FLAGS_MASK;
@@ -590,7 +582,7 @@ int gpiod_export(struct gpio_desc *desc, bool direction_may_change)
 		goto fail_unlock;
 	}
 
-	if (chip->direction_input && chip->direction_output &&
+	if (desc->chip->direction_input && desc->chip->direction_output &&
 			direction_may_change) {
 		set_bit(FLAG_SYSFS_DIR, &desc->flags);
 	}
@@ -598,10 +590,10 @@ int gpiod_export(struct gpio_desc *desc, bool direction_may_change)
 	spin_unlock_irqrestore(&gpio_lock, flags);
 
 	offset = gpio_chip_hwgpio(desc);
-	if (chip->names && chip->names[offset])
-		ioname = chip->names[offset];
+	if (desc->chip->names && desc->chip->names[offset])
+		ioname = desc->chip->names[offset];
 
-	dev = device_create_with_groups(&gpio_class, chip->dev,
+	dev = device_create_with_groups(&gpio_class, desc->chip->dev,
 					MKDEV(0, 0), desc, gpio_groups,
 					ioname ? ioname : "gpio%u",
 					desc_to_gpio(desc));
@@ -770,6 +762,7 @@ int gpiochip_export(struct gpio_chip *chip)
 		return 0;
 
 	/* use chip->base for the ID; it's already known to be unique */
+	mutex_lock(&sysfs_lock);
 	dev = device_create_with_groups(&gpio_class, chip->dev, MKDEV(0, 0),
 					chip, gpiochip_groups,
 					"gpiochip%d", chip->base);
@@ -777,8 +770,6 @@ int gpiochip_export(struct gpio_chip *chip)
 		status = PTR_ERR(dev);
 	else
 		status = 0;
-
-	mutex_lock(&sysfs_lock);
 	chip->exported = (status == 0);
 	mutex_unlock(&sysfs_lock);
 
@@ -793,16 +784,16 @@ void gpiochip_unexport(struct gpio_chip *chip)
 	int			status;
 	struct device		*dev;
 
+	mutex_lock(&sysfs_lock);
 	dev = class_find_device(&gpio_class, NULL, chip, match_export);
 	if (dev) {
 		put_device(dev);
 		device_unregister(dev);
-		mutex_lock(&sysfs_lock);
 		chip->exported = false;
-		mutex_unlock(&sysfs_lock);
 		status = 0;
 	} else
 		status = -ENODEV;
+	mutex_unlock(&sysfs_lock);
 
 	if (status)
 		chip_dbg(chip, "%s: status %d\n", __func__, status);
