@@ -284,7 +284,7 @@ int gpiochip_add(struct gpio_chip *chip)
 	of_gpiochip_add(chip);
 	acpi_gpiochip_add(chip);
 
-	status = gpiochip_export(chip);
+	status = gpiochip_sysfs_register(chip);
 	if (status)
 		goto err_remove_chip;
 
@@ -329,7 +329,7 @@ void gpiochip_remove(struct gpio_chip *chip)
 	unsigned	id;
 	bool		requested = false;
 
-	gpiochip_unexport(chip);
+	gpiochip_sysfs_unregister(chip);
 
 	gpiochip_irqchip_remove(chip);
 
