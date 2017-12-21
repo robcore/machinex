@@ -33,8 +33,8 @@ struct gpio_vreg {
 	struct regulator_dev	*rdev;
 	char			*gpio_label;
 	char			*name;
-	unsigned		gpio;
-	int			active_low;
+	unsigned int	gpio;
+	unsigned int			active_low;
 	bool			gpio_requested;
 };
 
