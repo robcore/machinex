@@ -1675,11 +1675,25 @@ void gpiod_add_lookup_table(struct gpiod_lookup_table *table)
 	mutex_unlock(&gpio_lookup_lock);
 }
 
-#ifdef CONFIG_OF
+/**
+ * gpiod_remove_lookup_table() - unregister GPIO device consumers
+ * @table: table of consumers to unregister
+ */
+void gpiod_remove_lookup_table(struct gpiod_lookup_table *table)
+{
+	mutex_lock(&gpio_lookup_lock);
+
+	list_del(&table->list);
+
+	mutex_unlock(&gpio_lookup_lock);
+}
+
+
 static struct gpio_desc *of_find_gpio(struct device *dev, const char *con_id,
 				      unsigned int idx,
 				      enum gpio_lookup_flags *flags)
 {
+#ifdef CONFIG_OF
 	char prop_name[32]; /* 32 is max size of property name */
 	enum of_gpio_flags of_flags;
 	struct gpio_desc *desc;
@@ -1706,15 +1720,11 @@ static struct gpio_desc *of_find_gpio(struct device *dev, const char *con_id,
 		*flags |= GPIO_ACTIVE_LOW;
 
 	return desc;
-}
 #else
-static struct gpio_desc *of_find_gpio(struct device *dev, const char *con_id,
-				      unsigned int idx,
-				      enum gpio_lookup_flags *flags)
-{
 	return ERR_PTR(-ENODEV);
-}
 #endif
+
+}
 
 static struct gpio_desc *acpi_find_gpio(struct device *dev, const char *con_id,
 					unsigned int idx,
