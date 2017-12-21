@@ -254,7 +254,7 @@ static void tegra_gpio_irq_handler(struct irq_desc *desc)
 			tegra_gpio_writel(1 << pin, GPIO_INT_CLR(gpio));
 
 			/* if gpio is edge triggered, clear condition
-			 * before executing the handler so that we don't
+			 * before executing the hander so that we don't
 			 * miss edges
 			 */
 			if (lvl & (0x100 << pin)) {
@@ -459,6 +459,7 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 		irq_set_chip_data(irq, bank);
 		irq_set_chip_and_handler(irq, &tegra_gpio_irq_chip,
 					 handle_simple_irq);
+		set_irq_flags(irq, IRQF_VALID);
 	}
 
 	for (i = 0; i < tegra_gpio_bank_count; i++) {

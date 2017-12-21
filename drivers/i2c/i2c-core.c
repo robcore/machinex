@@ -164,9 +164,6 @@ static int i2c_generic_recovery(struct i2c_adapter *adap)
 	if (bri->prepare_recovery)
 		bri->prepare_recovery(adap);
 
-	bri->set_scl(adap, val);
-	ndelay(RECOVERY_NDELAY);
-
 	/*
 	 * By this time SCL is high, as we need to give 9 falling-rising edges
 	 */
@@ -197,6 +194,7 @@ static int i2c_generic_recovery(struct i2c_adapter *adap)
 
 int i2c_generic_scl_recovery(struct i2c_adapter *adap)
 {
+	adap->bus_recovery_info->set_scl(adap, 1);
 	return i2c_generic_recovery(adap);
 }
 EXPORT_SYMBOL_GPL(i2c_generic_scl_recovery);
@@ -1240,7 +1238,7 @@ void i2c_del_adapter(struct i2c_adapter *adap)
 	 * FIXME: This is old code and should ideally be replaced by an
 	 * alternative which results in decoupling the lifetime of the struct
 	 * device from the i2c_adapter, like spi or netdev do. Any solution
-	 * should be thoroughly tested with DEBUG_KOBJECT_RELEASE enabled!
+	 * should be throughly tested with DEBUG_KOBJECT_RELEASE enabled!
 	 */
 	init_completion(&adap->dev_released);
 	device_unregister(&adap->dev);
@@ -1864,15 +1862,9 @@ struct i2c_adapter *i2c_get_adapter(int nr)
 
 	mutex_lock(&core_lock);
 	adapter = idr_find(&i2c_adapter_idr, nr);
-	if (!adapter)
-		goto exit;
-
-	if (try_module_get(adapter->owner))
-		get_device(&adapter->dev);
-	else
+	if (adapter && !try_module_get(adapter->owner))
 		adapter = NULL;
 
- exit:
 	mutex_unlock(&core_lock);
 	return adapter;
 }
@@ -1880,11 +1872,8 @@ EXPORT_SYMBOL(i2c_get_adapter);
 
 void i2c_put_adapter(struct i2c_adapter *adap)
 {
-	if (!adap)
-		return;
-
-	put_device(&adap->dev);
-	module_put(adap->owner);
+	if (adap)
+		module_put(adap->owner);
 }
 EXPORT_SYMBOL(i2c_put_adapter);
 
@@ -2390,24 +2379,18 @@ int i2c_slave_register(struct i2c_client *client, i2c_slave_cb_t slave_cb)
 {
 	int ret;
 
-	if (!client || !slave_cb) {
-		WARN(1, "insufficent data\n");
+	if (!client || !slave_cb)
 		return -EINVAL;
-	}
 
 	if (!(client->flags & I2C_CLIENT_TEN)) {
 		/* Enforce stricter address checking */
 		ret = i2c_check_addr_validity(client->addr);
-		if (ret) {
-			dev_err(&client->dev, "%s: invalid address\n", __func__);
+		if (ret)
 			return ret;
-		}
 	}
 
-	if (!client->adapter->algo->reg_slave) {
-		dev_err(&client->dev, "%s: not supported by adapter\n", __func__);
+	if (!client->adapter->algo->reg_slave)
 		return -EOPNOTSUPP;
-	}
 
 	client->slave_cb = slave_cb;
 
@@ -2415,10 +2398,8 @@ int i2c_slave_register(struct i2c_client *client, i2c_slave_cb_t slave_cb)
 	ret = client->adapter->algo->reg_slave(client);
 	i2c_unlock_adapter(client->adapter);
 
-	if (ret) {
+	if (ret)
 		client->slave_cb = NULL;
-		dev_err(&client->dev, "%s: adapter returned error %d\n", __func__, ret);
-	}
 
 	return ret;
 }
@@ -2428,10 +2409,8 @@ int i2c_slave_unregister(struct i2c_client *client)
 {
 	int ret;
 
-	if (!client->adapter->algo->unreg_slave) {
-		dev_err(&client->dev, "%s: not supported by adapter\n", __func__);
+	if (!client->adapter->algo->unreg_slave)
 		return -EOPNOTSUPP;
-	}
 
 	i2c_lock_adapter(client->adapter);
 	ret = client->adapter->algo->unreg_slave(client);
@@ -2439,8 +2418,6 @@ int i2c_slave_unregister(struct i2c_client *client)
 
 	if (ret == 0)
 		client->slave_cb = NULL;
-	else
-		dev_err(&client->dev, "%s: adapter returned error %d\n", __func__, ret);
 
 	return ret;
 }
