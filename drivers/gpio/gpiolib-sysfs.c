@@ -699,7 +699,7 @@ int gpiod_sysfs_set_active_low(struct gpio_desc *desc, int value)
 		}
 	}
 
-	status = sysfs_set_active_low(desc, dev, value);
+	status = gpio_sysfs_set_active_low(dev, value);
 	put_device(dev);
 unlock:
 	mutex_unlock(&sysfs_lock);
