@@ -444,6 +444,8 @@ void gpiochip_set_chained_irqchip(struct gpio_chip *gpiochip,
 		 */
 		irq_set_handler_data(parent_irq, gpiochip);
 		irq_set_chained_handler(parent_irq, parent_handler);
+
+		gpiochip->irq_parent = parent_irq;
 	}
 
 	/* Set the parent IRQ for all affected IRQs */
@@ -549,6 +551,11 @@ static int gpiochip_to_irq(struct gpio_chip *chip, unsigned offset)
 static void gpiochip_irqchip_remove(struct gpio_chip *gpiochip)
 {
 	unsigned int offset;
+
+	if (gpiochip->irq_parent) {
+		irq_set_chained_handler(gpiochip->irq_parent, NULL);
+		irq_set_handler_data(gpiochip->irq_parent, NULL);
+	}
 
 	/* Remove all IRQ mappings and delete the domain */
 	if (gpiochip->irqdomain) {
