@@ -95,7 +95,7 @@ static int ssb_gpio_chipco_init(struct ssb_bus *bus)
 	else
 		chip->base		= -1;
 
-	return gpiochip_add(chip);
+	return gpiochip_add_data(chip);
 }
 
 #ifdef CONFIG_SSB_DRIVER_EXTIF
@@ -153,7 +153,7 @@ static int ssb_gpio_extif_init(struct ssb_bus *bus)
 	else
 		chip->base		= -1;
 
-	return gpiochip_add(chip);
+	return gpiochip_add_data(chip);
 }
 
 #else

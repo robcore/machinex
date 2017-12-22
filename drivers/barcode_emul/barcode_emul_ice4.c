@@ -1175,7 +1175,7 @@ static struct i2c_driver ice4_i2c_driver = {
 static int __init barcode_emul_init(void)
 {
 	int ret;
-	ret = gpiochip_add(&ice_gpio);
+	ret = gpiochip_add_data(&ice_gpio);
 	if (ret) {
 		pr_err("gpiochip_add failed ret = %d\n", ret);
 		return ret;
