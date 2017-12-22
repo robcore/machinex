@@ -48,17 +48,17 @@ acpi_get_gpiod_by_index(struct device *dev, int index,
 {
 	return ERR_PTR(-ENOSYS);
 }
-
 static inline int acpi_gpio_count(struct device *dev, const char *con_id)
 {
 	return -ENODEV;
 }
-
+/*
 static inline bool acpi_can_fallback_to_crs(struct acpi_device *adev,
 					    const char *con_id)
 {
 	return false;
 }
+*/
 #endif
 
 struct gpio_desc *gpiochip_get_desc(struct gpio_chip *chip, u16 hwnum);
