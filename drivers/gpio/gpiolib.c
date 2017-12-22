@@ -379,17 +379,19 @@ static long gpio_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		 * this GPIO so it can't use it.
 		 */
 		lineinfo.flags = 0;
-		if (desc->flags & (FLAG_REQUESTED | FLAG_IS_HOGGED |
-				   FLAG_USED_AS_IRQ | FLAG_EXPORT |
-				   FLAG_SYSFS))
+		if (test_bit(FLAG_REQUESTED, &desc->flags) ||
+		    test_bit(FLAG_IS_HOGGED, &desc->flags) ||
+		    test_bit(FLAG_USED_AS_IRQ, &desc->flags) ||
+		    test_bit(FLAG_EXPORT, &desc->flags) ||
+		    test_bit(FLAG_SYSFS, &desc->flags))
 			lineinfo.flags |= GPIOLINE_FLAG_KERNEL;
-		if (desc->flags & FLAG_IS_OUT)
+		if (test_bit(FLAG_IS_OUT, &desc->flags))
 			lineinfo.flags |= GPIOLINE_FLAG_IS_OUT;
-		if (desc->flags & FLAG_ACTIVE_LOW)
+		if (test_bit(FLAG_ACTIVE_LOW, &desc->flags))
 			lineinfo.flags |= GPIOLINE_FLAG_ACTIVE_LOW;
-		if (desc->flags & FLAG_OPEN_DRAIN)
+		if (test_bit(FLAG_OPEN_DRAIN, &desc->flags))
 			lineinfo.flags |= GPIOLINE_FLAG_OPEN_DRAIN;
-		if (desc->flags & FLAG_OPEN_SOURCE)
+		if (test_bit(FLAG_OPEN_SOURCE, &desc->flags))
 			lineinfo.flags |= GPIOLINE_FLAG_OPEN_SOURCE;
 
 		if (copy_to_user(ip, &lineinfo, sizeof(lineinfo)))
@@ -716,6 +718,80 @@ void gpiochip_remove(struct gpio_chip *chip)
 	put_device(&gdev->dev);
 }
 EXPORT_SYMBOL_GPL(gpiochip_remove);
+
+static void devm_gpio_chip_release(struct device *dev, void *res)
+{
+	struct gpio_chip *chip = *(struct gpio_chip **)res;
+
+	gpiochip_remove(chip);
+}
+
+static int devm_gpio_chip_match(struct device *dev, void *res, void *data)
+
+{
+	struct gpio_chip **r = res;
+
+	if (!r || !*r) {
+		WARN_ON(!r || !*r);
+		return 0;
+	}
+
+	return *r == data;
+}
+
+/**
+ * devm_gpiochip_add_data() - Resource manager piochip_add_data()
+ * @dev: the device pointer on which irq_chip belongs to.
+ * @chip: the chip to register, with chip->base initialized
+ * Context: potentially before irqs will work
+ *
+ * Returns a negative errno if the chip can't be registered, such as
+ * because the chip->base is invalid or already associated with a
+ * different chip.  Otherwise it returns zero as a success code.
+ *
+ * The gpio chip automatically be released when the device is unbound.
+ */
+int devm_gpiochip_add_data(struct device *dev, struct gpio_chip *chip,
+			   void *data)
+{
+	struct gpio_chip **ptr;
+	int ret;
+
+	ptr = devres_alloc(devm_gpio_chip_release, sizeof(*ptr),
+			     GFP_KERNEL);
+	if (!ptr)
+		return -ENOMEM;
+
+	ret = gpiochip_add_data(chip, data);
+	if (ret < 0) {
+		devres_free(ptr);
+		return ret;
+	}
+
+	*ptr = chip;
+	devres_add(dev, ptr);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(devm_gpiochip_add_data);
+
+/**
+ * devm_gpiochip_remove() - Resource manager of gpiochip_remove()
+ * @dev: device for which which resource was allocated
+ * @chip: the chip to remove
+ *
+ * A gpio_chip with any GPIOs still requested may not be removed.
+ */
+void devm_gpiochip_remove(struct device *dev, struct gpio_chip *chip)
+{
+	int ret;
+
+	ret = devres_release(dev, devm_gpio_chip_release,
+			     devm_gpio_chip_match, chip);
+	if (!ret)
+		WARN_ON(ret);
+}
+EXPORT_SYMBOL_GPL(devm_gpiochip_remove);
 
 /**
  * gpiochip_find() - iterator for locating a specific gpio_chip
