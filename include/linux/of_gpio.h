@@ -53,8 +53,14 @@ extern int of_get_named_gpio_flags(struct device_node *np,
 extern unsigned int of_gpio_named_count(struct device_node *np,
 					const char* propname);
 
-extern int of_mm_gpiochip_add(struct device_node *np,
-			      struct of_mm_gpio_chip *mm_gc);
+extern int of_mm_gpiochip_add_data(struct device_node *np,
+				   struct of_mm_gpio_chip *mm_gc,
+				   void *data);
+static inline int of_mm_gpiochip_add(struct device_node *np,
+				     struct of_mm_gpio_chip *mm_gc)
+{
+	return of_mm_gpiochip_add_data(np, mm_gc, NULL);
+}
 extern void of_mm_gpiochip_remove(struct of_mm_gpio_chip *mm_gc);
 
 extern void of_gpiochip_add(struct gpio_chip *gc);
