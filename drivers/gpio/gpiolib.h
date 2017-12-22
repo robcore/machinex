@@ -33,6 +33,7 @@
  * of the @descs array.
  * @base: GPIO base in the DEPRECATED global Linux GPIO numberspace, assigned
  * at device creation time.
+ * @data: per-instance data assigned by the driver
  * @list: links gpio_device:s together for traversal
  *
  * This state container holds most of the runtime variable data
@@ -50,6 +51,7 @@ struct gpio_device {
 	struct gpio_desc	*descs;
 	int			base;
 	u16			ngpio;
+	void			*data;
 	struct list_head        list;
 };
 
