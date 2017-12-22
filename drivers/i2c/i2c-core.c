@@ -42,9 +42,6 @@
 #include "i2c-core.h"
 
 
-#define I2C_ADDR_OFFSET_TEN_BIT	0xa000
-#define I2C_ADDR_OFFSET_SLAVE	0x1000
-
 /* core_lock protects i2c_adapter_idr, and guarantees
    that device detection, deletion of detected devices, and attach_adapter
    and detach_adapter calls are serialized */
@@ -464,21 +461,6 @@ struct i2c_client *i2c_verify_client(struct device *dev)
 }
 EXPORT_SYMBOL(i2c_verify_client);
 
-
-/* Return a unique address which takes the flags of the client into account */
-static unsigned short i2c_encode_flags_to_addr(struct i2c_client *client)
-{
-	unsigned short addr = client->addr;
-
-	/* For some client flags, add an arbitrary offset to avoid collisions */
-	if (client->flags & I2C_CLIENT_TEN)
-		addr |= I2C_ADDR_OFFSET_TEN_BIT;
-
-	if (client->flags & I2C_CLIENT_SLAVE)
-		addr |= I2C_ADDR_OFFSET_SLAVE;
-
-	return addr;
-}
 
 /* This is a permissive address validity check, I2C address map constraints
  * are purposely not enforced, except for the general call address. */
