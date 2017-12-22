@@ -62,7 +62,7 @@ static int pm8xxx_mpp_write(struct pm8xxx_mpp_chip *mpp_chip, u16 offset,
 	spin_lock_irqsave(&mpp_chip->pm_lock, flags);
 
 	reg = (mpp_chip->ctrl_reg[offset] & ~mask) | (val & mask);
-	rc = pm8xxx_writeb(mpp_chip->gpio_chip.dev->parent,
+	rc = pm8xxx_writeb(mpp_chip->gpio_chip.parent->parent,
 				mpp_chip->base_addr + offset, reg);
 	if (!rc)
 		mpp_chip->ctrl_reg[offset] = reg;
@@ -88,7 +88,7 @@ static int pm8xxx_mpp_get(struct gpio_chip *chip, unsigned offset)
 			PM8XXX_MPP_TYPE_SHIFT == PM8XXX_MPP_TYPE_D_OUTPUT)
 		rc = mpp_chip->ctrl_reg[offset] & PM8XXX_MPP_CONFIG_CTRL_MASK;
 	else
-		rc = pm8xxx_read_irq_stat(mpp_chip->gpio_chip.dev->parent,
+		rc = pm8xxx_read_irq_stat(mpp_chip->gpio_chip.parent->parent,
 				mpp_chip->irq_base + offset);
 
 	return rc;
@@ -286,7 +286,7 @@ static int pm8xxx_mpp_reg_init(struct pm8xxx_mpp_chip *mpp_chip)
 	int rc, i;
 
 	for (i = 0; i < mpp_chip->nmpps; i++) {
-		rc = pm8xxx_readb(mpp_chip->gpio_chip.dev->parent,
+		rc = pm8xxx_readb(mpp_chip->gpio_chip.parent->parent,
 					mpp_chip->base_addr + i,
 					&mpp_chip->ctrl_reg[i]);
 		if (rc) {
@@ -334,7 +334,7 @@ static int pm8xxx_mpp_probe(struct platform_device *pdev)
 	mpp_chip->gpio_chip.dbg_show = pm8xxx_mpp_dbg_show;
 	mpp_chip->gpio_chip.ngpio = pdata->core_data.nmpps;
 	mpp_chip->gpio_chip.can_sleep = 0;
-	mpp_chip->gpio_chip.dev = &pdev->dev;
+	mpp_chip->gpio_chip.parent = &pdev->dev;
 	mpp_chip->gpio_chip.base = pdata->mpp_base;
 	mpp_chip->irq_base = platform_get_irq(pdev, 0);
 	mpp_chip->mpp_base = pdata->mpp_base;

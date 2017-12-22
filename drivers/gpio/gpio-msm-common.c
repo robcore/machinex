@@ -544,7 +544,7 @@ static int msm_gpio_probe(struct platform_device *pdev)
 #ifndef CONFIG_OF
 	int irq, i;
 #endif
-	msm_gpio.gpio_chip.dev = &pdev->dev;
+	msm_gpio.gpio_chip.parent = &pdev->dev;
 	spin_lock_init(&tlmm_lock);
 	bitmap_zero(msm_gpio.enabled_irqs, NR_MSM_GPIOS);
 	bitmap_zero(msm_gpio.wake_irqs, NR_MSM_GPIOS);

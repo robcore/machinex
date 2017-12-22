@@ -92,7 +92,7 @@ static int pm_gpio_get(struct pm_gpio_chip *pm_gpio_chip, unsigned gpio)
 	if (mode == PM_GPIO_MODE_OUTPUT)
 		return pm_gpio_chip->bank1[gpio] & PM_GPIO_OUT_INVERT;
 	else
-		return pm8xxx_read_irq_stat(pm_gpio_chip->gpio_chip.dev->parent,
+		return pm8xxx_read_irq_stat(pm_gpio_chip->gpio_chip.parent->parent,
 				pm_gpio_chip->irq_base + gpio);
 }
 
@@ -111,7 +111,7 @@ static int pm_gpio_set(struct pm_gpio_chip *pm_gpio_chip,
 		bank1 |= PM_GPIO_OUT_INVERT;
 
 	pm_gpio_chip->bank1[gpio] = bank1;
-	rc = pm8xxx_writeb(pm_gpio_chip->gpio_chip.dev->parent,
+	rc = pm8xxx_writeb(pm_gpio_chip->gpio_chip.parent->parent,
 				SSBI_REG_ADDR_GPIO(gpio), bank1);
 	spin_unlock_irqrestore(&pm_gpio_chip->pm_lock, flags);
 
@@ -148,7 +148,7 @@ static int pm_gpio_set_direction(struct pm_gpio_chip *pm_gpio_chip,
 		  & PM_GPIO_MODE_MASK);
 
 	pm_gpio_chip->bank1[gpio] = bank1;
-	rc = pm8xxx_writeb(pm_gpio_chip->gpio_chip.dev->parent,
+	rc = pm8xxx_writeb(pm_gpio_chip->gpio_chip.parent->parent,
 				SSBI_REG_ADDR_GPIO(gpio), bank1);
 	spin_unlock_irqrestore(&pm_gpio_chip->pm_lock, flags);
 
@@ -166,7 +166,7 @@ static int pm_gpio_init_bank1(struct pm_gpio_chip *pm_gpio_chip)
 
 	for (i = 0; i < pm_gpio_chip->gpio_chip.ngpio; i++) {
 		bank = 1 << PM_GPIO_BANK_SHIFT;
-		rc = pm8xxx_writeb(pm_gpio_chip->gpio_chip.dev->parent,
+		rc = pm8xxx_writeb(pm_gpio_chip->gpio_chip.parent->parent,
 				SSBI_REG_ADDR_GPIO(i),
 				bank);
 		if (rc) {
@@ -174,7 +174,7 @@ static int pm_gpio_init_bank1(struct pm_gpio_chip *pm_gpio_chip)
 			return rc;
 		}
 
-		rc = pm8xxx_readb(pm_gpio_chip->gpio_chip.dev->parent,
+		rc = pm8xxx_readb(pm_gpio_chip->gpio_chip.parent->parent,
 				SSBI_REG_ADDR_GPIO(i),
 				&pm_gpio_chip->bank1[i]);
 		if (rc) {
@@ -420,7 +420,7 @@ static int pm_gpio_probe(struct platform_device *pdev)
 	pm_gpio_chip->gpio_chip.dbg_show = pm_gpio_dbg_show;
 	pm_gpio_chip->gpio_chip.ngpio = pdata->gpio_cdata.ngpios;
 	pm_gpio_chip->gpio_chip.can_sleep = 0;
-	pm_gpio_chip->gpio_chip.dev = &pdev->dev;
+	pm_gpio_chip->gpio_chip.parent = &pdev->dev;
 	pm_gpio_chip->gpio_chip.base = pdata->gpio_base;
 	pm_gpio_chip->irq_base = platform_get_irq(pdev, 0);
 
@@ -543,7 +543,7 @@ int pm8xxx_gpio_config(int gpio, struct pm_gpio *param)
 	spin_lock_irqsave(&pm_gpio_chip->pm_lock, flags);
 	/* Remember bank1 for later use */
 	pm_gpio_chip->bank1[pm_gpio] = bank[1];
-	rc = pm8xxx_write_buf(pm_gpio_chip->gpio_chip.dev->parent,
+	rc = pm8xxx_write_buf(pm_gpio_chip->gpio_chip.parent->parent,
 			SSBI_REG_ADDR_GPIO(pm_gpio), bank, 6);
 	spin_unlock_irqrestore(&pm_gpio_chip->pm_lock, flags);
 

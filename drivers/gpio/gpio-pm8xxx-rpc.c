@@ -169,7 +169,7 @@ static int pm8xxx_gpio_rpc_probe(struct platform_device *pdev)
 	pm8xxx_gpio_chip->gpio_chip.dbg_show	= pm8xxx_gpio_rpc_dbg_show;
 	pm8xxx_gpio_chip->gpio_chip.ngpio	= pdata->ngpios;
 	pm8xxx_gpio_chip->gpio_chip.can_sleep	= 1;
-	pm8xxx_gpio_chip->gpio_chip.dev		= &pdev->dev;
+	pm8xxx_gpio_chip->gpio_chip.parent		= &pdev->dev;
 	pm8xxx_gpio_chip->gpio_chip.base	= pdata->gpio_base;
 
 	mutex_lock(&pm8xxx_gpio_chips_lock);
