@@ -434,7 +434,7 @@ static int pm_gpio_probe(struct platform_device *pdev)
 	mutex_unlock(&pm_gpio_chips_lock);
 	platform_set_drvdata(pdev, pm_gpio_chip);
 
-	ret = gpiochip_add_data(&pm_gpio_chip->gpio_chip);
+	ret = gpiochip_add(&pm_gpio_chip->gpio_chip);
 	if (ret) {
 		pr_err("gpiochip_add failed ret = %d\n", ret);
 		goto reset_drvdata;

@@ -352,7 +352,7 @@ static int pm8xxx_mpp_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, mpp_chip);
 
-	rc = gpiochip_add_data(&mpp_chip->gpio_chip);
+	rc = gpiochip_add(&mpp_chip->gpio_chip);
 	if (rc) {
 		pr_err("gpiochip_add failed, rc=%d\n", rc);
 		goto reset_drvdata;

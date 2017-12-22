@@ -549,7 +549,7 @@ static int msm_gpio_probe(struct platform_device *pdev)
 	bitmap_zero(msm_gpio.enabled_irqs, NR_MSM_GPIOS);
 	bitmap_zero(msm_gpio.wake_irqs, NR_MSM_GPIOS);
 	bitmap_zero(msm_gpio.dual_edge_irqs, NR_MSM_GPIOS);
-	ret = gpiochip_add_data(&msm_gpio.gpio_chip);
+	ret = gpiochip_add(&msm_gpio.gpio_chip);
 	if (ret < 0)
 		return ret;
 
