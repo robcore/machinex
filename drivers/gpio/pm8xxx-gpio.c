@@ -187,14 +187,14 @@ static int pm_gpio_init_bank1(struct pm_gpio_chip *pm_gpio_chip)
 
 static int pm_gpio_to_irq(struct gpio_chip *gpio_chip, unsigned offset)
 {
-	struct pm_gpio_chip *pm_gpio_chip = dev_get_drvdata(gpio_chip->dev);
+	struct pm_gpio_chip *pm_gpio_chip = dev_get_drvdata(gpio_chip->parent);
 
 	return pm_gpio_chip->irq_base + offset;
 }
 
 static int pm_gpio_read(struct gpio_chip *gpio_chip, unsigned offset)
 {
-	struct pm_gpio_chip *pm_gpio_chip = dev_get_drvdata(gpio_chip->dev);
+	struct pm_gpio_chip *pm_gpio_chip = dev_get_drvdata(gpio_chip->parent);
 
 	return pm_gpio_get(pm_gpio_chip, offset);
 }
@@ -202,7 +202,7 @@ static int pm_gpio_read(struct gpio_chip *gpio_chip, unsigned offset)
 static void pm_gpio_write(struct gpio_chip *gpio_chip,
 		unsigned offset, int val)
 {
-	struct pm_gpio_chip *pm_gpio_chip = dev_get_drvdata(gpio_chip->dev);
+	struct pm_gpio_chip *pm_gpio_chip = dev_get_drvdata(gpio_chip->parent);
 
 	pm_gpio_set(pm_gpio_chip, offset, val);
 }
@@ -210,7 +210,7 @@ static void pm_gpio_write(struct gpio_chip *gpio_chip,
 static int pm_gpio_direction_input(struct gpio_chip *gpio_chip,
 		unsigned offset)
 {
-	struct pm_gpio_chip *pm_gpio_chip = dev_get_drvdata(gpio_chip->dev);
+	struct pm_gpio_chip *pm_gpio_chip = dev_get_drvdata(gpio_chip->parent);
 
 	return pm_gpio_set_direction(pm_gpio_chip, offset, PM_GPIO_DIR_IN);
 }
@@ -220,7 +220,7 @@ static int pm_gpio_direction_output(struct gpio_chip *gpio_chip,
 		int val)
 {
 	int ret;
-	struct pm_gpio_chip *pm_gpio_chip = dev_get_drvdata(gpio_chip->dev);
+	struct pm_gpio_chip *pm_gpio_chip = dev_get_drvdata(gpio_chip->parent);
 
 	ret = pm_gpio_set_direction(pm_gpio_chip, offset, PM_GPIO_DIR_OUT);
 	if (!ret)
@@ -232,7 +232,7 @@ static int pm_gpio_direction_output(struct gpio_chip *gpio_chip,
 static void pm_gpio_dbg_show(struct seq_file *s, struct gpio_chip *gpio_chip)
 {
 	static const char * const cmode[] = { "in", "in/out", "out", "off" };
-	struct pm_gpio_chip *pm_gpio_chip = dev_get_drvdata(gpio_chip->dev);
+	struct pm_gpio_chip *pm_gpio_chip = dev_get_drvdata(gpio_chip->parent);
 	u8 mode, state, bank;
 	const char *label;
 	int i, j;
@@ -250,10 +250,10 @@ static void pm_gpio_dbg_show(struct seq_file *s, struct gpio_chip *gpio_chip)
 				state ? "hi" : "lo");
 		for (j = 0; j < PM_GPIO_BANKS; j++) {
 			bank = j << PM_GPIO_BANK_SHIFT;
-			pm8xxx_writeb(gpio_chip->dev->parent,
+			pm8xxx_writeb(gpio_chip->parent->parent,
 					SSBI_REG_ADDR_GPIO(i),
 					bank);
-			pm8xxx_readb(gpio_chip->dev->parent,
+			pm8xxx_readb(gpio_chip->parent->parent,
 					SSBI_REG_ADDR_GPIO(i),
 					&bank);
 			seq_printf(s, " 0x%02x", bank);
@@ -265,10 +265,10 @@ static void pm_gpio_dbg_show(struct seq_file *s, struct gpio_chip *gpio_chip)
 #define PM_GPIO_CONFIG_READ(bank, gpio_chip, gpio, j) \
 	do {	\
 		bank = j << PM_GPIO_BANK_SHIFT;	\
-		pm8xxx_writeb(gpio_chip->dev->parent,	\
+		pm8xxx_writeb(gpio_chip->parent->parent,	\
 				SSBI_REG_ADDR_GPIO(gpio),	\
 				bank);	\
-		pm8xxx_readb(gpio_chip->dev->parent,	\
+		pm8xxx_readb(gpio_chip->parent->parent,	\
 				SSBI_REG_ADDR_GPIO(gpio),	\
 				&bank);	\
 	} while (0);

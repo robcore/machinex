@@ -74,14 +74,14 @@ static int pm8xxx_mpp_write(struct pm8xxx_mpp_chip *mpp_chip, u16 offset,
 
 static int pm8xxx_mpp_to_irq(struct gpio_chip *chip, unsigned offset)
 {
-	struct pm8xxx_mpp_chip *mpp_chip = dev_get_drvdata(chip->dev);
+	struct pm8xxx_mpp_chip *mpp_chip = dev_get_drvdata(chip->parent);
 
 	return mpp_chip->irq_base + offset;
 }
 
 static int pm8xxx_mpp_get(struct gpio_chip *chip, unsigned offset)
 {
-	struct pm8xxx_mpp_chip *mpp_chip = dev_get_drvdata(chip->dev);
+	struct pm8xxx_mpp_chip *mpp_chip = dev_get_drvdata(chip->parent);
 	int rc;
 
 	if ((mpp_chip->ctrl_reg[offset] & PM8XXX_MPP_TYPE_MASK) >>
@@ -96,7 +96,7 @@ static int pm8xxx_mpp_get(struct gpio_chip *chip, unsigned offset)
 
 static void pm8xxx_mpp_set(struct gpio_chip *chip, unsigned offset, int val)
 {
-	struct pm8xxx_mpp_chip *mpp_chip = dev_get_drvdata(chip->dev);
+	struct pm8xxx_mpp_chip *mpp_chip = dev_get_drvdata(chip->parent);
 	u8 reg = val ? PM8XXX_MPP_DOUT_CTRL_HIGH : PM8XXX_MPP_DOUT_CTRL_LOW;
 	int rc;
 
@@ -108,7 +108,7 @@ static void pm8xxx_mpp_set(struct gpio_chip *chip, unsigned offset, int val)
 
 static int pm8xxx_mpp_dir_input(struct gpio_chip *chip, unsigned offset)
 {
-	struct pm8xxx_mpp_chip *mpp_chip = dev_get_drvdata(chip->dev);
+	struct pm8xxx_mpp_chip *mpp_chip = dev_get_drvdata(chip->parent);
 	int rc = pm8xxx_mpp_write(mpp_chip, offset,
 			PM8XXX_MPP_TYPE_D_INPUT << PM8XXX_MPP_TYPE_SHIFT,
 			PM8XXX_MPP_TYPE_MASK);
@@ -121,7 +121,7 @@ static int pm8xxx_mpp_dir_input(struct gpio_chip *chip, unsigned offset)
 static int pm8xxx_mpp_dir_output(struct gpio_chip *chip,
 		unsigned offset, int val)
 {
-	struct pm8xxx_mpp_chip *mpp_chip = dev_get_drvdata(chip->dev);
+	struct pm8xxx_mpp_chip *mpp_chip = dev_get_drvdata(chip->parent);
 	u8 reg = (PM8XXX_MPP_TYPE_D_OUTPUT << PM8XXX_MPP_TYPE_SHIFT) |
 		(val & PM8XXX_MPP_CONFIG_CTRL_MASK);
 	u8 mask = PM8XXX_MPP_TYPE_MASK | PM8XXX_MPP_CONFIG_CTRL_MASK;
@@ -138,7 +138,7 @@ static void pm8xxx_mpp_dbg_show(struct seq_file *s, struct gpio_chip *chip)
 						"a_in", "a_out", "sink",
 						"dtest_sink", "dtest_out"
 	};
-	struct pm8xxx_mpp_chip *mpp_chip = dev_get_drvdata(chip->dev);
+	struct pm8xxx_mpp_chip *mpp_chip = dev_get_drvdata(chip->parent);
 	u8 type, state;
 	const char *label;
 	int i;
