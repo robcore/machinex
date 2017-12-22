@@ -543,6 +543,10 @@ static void reduce_input_current(struct max77693_charger_data *charger, int cur)
 				__func__, set_reg, set_value);
 	}
 	if(charger->cable_type == POWER_SUPPLY_TYPE_MAINS) {
+		pr_info("[%s][DEC] Reducing Current - reg:%u val:%d\n",
+				__func__, set_reg, set_value);
+		pr_info("[%s][HEX] Reducing Current - reg: 0x%x val: 0x%x\n",
+				__func__, set_reg, set_value);
 		/* schedule softreg recovery wq */
 		wake_lock(&charger->recovery_wake_lock);
 		mod_delayed_work(charger->wqueue, &charger->recovery_work,
