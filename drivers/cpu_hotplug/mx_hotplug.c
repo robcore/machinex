@@ -76,44 +76,28 @@ static unsigned int mxread(void)
 
 	return ret;
 }
-static void mx_lock(int lock)
+
+static inline void mxget(void)
 {
 	unsigned long flags = 0;
 
-	if (lock)
-		write_lock_irqsave(&mxhp_lock, flags);
-	else
-		write_unlock_irqrestore(&mxhp_lock, flags);
-}
-
-static void _mxget(void)
-{
+	write_lock_irqsave(&mxhp_lock, flags);
 	mx_hotplug_active = 1;
+	write_unlock_irqrestore(&mxhp_lock, flags);
 }
 
-static void mxget(void)
+static inline void mxput(void)
 {
-	mx_lock(1);
-	_mxget();
-	mx_lock(0);
-}
+	unsigned long flags = 0;
 
-static void _mxput(void)
-{
+	write_lock_irqsave(&mxhp_lock, flags);
 	mx_hotplug_active = 0;
-}
-
-static void mxput(void)
-{
-	mx_lock(1);
-	_mxput();
-	mx_lock(0);
+	write_unlock_irqrestore(&mxhp_lock, flags);
 }
 
 void inject_nos(bool from_input, bool last_uptick)
 {
 	unsigned int cpu, cylinders;
-	int ret;
 
 	if (!last_uptick && (!mxread() || hotplug_suspended))
 		return;
@@ -210,12 +194,8 @@ static int __ref mx_gearbox(void *data)
 again:
 	set_current_state(TASK_INTERRUPTIBLE);
 
-	if (kthread_should_stop()) {
-		mutex_lock(&mx_mutex);
-		inject_nos(false, true);
-		mutex_unlock(&mx_mutex);
+	if (kthread_should_stop())
 		return 0;
-	}
 
 	mutex_lock(&mx_mutex);
 	delta = ktime_sub(ktime_get(), last_fuelcheck);
@@ -297,18 +277,19 @@ void fuel_injector(void)
 	if (!mutex_trylock(&mx_mutex))
 		return;
 
-	delta = ktime_sub(ktime_get(), last_boost);
-	if (ktime_compare(delta, ms_to_ktime(boost_timeout)) < 0) {
-		mutex_unlock(&mx_mutex);
-		return;
-	}
+	if (should_boost)
+		goto unlock;
 
-	if (!should_boost) {
-		should_boost = true;
-		mutex_unlock(&mx_mutex);
-		mod_delayed_work_on(0, mx_hp_engine, &motor, 0);
-	} else
-		mutex_unlock(&mx_mutex);
+	delta = ktime_sub(ktime_get(), last_boost);
+	if (ktime_compare(delta, ms_to_ktime(boost_timeout)) < 0)
+		goto unlock;
+	should_boost = true;
+	mutex_unlock(&mx_mutex);
+	mod_delayed_work_on(0, mx_hp_engine, &motor, 0);
+	return;
+
+unlock:
+	mutex_unlock(&mx_mutex);
 }
 	
 
@@ -410,6 +391,10 @@ void ignition(unsigned int status)
 #endif
 	} else {
 		mxput();
+		if (mutex_trylock(&mx_mutex)) {
+			inject_nos(false, true);
+			mutex_unlock(&mx_mutex);
+		}
 #if 0
 		unregister_thermal_notifier(&mxtherm_nb);
 #endif
