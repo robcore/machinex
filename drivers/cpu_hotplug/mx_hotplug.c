@@ -215,8 +215,8 @@ again:
 		goto purge;
 	}
 
-	WRITE_ONCE(air_to_fuel, avg_nr_running());
-	WRITE_ONCE(current_rpm, all_cpu_load());
+	air_to_fuel = avg_nr_running();
+	current_rpm = all_cpu_load();
 	if (air_to_fuel >= sixthgear ||
 		current_rpm >= sixthgear_rpm)
 		inject_nos(false, false);
