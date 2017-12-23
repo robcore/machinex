@@ -56,6 +56,16 @@ struct gpio_device {
 	char			*label;
 	void			*data;
 	struct list_head        list;
+
+#ifdef CONFIG_PINCTRL
+	/*
+	 * If CONFIG_PINCTRL is enabled, then gpio controllers can optionally
+	 * describe the actual pin range which they serve in an SoC. This
+	 * information would be used by pinctrl subsystem to configure
+	 * corresponding pins for gpio usage.
+	 */
+	struct list_head pin_ranges;
+#endif
 };
 
 /**
@@ -65,7 +75,8 @@ struct gpio_device {
  */
 struct acpi_gpio_info {
 	bool gpioint;
-	bool active_low;
+	int polarity;
+	int triggering;
 };
 
 /* gpio suffixes used for ACPI and device tree lookup */

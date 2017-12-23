@@ -660,8 +660,7 @@ int gpiochip_add_data(struct gpio_chip *chip, void *data)
 	}
 
 #ifdef CONFIG_PINCTRL
-	/* FIXME: move pin ranges to gpio_device */
-	INIT_LIST_HEAD(&chip->pin_ranges);
+	INIT_LIST_HEAD(&gdev->pin_ranges);
 #endif
 
 	status = gpiochip_set_desc_names(chip);
@@ -1227,7 +1226,7 @@ int gpiochip_add_pingroup_range(struct gpio_chip *chip,
 		 gpio_offset, gpio_offset + pin_range->range.npins - 1,
 		 pinctrl_dev_get_devname(pctldev), pin_group);
 
-	list_add_tail(&pin_range->node, &chip->pin_ranges);
+	list_add_tail(&pin_range->node, &gdev->pin_ranges);
 
 	return 0;
 }
@@ -1276,7 +1275,7 @@ int gpiochip_add_pin_range(struct gpio_chip *chip, const char *pinctl_name,
 		 pinctl_name,
 		 pin_offset, pin_offset + npins - 1);
 
-	list_add_tail(&pin_range->node, &chip->pin_ranges);
+	list_add_tail(&pin_range->node, &gdev->pin_ranges);
 
 	return 0;
 }
@@ -1289,8 +1288,9 @@ EXPORT_SYMBOL_GPL(gpiochip_add_pin_range);
 void gpiochip_remove_pin_ranges(struct gpio_chip *chip)
 {
 	struct gpio_pin_range *pin_range, *tmp;
+	struct gpio_device *gdev = chip->gpiodev;
 
-	list_for_each_entry_safe(pin_range, tmp, &chip->pin_ranges, node) {
+	list_for_each_entry_safe(pin_range, tmp, &gdev->pin_ranges, node) {
 		list_del(&pin_range->node);
 		pinctrl_remove_gpio_range(pin_range->pctldev,
 				&pin_range->range);
@@ -1680,14 +1680,7 @@ int gpiod_set_debounce(struct gpio_desc *desc, unsigned debounce)
 {
 	struct gpio_chip	*chip;
 
-	/*
-	 * Cannot VALIDATE_DESC() here as gpiod_to_irq() consumer semantics
-	 * requires this function to not return zero on an invalid descriptor
-	 * but rather a negative error number.
-	 */
-	if (!desc || !desc->gdev || !desc->gdev->chip)
-		return -EINVAL;
-
+	VALIDATE_DESC(desc);
 	chip = desc->gdev->chip;
 	if (!chip->set || !chip->set_debounce) {
 		gpiod_dbg(desc,
@@ -2133,22 +2126,14 @@ void gpiochip_unlock_as_irq(struct gpio_chip *chip, unsigned int offset)
 }
 EXPORT_SYMBOL_GPL(gpiochip_unlock_as_irq);
 
-/**
- * gpiod_get_raw_value_cansleep() - return a gpio's raw value
- * @desc: gpio whose value will be returned
- *
- * Return the GPIO's raw value, i.e. the value of the physical line disregarding
- * its ACTIVE_LOW status, or negative errno on failure.
- *
- * This function is to be called from contexts that can sleep.
- */
-int gpiod_get_raw_value_cansleep(const struct gpio_desc *desc)
+bool gpiochip_line_is_irq(struct gpio_chip *chip, unsigned int offset)
 {
-	might_sleep_if(extra_checks);
-	VALIDATE_DESC(desc);
-	return _gpiod_get_raw_value(desc);
+	if (offset >= chip->ngpio)
+		return false;
+
+	return test_bit(FLAG_USED_AS_IRQ, &chip->gpiodev->descs[offset].flags);
 }
-EXPORT_SYMBOL_GPL(gpiod_get_raw_value_cansleep);
+EXPORT_SYMBOL_GPL(gpiochip_line_is_irq);
 
 bool gpiochip_line_is_open_drain(struct gpio_chip *chip, unsigned int offset)
 {
@@ -2167,6 +2152,23 @@ bool gpiochip_line_is_open_source(struct gpio_chip *chip, unsigned int offset)
 	return test_bit(FLAG_OPEN_SOURCE, &chip->gpiodev->descs[offset].flags);
 }
 EXPORT_SYMBOL_GPL(gpiochip_line_is_open_source);
+
+/**
+ * gpiod_get_raw_value_cansleep() - return a gpio's raw value
+ * @desc: gpio whose value will be returned
+ *
+ * Return the GPIO's raw value, i.e. the value of the physical line disregarding
+ * its ACTIVE_LOW status, or negative errno on failure.
+ *
+ * This function is to be called from contexts that can sleep.
+ */
+int gpiod_get_raw_value_cansleep(const struct gpio_desc *desc)
+{
+	might_sleep_if(extra_checks);
+	VALIDATE_DESC(desc);
+	return _gpiod_get_raw_value(desc);
+}
+EXPORT_SYMBOL_GPL(gpiod_get_raw_value_cansleep);
 
 /**
  * gpiod_get_value_cansleep() - return a gpio's value
@@ -2385,10 +2387,16 @@ static struct gpio_desc *acpi_find_gpio(struct device *dev, const char *con_id,
 		desc = acpi_get_gpiod_by_index(adev, NULL, idx, &info);
 		if (IS_ERR(desc))
 			return desc;
+
+		if ((flags == GPIOD_OUT_LOW || flags == GPIOD_OUT_HIGH) &&
+		    info.gpioint) {
+			dev_dbg(dev, "refusing GpioInt() entry when doing GPIOD_OUT_* lookup\n");
+			return ERR_PTR(-ENOENT);
+		}
 	}
 
-	if (info.active_low)
-		*flags |= GPIO_ACTIVE_LOW;
+	if (info.polarity == GPIO_ACTIVE_LOW)
+		*lookupflags |= GPIO_ACTIVE_LOW;
 
 	return desc;
 }
@@ -2706,7 +2714,7 @@ struct gpio_desc *fwnode_get_named_gpiod(struct fwnode_handle *fwnode,
 
 		desc = acpi_node_get_gpiod(fwnode, propname, 0, &info);
 		if (!IS_ERR(desc))
-			active_low = info.active_low;
+			active_low = info.polarity == GPIO_ACTIVE_LOW;
 	}
 
 	if (IS_ERR(desc))
