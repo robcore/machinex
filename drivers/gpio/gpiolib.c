@@ -1197,6 +1197,8 @@ int gpiod_request(struct gpio_desc *desc, const char *label)
 		status = __gpiod_request(desc, label);
 		if (status < 0)
 			module_put(gdev->owner);
+		else
+			get_device(&gdev->dev);
 	}
 
 	if (status)
@@ -1240,10 +1242,12 @@ static bool __gpiod_free(struct gpio_desc *desc)
 
 void gpiod_free(struct gpio_desc *desc)
 {
-	if (desc && __gpiod_free(desc))
+	if (desc && desc->gdev && __gpiod_free(desc)) {
 		module_put(desc->gdev->owner);
-	else
+		put_device(&desc->gdev->dev);
+	} else {
 		WARN_ON(extra_checks);
+	}
 }
 
 /**
