@@ -347,9 +347,7 @@ static void mxc_gpio_get_hw(struct platform_device *pdev)
 
 static int mxc_gpio_to_irq(struct gpio_chip *gc, unsigned offset)
 {
-	struct bgpio_chip *bgc = to_bgpio_chip(gc);
-	struct mxc_gpio_port *port =
-		container_of(bgc, struct mxc_gpio_port, bgc);
+	struct mxc_gpio_port *port = gpiochip_get_data(gc);
 
 	return port->virtual_irq_start + offset;
 }
@@ -413,7 +411,7 @@ static int mxc_gpio_probe(struct platform_device *pdev)
 		}
 	}
 
-	err = bgpio_init(&port->bgc, &pdev->dev, 4,
+	err = bgpio_init(&port->gc, &pdev->dev, 4,
 			 port->base + GPIO_PSR,
 			 port->base + GPIO_DR, NULL,
 			 port->base + GPIO_GDIR, NULL, 0);

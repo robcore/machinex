@@ -16,10 +16,11 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/io.h>
-#include <linux/gpio.h>
 #include <linux/irq.h>
 #include <linux/slab.h>
-#include <linux/basic_mmio_gpio.h>
+#include <linux/gpio/driver.h>
+/* FIXME: this is here for gpio_to_irq() - get rid of this! */
+#include <linux/gpio.h>
 
 #include <mach/hardware.h>
 #include <mach/gpio-ep93xx.h>
@@ -28,7 +29,7 @@
 
 struct ep93xx_gpio {
 	void __iomem		*mmio_base;
-	struct bgpio_chip	bgc[8];
+	struct gpio_chip	gc[8];
 };
 
 /*************************************************************************
@@ -318,26 +319,26 @@ static int ep93xx_gpio_to_irq(struct gpio_chip *chip, unsigned offset)
 	return 64 + gpio;
 }
 
-static int ep93xx_gpio_add_bank(struct bgpio_chip *bgc, struct device *dev,
+static int ep93xx_gpio_add_bank(struct gpio_chip *gc, struct device *dev,
 	void __iomem *mmio_base, struct ep93xx_gpio_bank *bank)
 {
 	void __iomem *data = mmio_base + bank->data;
 	void __iomem *dir =  mmio_base + bank->dir;
 	int err;
 
-	err = bgpio_init(bgc, dev, 1, data, NULL, NULL, dir, NULL, 0);
+	err = bgpio_init(gc, dev, 1, data, NULL, NULL, dir, NULL, 0);
 	if (err)
 		return err;
 
-	bgc->gc.label = bank->label;
-	bgc->gc.base = bank->base;
+	gc->label = bank->label;
+	gc->base = bank->base;
 
 	if (bank->has_debounce) {
-		bgc->gc.set_debounce = ep93xx_gpio_set_debounce;
-		bgc->gc.to_irq = ep93xx_gpio_to_irq;
+		gc->set_debounce = ep93xx_gpio_set_debounce;
+		gc->to_irq = ep93xx_gpio_to_irq;
 	}
 
-	return gpiochip_add(&bgc->gc);
+	return gpiochip_add_data(gc, NULL);
 }
 
 static int ep93xx_gpio_probe(struct platform_device *pdev)
