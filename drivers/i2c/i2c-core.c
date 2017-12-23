@@ -88,17 +88,12 @@ static int i2c_device_match(struct device *dev, struct device_driver *drv)
 	return 0;
 }
 
-
-/* uevent helps with hotplug: modprobe -q $(MODALIAS) */
 static int i2c_device_uevent(struct device *dev, struct kobj_uevent_env *env)
 {
-	struct i2c_client	*client = to_i2c_client(dev);
+	struct i2c_client *client = to_i2c_client(dev);
+	int rc;
 
-	if (add_uevent_var(env, "MODALIAS=%s%s",
-			   I2C_MODULE_PREFIX, client->name))
-		return -ENOMEM;
-	dev_dbg(dev, "uevent\n");
-	return 0;
+	return add_uevent_var(env, "MODALIAS=%s%s", I2C_MODULE_PREFIX, client->name);
 }
 
 /* i2c bus recovery routines */
@@ -1277,7 +1272,7 @@ void i2c_del_adapter(struct i2c_adapter *adap)
 	 * FIXME: This is old code and should ideally be replaced by an
 	 * alternative which results in decoupling the lifetime of the struct
 	 * device from the i2c_adapter, like spi or netdev do. Any solution
-	 * should be throughly tested with DEBUG_KOBJECT_RELEASE enabled!
+	 * should be thoroughly tested with DEBUG_KOBJECT_RELEASE enabled!
 	 */
 	init_completion(&adap->dev_released);
 	device_unregister(&adap->dev);
@@ -1338,14 +1333,6 @@ int i2c_register_driver(struct module *owner, struct i2c_driver *driver)
 	res = driver_register(&driver->driver);
 	if (res)
 		return res;
-
-	/* Drivers should switch to dev_pm_ops instead. */
-	if (driver->suspend)
-		pr_warn("i2c-core: driver [%s] using legacy suspend method\n",
-			driver->driver.name);
-	if (driver->resume)
-		pr_warn("i2c-core: driver [%s] using legacy resume method\n",
-			driver->driver.name);
 
 	pr_debug("i2c-core: driver [%s] registered\n", driver->driver.name);
 
