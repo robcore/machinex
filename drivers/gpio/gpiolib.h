@@ -105,6 +105,10 @@ static inline bool acpi_can_fallback_to_crs(struct acpi_device *adev,
 #endif
 
 struct gpio_desc *gpiochip_get_desc(struct gpio_chip *chip, u16 hwnum);
+void gpiod_set_array_value_complex(bool raw, bool can_sleep,
+				   unsigned int array_size,
+				   struct gpio_desc **desc_array,
+				   int *value_array);
 
 extern struct spinlock gpio_lock;
 extern struct list_head gpio_devices;
