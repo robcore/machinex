@@ -558,7 +558,7 @@ int bgpio_init(struct bgpio_chip *bgc, struct device *dev,
 }
 EXPORT_SYMBOL_GPL(bgpio_init);
 
-#ifdef CONFIG_GPIO_GENERIC_PLATFORM
+#if IS_ENABLED(CONFIG_GPIO_GENERIC_PLATFORM)
 
 static void __iomem *bgpio_map(struct platform_device *pdev,
 			       const char *name,
