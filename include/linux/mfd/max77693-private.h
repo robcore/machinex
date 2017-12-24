@@ -219,6 +219,9 @@ enum max77693_haptic_reg {
 #define WCIN_MASK				(0x1 << WCIN_SHIFT)
 #define CHGIN_SHIFT				6
 #define CHGIN_MASK				(0x1 << CHGIN_SHIFT)
+#define chgin_shifter(val) (val << CHGIN_SHIFT)
+#define chg_on_shifted chgin_shifter(1)
+#define chg_off_shifted chgin_shifter(0)
 
 /* MAX77693 CONTROL1 register */
 #define CLEAR_IDBEN_MICEN_MASK	0x3f

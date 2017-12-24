@@ -235,7 +235,7 @@ static void max77693_set_input_current(struct max77693_charger_data *charger,
 
 	mutex_lock(&charger->ops_lock);
 	reg_data = 0;
-	reg_data = (1 << CHGIN_SHIFT);
+	reg_data = chg_on_shifted;
 	max77693_update_reg(charger->max77693->i2c, MAX77693_CHG_REG_CHG_INT_MASK, reg_data,
 			CHGIN_MASK);
 
@@ -354,7 +354,7 @@ set_input_current:
 		set_reg, set_current_reg);
 exit:
 	reg_data = 0;
-	reg_data = (0 << CHGIN_SHIFT);
+	reg_data = chg_off_shifted;
 	max77693_update_reg(charger->max77693->i2c, MAX77693_CHG_REG_CHG_INT_MASK, reg_data,
 			CHGIN_MASK);
 	mutex_unlock(&charger->ops_lock);
@@ -1275,7 +1275,7 @@ static void max77693_chgin_isr_work(struct work_struct *work)
 	u8 reg_data;
 
 	reg_data = 0;
-	reg_data = (1 << CHGIN_SHIFT);
+	reg_data = chg_on_shifted;
 	max77693_update_reg(charger->max77693->i2c, MAX77693_CHG_REG_CHG_INT_MASK, reg_data,
 			CHGIN_MASK);
 
@@ -1355,7 +1355,7 @@ static void max77693_chgin_isr_work(struct work_struct *work)
 		msleep(100);
 	}
 	reg_data = 0;
-	reg_data = (0 << CHGIN_SHIFT);
+	reg_data = chg_off_shifted;
 	max77693_update_reg(charger->max77693->i2c, MAX77693_CHG_REG_CHG_INT_MASK, reg_data,
 			CHGIN_MASK);
 }
