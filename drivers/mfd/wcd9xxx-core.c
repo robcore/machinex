@@ -1559,15 +1559,6 @@ static int wcd9xxx_slim_resume(struct slim_device *sldev)
 		return 0;
 }
 
-static int wcd9xxx_i2c_resume(struct i2c_client *i2cdev)
-{
-	struct wcd9xxx *wcd9xxx = dev_get_drvdata(&i2cdev->dev);
-	if (wcd9xxx)
-		return wcd9xxx_resume(wcd9xxx);
-	else
-		return 0;
-}
-
 static int wcd9xxx_suspend(struct wcd9xxx *wcd9xxx, pm_message_t pmesg)
 {
 	int ret = 0;
@@ -1621,14 +1612,87 @@ static int wcd9xxx_slim_suspend(struct slim_device *sldev, pm_message_t pmesg)
 		return 0;
 }
 
-static int wcd9xxx_i2c_suspend(struct i2c_client *i2cdev, pm_message_t pmesg)
+static int wcd9xxx_i2c_resume(struct device *dev)
 {
-	struct wcd9xxx *wcd9xxx = dev_get_drvdata(&i2cdev->dev);
-	if (wcd9xxx != NULL)
-		return wcd9xxx_suspend(wcd9xxx, pmesg);
-	else
+	struct i2c_client *client = i2c_verify_client(dev);
+	struct wcd9xxx *wcd9xxx;
+	int ret = 0;
+
+	if (!client)
 		return 0;
+
+	wcd9xxx = dev_get_drvdata(&client->dev);
+
+	pr_debug("%s: enter\n", __func__);
+	mutex_lock(&wcd9xxx->pm_lock);
+	if (wcd9xxx->pm_state == WCD9XXX_PM_ASLEEP) {
+		pr_debug("%s: resuming system, state %d, wlock %d\n", __func__,
+			 wcd9xxx->pm_state, wcd9xxx->wlock_holders);
+		wcd9xxx->pm_state = WCD9XXX_PM_SLEEPABLE;
+	} else {
+		pr_warn("%s: system is already awake, state %d wlock %d\n",
+			__func__, wcd9xxx->pm_state, wcd9xxx->wlock_holders);
+	}
+	mutex_unlock(&wcd9xxx->pm_lock);
+	wake_up_all(&wcd9xxx->pm_wq);
+
+	return ret;
 }
+
+static int wcd9xxx_i2c_suspend(struct device *dev)
+{
+	struct i2c_client *client = i2c_verify_client(dev);
+	struct wcd9xxx *wcd9xxx;
+	int ret = 0;
+
+	if (!client)
+		return 0;
+
+	wcd9xxx = dev_get_drvdata(&client->dev);
+	pr_debug("%s: enter\n", __func__);
+	/*
+	 * pm_qos_update_request() can be called after this suspend chain call
+	 * started. thus suspend can be called while lock is being held
+	 */
+	mutex_lock(&wcd9xxx->pm_lock);
+	if (wcd9xxx->pm_state == WCD9XXX_PM_SLEEPABLE) {
+		pr_debug("%s: suspending system, state %d, wlock %d\n",
+			 __func__, wcd9xxx->pm_state, wcd9xxx->wlock_holders);
+		wcd9xxx->pm_state = WCD9XXX_PM_ASLEEP;
+	} else if (wcd9xxx->pm_state == WCD9XXX_PM_AWAKE) {
+		/* unlock to wait for pm_state == WCD9XXX_PM_SLEEPABLE
+		 * then set to WCD9XXX_PM_ASLEEP */
+		pr_debug("%s: waiting to suspend system, state %d, wlock %d\n",
+			 __func__, wcd9xxx->pm_state, wcd9xxx->wlock_holders);
+		mutex_unlock(&wcd9xxx->pm_lock);
+		if (!(wait_event_timeout(wcd9xxx->pm_wq,
+					 wcd9xxx_pm_cmpxchg(wcd9xxx,
+						  WCD9XXX_PM_SLEEPABLE,
+						  WCD9XXX_PM_ASLEEP) ==
+							WCD9XXX_PM_SLEEPABLE,
+					 HZ))) {
+			pr_debug("%s: suspend failed state %d, wlock %d\n",
+				 __func__, wcd9xxx->pm_state,
+				 wcd9xxx->wlock_holders);
+			ret = -EBUSY;
+		} else {
+			pr_debug("%s: done, state %d, wlock %d\n", __func__,
+				 wcd9xxx->pm_state, wcd9xxx->wlock_holders);
+		}
+		mutex_lock(&wcd9xxx->pm_lock);
+	} else if (wcd9xxx->pm_state == WCD9XXX_PM_ASLEEP) {
+		pr_warn("%s: system is already suspended, state %d, wlock %dn",
+			__func__, wcd9xxx->pm_state, wcd9xxx->wlock_holders);
+	}
+	mutex_unlock(&wcd9xxx->pm_lock);
+
+	return ret;
+}
+
+static const struct dev_pm_ops wcd9xxx_i2c_pm_ops = {
+	.suspend = wcd9xxx_i2c_suspend,
+	.resume = wcd9xxx_i2c_resume,
+};
 
 static const struct slim_device_id sitar_slimtest_id[] = {
 	{"sitar-slim", 0},
@@ -1743,36 +1807,33 @@ static struct i2c_driver tabla_i2c_driver = {
 	.driver = {
 	.owner = THIS_MODULE,
 	.name = "tabla-i2c-core",
+	.pm		= &wcd9xxx_i2c_pm_ops,
 	},
 	.id_table = tabla_id_table,
 	.probe = wcd9xxx_i2c_probe,
 	.remove = wcd9xxx_i2c_remove,
-	.resume	= wcd9xxx_i2c_resume,
-	.suspend = wcd9xxx_i2c_suspend,
 };
 
 static struct i2c_driver sitar_i2c_driver = {
 	.driver = {
 	.owner = THIS_MODULE,
 	.name = "sitar-i2c-core",
+	.pm		= &wcd9xxx_i2c_pm_ops,
 	},
 	.id_table = sitar_id_table,
 	.probe = wcd9xxx_i2c_probe,
 	.remove = wcd9xxx_i2c_remove,
-	.resume	= wcd9xxx_i2c_resume,
-	.suspend = wcd9xxx_i2c_suspend,
 };
 
 static struct i2c_driver wcd9xxx_i2c_driver = {
        .driver = {
 	   .owner= THIS_MODULE,
 	   .name = "wcd9xxx-i2c-core",
+	   .pm		= &wcd9xxx_i2c_pm_ops,
        },
        .id_table = wcd9xxx_id_table,
        .probe = wcd9xxx_i2c_probe,
        .remove = wcd9xxx_i2c_remove,
-       .resume = wcd9xxx_i2c_resume,
-       .suspend = wcd9xxx_i2c_suspend,
 };
 
 static int __init wcd9xxx_init(void)
