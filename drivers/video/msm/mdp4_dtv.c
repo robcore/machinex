@@ -155,9 +155,8 @@ static int dtv_off_sub(void)
 		return -EINVAL;
 	}
 
+	prfunction();
 	ret = panel_next_off(dtv_pdev);
-
-	pr_info("%s\n", __func__);
 
 	clk_disable_unprepare(hdmi_clk);
 	if (mdp_tv_clk)
@@ -201,7 +200,7 @@ static int dtv_on(struct platform_device *pdev)
 
 	/* If a power down is already underway, wait for it to finish */
 	flush_work(&dtv_off_work);
-
+	prfunction();
 	mfd = platform_get_drvdata(pdev);
 	panel_pixclock_freq = mfd->fbi->var.pixclock;
 
