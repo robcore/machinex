@@ -8809,7 +8809,7 @@ static ssize_t peek_reg_read_file(struct file *file, char __user *ubuf,
 {
 	char lbuf[8];
 
-	snprintf(lbuf, sizeof(lbuf), "0x%x\n", read_data);
+	snprintf(lbuf, sizeof(lbuf), "%u\n", read_data);
 	return simple_read_from_buffer(ubuf, count, ppos, lbuf, strlen(lbuf));
 }
 
