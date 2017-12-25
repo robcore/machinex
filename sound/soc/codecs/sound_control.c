@@ -379,22 +379,24 @@ static ssize_t mic_gain_store(struct kobject *kobj,
 static ssize_t sound_control_register_list_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-	return sprintf(buf, "Headphone Left reg:%u val:%u\n "
-			"Headphone Right reg:%u val:%u\n "
-			"Speaker reg:%u val:%u\n "
-			"In Call Mic reg:%u val:%u\n "
+	return sprintf(buf, "Headphone Left reg:%u val:%u\n"
+			"Headphone Right reg:%u val:%u\n"
+			"Speaker reg:%u val:%u\n"
+			"In Call Mic reg:%u val:%u\n"
 			"Camera Mic reg:%u val:%u\n"
-			"RX1_Vol_B1_Ctrl reg:%u val:%u\n "
-			"RX2_Vol_B1_Ctrl reg:%u val:%u\n "
-			"RX3_Vol_B1_Ctrl reg:%u val:%u\n "
-			"RX4_Vol_B1_Ctrl reg:%u val:%u\n "
-			"RX5_Vol_B1_Ctrl reg:%u val:%u\n "
-			"RX6_Vol_B1_Ctrl reg:%u val:%u\n "
-			"RX7_Vol_B1_Ctrl reg:%u val:%u\n "
-			"RX3_Vol_B2_Ctrl reg:%u val:%u\n "
-			"RX4_Vol_B2_Ctrl reg:%u val:%u\n "
-			"RX6_Vol_B2_Ctrl reg:%u val:%u\n "
-			"RX7_Vol_B2_Ctrl reg:%u val:%u\n",
+			"RX1_Vol_B1_Ctrl reg:%u val:%u\n"
+			"RX2_Vol_B1_Ctrl reg:%u val:%u\n"
+			"RX3_Vol_B1_Ctrl reg:%u val:%u\n"
+			"RX4_Vol_B1_Ctrl reg:%u val:%u\n"
+			"RX5_Vol_B1_Ctrl reg:%u val:%u\n"
+			"RX6_Vol_B1_Ctrl reg:%u val:%u\n"
+			"RX7_Vol_B1_Ctrl reg:%u val:%u\n"
+			"RX3_Vol_B2_Ctrl reg:%u val:%u\n"
+			"RX4_Vol_B2_Ctrl reg:%u val:%u\n"
+			"RX6_Vol_B2_Ctrl reg:%u val:%u\n"
+			"RX7_Vol_B2_Ctrl reg:%u val:%u\n"
+			"HPH L Gain reg:%u val:%u\n"
+			"HPH R Gain reg:%u val:%u\n",
 			TABLA_A_CDC_RX1_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX1_VOL_CTL_B2_CTL),
 			TABLA_A_CDC_RX2_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX2_VOL_CTL_B2_CTL),
 			TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX5_VOL_CTL_B2_CTL),
@@ -410,7 +412,9 @@ static ssize_t sound_control_register_list_show(struct kobject *kobj,
 			TABLA_A_CDC_RX3_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX3_VOL_CTL_B2_CTL),
 			TABLA_A_CDC_RX4_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX4_VOL_CTL_B2_CTL),
 			TABLA_A_CDC_RX6_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX6_VOL_CTL_B2_CTL),
-			TABLA_A_CDC_RX7_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX7_VOL_CTL_B2_CTL));
+			TABLA_A_CDC_RX7_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX7_VOL_CTL_B2_CTL)
+			TABLA_A_RX_HPH_L_GAIN, human_readable(TABLA_A_RX_HPH_L_GAIN),
+			TABLA_A_RX_HPH_R_GAIN, human_readable(TABLA_A_RX_HPH_R_GAIN);
 }
 
 
