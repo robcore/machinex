@@ -412,7 +412,7 @@ static ssize_t sound_control_register_list_show(struct kobject *kobj,
 			TABLA_A_CDC_RX3_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX3_VOL_CTL_B2_CTL),
 			TABLA_A_CDC_RX4_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX4_VOL_CTL_B2_CTL),
 			TABLA_A_CDC_RX6_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX6_VOL_CTL_B2_CTL),
-			TABLA_A_CDC_RX7_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX7_VOL_CTL_B2_CTL)
+			TABLA_A_CDC_RX7_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX7_VOL_CTL_B2_CTL),
 			TABLA_A_RX_HPH_L_GAIN, human_readable(TABLA_A_RX_HPH_L_GAIN),
 			TABLA_A_RX_HPH_R_GAIN, human_readable(TABLA_A_RX_HPH_R_GAIN));
 }
