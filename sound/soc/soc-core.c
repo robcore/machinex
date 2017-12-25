@@ -121,11 +121,11 @@ static int format_register_str(struct snd_soc_codec *codec,
 		memset(regbuf, 'X', regsize);
 		regbuf[regsize] = '\0';
 	} else {
-		snprintf(regbuf, regsize + 1, "%.*x", regsize, ret);
+		snprintf(regbuf, regsize + 1, "%.*d", regsize, ret);
 	}
 
 	/* prepare the buffer */
-	snprintf(tmpbuf, len + 1, "%.*x: %s\n", wordsize, reg, regbuf);
+	snprintf(tmpbuf, len + 1, "%.*d: %s\n", wordsize, reg, regbuf);
 	/* copy it back to the caller without the '\0' */
 	memcpy(buf, tmpbuf, len);
 
