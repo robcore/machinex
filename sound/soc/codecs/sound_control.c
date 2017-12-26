@@ -37,9 +37,10 @@ unsigned int vib_feedback = 0;
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
 		unsigned int value);
-
+static int show_sound_value(int val);
 #define simpleclamp(val) clamp_val(val, 0, 1)
 #define human_readable(regval) show_sound_value(tabla_read(snd_engine_codec_ptr, regval))
+#define read_reg(regval) tabla_read(snd_engine_codec_ptr, regval)
 #define REG_SZ 5
 
 static unsigned int cached_regs[REG_SZ] = { 0, 0, 0, 0, 0 };
@@ -395,8 +396,13 @@ static ssize_t sound_control_register_list_show(struct kobject *kobj,
 			"RX4_Vol_B2_Ctrl reg:%u val:%u\n"
 			"RX6_Vol_B2_Ctrl reg:%u val:%u\n"
 			"RX7_Vol_B2_Ctrl reg:%u val:%u\n"
-			"HPH L Gain reg:%u val:%d\n"
-			"HPH R Gain reg:%u val:%d\n",
+			"Line 1 Gain reg:%u val:%u\n"
+			"Line 2 Gain reg:%u val:%u\n"
+			"Line 3 Gain reg:%u val:%u\n"
+			"Line 4 Gain reg:%u val:%u\n"
+			"Line 5 Gain reg:%u val:%u\n"
+			"HPH L Gain reg:%u val:%d raw: %d\n"
+			"HPH R Gain reg:%u val:%d raw: %d\n",
 			TABLA_A_CDC_RX1_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX1_VOL_CTL_B2_CTL),
 			TABLA_A_CDC_RX2_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX2_VOL_CTL_B2_CTL),
 			TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX5_VOL_CTL_B2_CTL),
@@ -413,11 +419,14 @@ static ssize_t sound_control_register_list_show(struct kobject *kobj,
 			TABLA_A_CDC_RX4_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX4_VOL_CTL_B2_CTL),
 			TABLA_A_CDC_RX6_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX6_VOL_CTL_B2_CTL),
 			TABLA_A_CDC_RX7_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX7_VOL_CTL_B2_CTL),
-			TABLA_A_RX_HPH_L_GAIN, human_readable(TABLA_A_RX_HPH_L_GAIN),
-			TABLA_A_RX_HPH_R_GAIN, human_readable(TABLA_A_RX_HPH_R_GAIN));
+			TABLA_A_RX_HPH_L_GAIN, human_readable(TABLA_A_RX_HPH_L_GAIN), read_reg(TABLA_A_RX_HPH_L_GAIN),
+			TABLA_A_RX_HPH_R_GAIN, human_readable(TABLA_A_RX_HPH_R_GAIN), read_reg(TABLA_A_RX_HPH_R_GAIN),
+			TABLA_A_RX_LINE_1_GAIN, human_readable(TABLA_A_RX_LINE_1_GAIN),
+			TABLA_A_RX_LINE_2_GAIN, human_readable(TABLA_A_RX_LINE_2_GAIN),
+			TABLA_A_RX_LINE_3_GAIN, human_readable(TABLA_A_RX_LINE_3_GAIN),
+			TABLA_A_RX_LINE_4_GAIN, human_readable(TABLA_A_RX_LINE_4_GAIN),
+			TABLA_A_RX_LINE_5_GAIN, human_readable(TABLA_A_RX_LINE_5_GAIN));
 }
-
-
 
 static ssize_t sound_control_version_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)

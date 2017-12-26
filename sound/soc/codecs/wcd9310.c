@@ -879,7 +879,7 @@ static int tabla_config_gain_compander(
 	}
 
 	if ((enable == 0) || SND_SOC_DAPM_EVENT_OFF(event))
-		value = 1 << 4;
+		value = mask;
 
 	if (compander == COMPANDER_1) {
 		tabla_compander_gain_offset(codec, enable,
@@ -887,6 +887,7 @@ static int tabla_config_gain_compander(
 				TABLA_A_CDC_RX1_VOL_CTL_B2_CTL,
 				mask, event, &gain_offset, 0);
 		snd_soc_update_bits(codec, TABLA_A_RX_HPH_L_GAIN, mask, value);
+		mxcodec_dbg("[%s] Compander Setting HPH L Gain to %d\n", __func__, value);
 		snd_soc_update_bits(codec, TABLA_A_CDC_RX1_VOL_CTL_B2_CTL,
 				    0xFF, gain_offset.whole_db_gain);
 		snd_soc_update_bits(codec, TABLA_A_CDC_RX1_B6_CTL,
@@ -896,6 +897,7 @@ static int tabla_config_gain_compander(
 				TABLA_A_CDC_RX2_VOL_CTL_B2_CTL,
 				mask, event, &gain_offset, 1);
 		snd_soc_update_bits(codec, TABLA_A_RX_HPH_R_GAIN, mask, value);
+		mxcodec_dbg("[%s] Compander Setting HPH R Gain to %d\n", __func__, value);
 		snd_soc_update_bits(codec, TABLA_A_CDC_RX2_VOL_CTL_B2_CTL,
 				    0xFF, gain_offset.whole_db_gain);
 		snd_soc_update_bits(codec, TABLA_A_CDC_RX2_B6_CTL,
@@ -2599,19 +2601,31 @@ static bool tabla_is_hph_pa_on(struct snd_soc_codec *codec)
 {
 	u8 hph_reg_val = 0;
 	hph_reg_val = snd_soc_read(codec, TABLA_A_RX_HPH_CNP_EN);
-
+	if (mx_wcd_debug)
+		prfunction();
+	mxcodec_dbg("hph_reg raw: %u adjusted: %u\n", hph_reg_val, hph_reg_val & 0x30);
 	return (hph_reg_val & 0x30) ? true : false;
 }
 
 static bool tabla_is_hph_dac_on(struct snd_soc_codec *codec, int left)
 {
 	u8 hph_reg_val = 0;
-	if (left)
+
+	if (mx_wcd_debug)
+		prfunction();
+
+	if (left) {
 		hph_reg_val = snd_soc_read(codec,
 					   TABLA_A_RX_HPH_L_DAC_CTL);
-	else
+		mxcodec_dbg("hph_left_dac_reg raw: %u adjusted: %u\n",
+						hph_reg_val, hph_reg_val & 0xC0);
+
+	} else {
 		hph_reg_val = snd_soc_read(codec,
 					   TABLA_A_RX_HPH_R_DAC_CTL);
+		mxcodec_dbg("hph_right_dac_reg raw: %u adjusted: %u\n",
+						hph_reg_val, hph_reg_val & 0xC0);
+	}
 
 	return (hph_reg_val & 0xC0) ? true : false;
 }
@@ -5945,7 +5959,7 @@ void tabla_set_and_turnoff_hph_padac(struct snd_soc_codec *codec)
 		set_bit(TABLA_HPHL_PA_OFF_ACK, &tabla->hph_pa_dac_state);
 		set_bit(TABLA_HPHR_PA_OFF_ACK, &tabla->hph_pa_dac_state);
 	} else {
-		mxcodec_dbg("%s PA is off\n", __func__);
+		mxcodec_dbg("%s PA is already off\n", __func__);
 	}
 
 	if (tabla_is_hph_dac_on(codec, 1))
