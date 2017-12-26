@@ -28,6 +28,13 @@
 
 #define BUCK_SETTLE_TIME_US 50
 #define NCP_SETTLE_TIME_US 50
+static bool debug_clsh = false;
+module_param(debug_clsh, bool, 0644);
+#define pr_clsh(msg...)		\
+do { 				\
+	if (debug_clsh)		\
+		pr_info(msg);	\
+} while (0)
 
 static inline void
 wcd9xxx_enable_clsh_block(struct snd_soc_codec *codec,
@@ -37,7 +44,7 @@ wcd9xxx_enable_clsh_block(struct snd_soc_codec *codec,
 	    (!enable && --clsh_d->clsh_users == 0))
 		snd_soc_update_bits(codec, WCD9XXX_A_CDC_CLSH_B1_CTL,
 				    0x01, enable ? 0x01 : 0x00);
-	dev_dbg(codec->dev, "%s: clsh_users %d, enable %d", __func__,
+	pr_clsh("%s: clsh_users %d, enable %d", __func__,
 		clsh_d->clsh_users, enable);
 }
 
@@ -58,7 +65,7 @@ wcd9xxx_enable_buck(struct snd_soc_codec *codec,
 	    (!enable && --clsh_d->buck_users == 0))
 		snd_soc_update_bits(codec, WCD9XXX_A_BUCK_MODE_1,
 				    0x80, enable ? 0x80 : 0x00);
-	dev_dbg(codec->dev, "%s: buck_users %d, enable %d", __func__,
+	pr_clsh("%s: buck_users %d, enable %d", __func__,
 		clsh_d->buck_users, enable);
 }
 
@@ -124,7 +131,7 @@ static void wcd9xxx_cfg_clsh_param_common(
 		snd_soc_update_bits(codec, reg_set[i].reg, reg_set[i].mask,
 						    reg_set[i].val);
 
-	dev_dbg(codec->dev, "%s: Programmed class H controller common parameters",
+	pr_clsh("%s: Programmed class H controller common parameters",
 			 __func__);
 }
 
@@ -142,12 +149,12 @@ static void wcd9xxx_chargepump_request(
 
 	else if (!on) {
 		if (--cp_count < 0) {
-			dev_dbg(codec->dev,
+			pr_clsh(
 				"%s: Unbalanced disable for charge pump\n",
 				__func__);
 			if (snd_soc_read(codec, WCD9XXX_A_CDC_CLK_OTHR_CTL) &
 			    0x01) {
-				dev_dbg(codec->dev,
+				pr_clsh(
 					"%s: Actual chargepump is ON\n",
 					__func__);
 			}
@@ -158,7 +165,7 @@ static void wcd9xxx_chargepump_request(
 		if (cp_count == 0) {
 			snd_soc_update_bits(codec, WCD9XXX_A_CDC_CLK_OTHR_CTL,
 					    0x01, 0x00);
-			dev_dbg(codec->dev,
+			pr_clsh(
 				"%s: Charge pump disabled, count = %d\n",
 				__func__, cp_count);
 		}
@@ -209,7 +216,7 @@ static void wcd9xxx_set_buck_mode(struct snd_soc_codec *codec, u8 buck_vref)
 		snd_soc_update_bits(codec, reg_set[i].reg,
 					reg_set[i].mask, reg_set[i].val);
 
-	dev_dbg(codec->dev, "%s: Done\n", __func__);
+	pr_clsh("%s: Done\n", __func__);
 	usleep_range(BUCK_SETTLE_TIME_US, BUCK_SETTLE_TIME_US);
 }
 
@@ -227,7 +234,7 @@ static void wcd9xxx_clsh_enable_post_pa(struct snd_soc_codec *codec)
 		snd_soc_update_bits(codec, reg_set[i].reg,
 					reg_set[i].mask, reg_set[i].val);
 
-	dev_dbg(codec->dev, "%s: completed clsh mode settings after PA enable\n",
+	pr_clsh("%s: completed clsh mode settings after PA enable\n",
 		   __func__);
 
 }
@@ -308,7 +315,7 @@ static void wcd9xxx_cfg_clsh_param_ear(struct snd_soc_codec *codec)
 		snd_soc_update_bits(codec, reg_set[i].reg,
 					reg_set[i].mask, reg_set[i].val);
 
-	dev_dbg(codec->dev, "%s: Programmed Class H controller EAR specific params\n",
+	pr_clsh("%s: Programmed Class H controller EAR specific params\n",
 			 __func__);
 }
 
@@ -340,7 +347,7 @@ static void wcd9xxx_cfg_clsh_param_hph(struct snd_soc_codec *codec)
 	for (i = 0; i < ARRAY_SIZE(reg_set); i++)
 		snd_soc_update_bits(codec, reg_set[i].reg, reg_set[i].mask,
 							reg_set[i].val);
-	dev_dbg(codec->dev, "%s: Programmed Class H controller HPH specific params\n",
+	pr_clsh("%s: Programmed Class H controller HPH specific params\n",
 			 __func__);
 }
 
@@ -360,9 +367,9 @@ static void wcd9xxx_clsh_state_ear(struct snd_soc_codec *codec,
 		wcd9xxx_enable_buck(codec, clsh_d, true);
 		wcd9xxx_set_fclk_get_ncp(codec, clsh_d, NCP_FCLK_LEVEL_8);
 
-		dev_dbg(codec->dev, "%s: Enabled ear mode class h\n", __func__);
+		pr_clsh("%s: Enabled ear mode class h\n", __func__);
 	} else {
-		dev_dbg(codec->dev, "%s: stub fallback to ear\n", __func__);
+		pr_clsh("%s: stub fallback to ear\n", __func__);
 		wcd9xxx_set_fclk_put_ncp(codec, clsh_d, NCP_FCLK_LEVEL_8);
 		wcd9xxx_enable_buck(codec, clsh_d, false);
         wcd9xxx_clsh_computation_request(codec,
@@ -388,7 +395,7 @@ static void wcd9xxx_clsh_state_hph_l(struct snd_soc_codec *codec,
 		wcd9xxx_enable_buck(codec, clsh_d, true);
 		wcd9xxx_set_fclk_get_ncp(codec, clsh_d, NCP_FCLK_LEVEL_8);
 
-		dev_dbg(codec->dev, "%s: Done\n", __func__);
+		pr_clsh("%s: Done\n", __func__);
 	} else {
 		wcd9xxx_set_fclk_put_ncp(codec, clsh_d, NCP_FCLK_LEVEL_8);
 		wcd9xxx_enable_buck(codec, clsh_d, false);
@@ -415,7 +422,7 @@ static void wcd9xxx_clsh_state_hph_r(struct snd_soc_codec *codec,
 		wcd9xxx_enable_buck(codec, clsh_d, true);
 		wcd9xxx_set_fclk_get_ncp(codec, clsh_d, NCP_FCLK_LEVEL_8);
 
-		dev_dbg(codec->dev, "%s: Done\n", __func__);
+		pr_clsh("%s: Done\n", __func__);
 	} else {
 		wcd9xxx_set_fclk_put_ncp(codec, clsh_d, NCP_FCLK_LEVEL_8);
 		wcd9xxx_enable_buck(codec, clsh_d, false);
@@ -438,7 +445,7 @@ static void wcd9xxx_clsh_state_hph_st(struct snd_soc_codec *codec,
 		wcd9xxx_clsh_computation_request(codec,
 				CLSH_COMPUTE_HPH_R, true);
 	} else {
-		dev_dbg(codec->dev, "%s: stub fallback to hph_st\n", __func__);
+		pr_clsh("%s: stub fallback to hph_st\n", __func__);
 	}
 }
 
@@ -468,7 +475,7 @@ static void wcd9xxx_clsh_state_lo(struct snd_soc_codec *codec,
 		}
 		snd_soc_update_bits(codec, WCD9XXX_A_BUCK_MODE_1, 0x04, 0x00);
 	} else {
-		dev_dbg(codec->dev, "%s: stub fallback to lineout\n", __func__);
+		pr_clsh("%s: stub fallback to lineout\n", __func__);
 		wcd9xxx_set_fclk_put_ncp(codec, clsh_d, NCP_FCLK_LEVEL_5);
 		if (clsh_d->buck_mv != WCD9XXX_CDC_BUCK_MV_1P8)
 			wcd9xxx_enable_buck(codec, clsh_d, false);
@@ -481,8 +488,7 @@ static void wcd9xxx_clsh_state_err(struct snd_soc_codec *codec,
 {
 	char msg[128];
 
-	dev_dbg(codec->dev,
-		"%s Wrong request for class H state machine requested to %s %s",
+	pr_clsh("%s Wrong request for class H state machine requested to %s %s",
 		__func__, is_enable ? "enable" : "disable",
 		state_to_str(req_state, msg, sizeof(msg)));
 	WARN_ON(1);
