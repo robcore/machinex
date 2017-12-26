@@ -831,7 +831,7 @@ static int tabla_compander_gain_offset(
 	struct tabla_priv *tabla = snd_soc_codec_get_drvdata(codec);
 
 	mxcodec_dbg("%s: pa_gain(hex:0x%x=0x%x dec:%u=%d)digital_vol(hex:0x%x=0x%x dec:0x%u=0x%d)event(0x%x) index(%d)\n",
-		 __func__, pa_reg, pa_gain, vol_reg, digital_vol, event, index);
+		 __func__, pa_reg, pa_gain, pa_reg, pa_gain, vol_reg, digital_vol, event, index);
 	if (((pa_gain & 0xF) + 1) > ARRAY_SIZE(comp_dgtl_gain) ||
 		(index >= ARRAY_SIZE(tabla->comp_gain_offset))) {
 		pr_err("%s: Out of array boundary\n", __func__);
@@ -843,7 +843,7 @@ static int tabla_compander_gain_offset(
 		  (digital_vol - comp_dgtl_gain[pa_gain & 0xF].whole_db_gain),
 		  comp_dgtl_gain[pa_gain & 0xF].half_db_gain);
 		mxcodec_dbg("%s: listed whole_db_gain hex:0x%x dec:0x%d, adjusted whole_db_gainhex:0x%x dec:0x%d\n",
-			 __func__, comp_dgtl_gain[pa_gain & 0xF].whole_db_gain,
+			 __func__, comp_dgtl_gain[pa_gain & 0xF].whole_db_gain, comp_dgtl_gain[pa_gain & 0xF].whole_db_gain,
 			 gain_offset->whole_db_gain);
 		gain_offset->half_db_gain =
 				comp_dgtl_gain[pa_gain & 0xF].half_db_gain;
@@ -854,7 +854,7 @@ static int tabla_compander_gain_offset(
 		gain_offset->whole_db_gain = digital_vol +
 					     tabla->comp_gain_offset[index];
 		mxcodec_dbg("%s: listed whole_db_gain hex:0x%x dec:0x%d, adjusted whole_db_gain hex:0x%x dec:0x%d\n",
-			 __func__, comp_dgtl_gain[pa_gain & 0xF].whole_db_gain,
+			 __func__, comp_dgtl_gain[pa_gain & 0xF].whole_db_gain, comp_dgtl_gain[pa_gain & 0xF].whole_db_gain,
 			 gain_offset->whole_db_gain);
 		gain_offset->half_db_gain = 0;
 	}
