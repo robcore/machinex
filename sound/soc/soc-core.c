@@ -2143,14 +2143,11 @@ EXPORT_SYMBOL_GPL(snd_soc_update_bits_locked);
 int snd_soc_test_bits(struct snd_soc_codec *codec, unsigned short reg,
 				unsigned int mask, unsigned int value)
 {
-	int change;
-	unsigned int old, new;
+	unsigned int old, new;	
 
 	old = snd_soc_read(codec, reg);
 	new = (old & ~mask) | value;
-	change = old != new;
-
-	return change;
+	return old != new;
 }
 EXPORT_SYMBOL_GPL(snd_soc_test_bits);
 

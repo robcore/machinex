@@ -610,7 +610,7 @@ static int tabla_pa_gain_get(struct snd_kcontrol *kcontrol,
 
 	ear_pa_gain = snd_soc_read(codec, TABLA_A_RX_EAR_GAIN);
 
-	ear_pa_gain = ear_pa_gain >> 5;
+	ear_pa_gain >>= 5;
 
 	if (ear_pa_gain == 0x00) {
 		ucontrol->value.integer.value[0] = 0;
@@ -830,8 +830,8 @@ static int tabla_compander_gain_offset(
 	int pa_mode = pa_gain & mask;
 	struct tabla_priv *tabla = snd_soc_codec_get_drvdata(codec);
 
-	mxcodec_dbg("%s: pa_gain(hex:0x%x=0x%x dec:%u=%d)digital_vol(hex:0x%x=0x%x dec:0x%u=0x%d)event(0x%x) index(%d)\n",
-		 __func__, pa_reg, pa_gain, pa_reg, pa_gain, vol_reg, digital_vol, event, index);
+	mxcodec_dbg("%s: pa_mode: %d pa_gain(hex:0x%x=0x%x dec:%u=%d)digital_vol(hex:0x%x=0x%x dec:0x%u=0x%d)event(0x%x) index(%d)\n",
+		 __func__, pa_mode, pa_reg, pa_gain, pa_reg, pa_gain, vol_reg, digital_vol, event, index);
 	if (((pa_gain & 0xF) + 1) > ARRAY_SIZE(comp_dgtl_gain) ||
 		(index >= ARRAY_SIZE(tabla->comp_gain_offset))) {
 		pr_err("%s: Out of array boundary\n", __func__);
@@ -878,9 +878,11 @@ static int tabla_config_gain_compander(
 		return -EINVAL;
 	}
 
-	if ((enable == 0) || SND_SOC_DAPM_EVENT_OFF(event))
+	if ((enable == 0) || SND_SOC_DAPM_EVENT_OFF(event)) {
 		value = mask;
-
+		mxcodec_dbg("Compander: Turning PowerAmp Off\n");
+	} else
+		mxcodec_dbg("Compander: Turning PowerAmp On\n");
 	if (compander == COMPANDER_1) {
 		tabla_compander_gain_offset(codec, enable,
 				TABLA_A_RX_HPH_L_GAIN,
