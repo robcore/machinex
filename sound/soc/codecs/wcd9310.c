@@ -4061,7 +4061,6 @@ static int tabla_readable(struct snd_soc_codec *ssc, unsigned int reg)
 }
 static bool tabla_is_digital_gain_register(unsigned int reg)
 {
-	bool rtn = false;
 	switch (reg) {
 	case TABLA_A_CDC_RX1_VOL_CTL_B2_CTL:
 	case TABLA_A_CDC_RX2_VOL_CTL_B2_CTL:
@@ -4080,14 +4079,13 @@ static bool tabla_is_digital_gain_register(unsigned int reg)
 	case TABLA_A_CDC_TX8_VOL_CTL_GAIN:
 	case TABLA_A_CDC_TX9_VOL_CTL_GAIN:
 	case TABLA_A_CDC_TX10_VOL_CTL_GAIN:
-		rtn = true;
-		break;
+		return true;
 	default:
 		break;
 	}
-	return rtn;
+	return false;
 }
-static int tabla_volatile(struct snd_soc_codec *ssc, unsigned int reg)
+static int tabla_volatile(struct snd_soc_codec *unused, unsigned int reg)
 {
 	/* Registers lower than 0x100 are top level registers which can be
 	 * written by the Tabla core driver.
