@@ -519,7 +519,7 @@ int force_fast_charge_init(void)
 			&force_fast_charge_attr_group);
 
         if (force_fast_charge_retval)
-                kobject_put(force_fast_charge_kobj);
+			kobject_put(force_fast_charge_kobj);
 
         return (force_fast_charge_retval);
 }
