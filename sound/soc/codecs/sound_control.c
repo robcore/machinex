@@ -23,11 +23,10 @@
 #include <linux/mfd/wcd9xxx/wcd9310_registers.h>
 #include <linux/sysfs_helpers.h>
 #include <linux/timed_output.h>
+#include "wcd9310.h"
 
 #define SOUND_CONTROL_MAJOR_VERSION	5
 #define SOUND_CONTROL_MINOR_VERSION	5
-
-extern struct snd_soc_codec *snd_engine_codec_ptr;
 
 unsigned int snd_ctrl_enabled = 0;
 unsigned int snd_ctrl_locked;
