@@ -23,23 +23,21 @@
 #include <linux/mfd/wcd9xxx/wcd9310_registers.h>
 #include <linux/sysfs_helpers.h>
 #include <linux/timed_output.h>
-#include "wcd9310.h"
 
 #define SOUND_CONTROL_MAJOR_VERSION	5
-#define SOUND_CONTROL_MINOR_VERSION	6
+#define SOUND_CONTROL_MINOR_VERSION	5
+
+extern struct snd_soc_codec *snd_engine_codec_ptr;
 
 unsigned int snd_ctrl_enabled = 0;
 unsigned int snd_ctrl_locked;
 unsigned int feedback_val = 125;
 unsigned int vib_feedback = 0;
 
-int snd_ctrl_hph_pa_gain;
-
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
 		unsigned int value);
 static int show_sound_value(int val);
-
 #define simpleclamp(val) clamp_val(val, 0, 1)
 #define human_readable(regval) show_sound_value(tabla_read(snd_engine_codec_ptr, regval))
 #define read_reg(regval) tabla_read(snd_engine_codec_ptr, regval)
@@ -297,29 +295,6 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 	return count;
 }
 
-static ssize_t headphone_pa_gain_show(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-	return snprintf(buf, PAGE_SIZE, "%d\n",
-		snd_ctrl_hph_pa_gain & 0x1F);
-}
-
-static ssize_t headphone_pa_gain_store(struct kobject *kobj,
-		struct kobj_attribute *attr, const char *buf, size_t count)
-{
-	unsigned int input;
-
-	sscanf(buf, "%d", &input);
-
-	sanitize_min_max(input, 0, 12)
-
-	snd_soc_update_bits(snd_engine_codec_ptr, TABLA_A_RX_HPH_L_GAIN, 0x1f, input);
-	snd_soc_update_bits(snd_engine_codec_ptr, TABLA_A_RX_HPH_R_GAIN, 0x1f, input);
-
-	snd_ctrl_hph_pa_gain = input;
-	return count;
-}
-
 static ssize_t cam_mic_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -485,12 +460,6 @@ static struct kobj_attribute headphone_gain_attribute =
 		headphone_gain_show,
 		headphone_gain_store);
 
-static struct kobj_attribute headphone_pa_gain_attribute =
-	__ATTR(gpl_headphone_pa_gain,
-		0664,
-		headphone_pa_gain_show,
-		headphone_pa_gain_store);
-
 static struct kobj_attribute speaker_gain_attribute =
 	__ATTR(gpl_speaker_gain,
 		0664,
@@ -525,7 +494,6 @@ static struct attribute *sound_control_attrs[] =
 	&sound_control_snd_vib_feedback_attribute.attr,
 	&sound_control_enabled_attribute.attr,
 	&headphone_gain_attribute.attr,
-	&headphone_pa_gain_attribute.attr,
 	&speaker_gain_attribute.attr,
 	&cam_mic_gain_attribute.attr,
 	&mic_gain_attribute.attr,
@@ -547,7 +515,6 @@ static int sound_control_init(void)
 	int ret = 0;
 
 	snd_ctrl_enabled = 0;
-	snd_ctrl_hph_pa_gain = snd_soc_read(snd_engine_codec_ptr, TABLA_A_RX_HPH_L_GAIN);
 
 	sound_control_kobj =
 		kobject_create_and_add("sound_control_3", kernel_kobj);

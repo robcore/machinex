@@ -56,6 +56,10 @@ do { 				\
 } while (0)
 
 #ifdef CONFIG_SOUND_CONTROL
+extern unsigned int snd_ctrl_enabled;
+extern int snd_reg_access(unsigned int);
+extern unsigned int snd_cache_read(unsigned int);
+extern void snd_cache_write(unsigned int, unsigned int);
 struct snd_soc_codec *snd_engine_codec_ptr;
 EXPORT_SYMBOL(snd_engine_codec_ptr);
 #endif
@@ -874,16 +878,11 @@ static int tabla_config_gain_compander(
 		return -EINVAL;
 	}
 
-	if (snd_ctrl_enabled)
-		return 0;
-
 	if ((enable == 0) || SND_SOC_DAPM_EVENT_OFF(event)) {
 		value = mask;
 		mxcodec_dbg("Compander: Turning PowerAmp Off\n");
-	} else {
+	} else
 		mxcodec_dbg("Compander: Turning PowerAmp On\n");
-	}
-
 	if (compander == COMPANDER_1) {
 		tabla_compander_gain_offset(codec, enable,
 				TABLA_A_RX_HPH_L_GAIN,
@@ -1217,12 +1216,10 @@ static const struct snd_kcontrol_new tabla_snd_controls[] = {
 	SOC_SINGLE_TLV("LINEOUT5 Volume", TABLA_A_RX_LINE_5_GAIN, 0, 12, 1,
 		line_gain),
 
-#ifndef CONFIG_SOUND_CONTROL
 	SOC_SINGLE_TLV("HPHL Volume", TABLA_A_RX_HPH_L_GAIN, 0, 12, 1,
 		line_gain),
 	SOC_SINGLE_TLV("HPHR Volume", TABLA_A_RX_HPH_R_GAIN, 0, 12, 1,
 		line_gain),
-#endif
 
 	SOC_SINGLE_S8_TLV("RX1 Digital Volume", TABLA_A_CDC_RX1_VOL_CTL_B2_CTL,
 		-84, 40, digital_gain),
