@@ -251,5 +251,9 @@ extern void *tabla_mbhc_cal_btn_det_mp(const struct tabla_mbhc_btn_detect_cfg
 	    (cfg_ptr->_n_rload * (sizeof(cfg_ptr->_rload[0]) + \
 				 sizeof(cfg_ptr->_alpha[0]))))
 
+/*Sound control*/
 extern struct snd_soc_codec *snd_engine_codec_ptr;
-
+extern unsigned int snd_ctrl_enabled;
+extern int snd_reg_access(unsigned int);
+extern unsigned int snd_cache_read(unsigned int);
+extern void snd_cache_write(unsigned int, unsigned int);

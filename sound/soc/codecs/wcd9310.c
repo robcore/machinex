@@ -56,10 +56,6 @@ do { 				\
 } while (0)
 
 #ifdef CONFIG_SOUND_CONTROL
-extern unsigned int snd_ctrl_enabled;
-extern int snd_reg_access(unsigned int);
-extern unsigned int snd_cache_read(unsigned int);
-extern void snd_cache_write(unsigned int, unsigned int);
 struct snd_soc_codec *snd_engine_codec_ptr;
 EXPORT_SYMBOL(snd_engine_codec_ptr);
 #endif
