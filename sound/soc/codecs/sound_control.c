@@ -33,7 +33,7 @@ unsigned int snd_ctrl_locked;
 unsigned int feedback_val = 125;
 unsigned int vib_feedback = 0;
 
-int snd_ctrl_hph_pa_gain;
+int snd_ctrl_hph_pa_gain = 12;
 
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
@@ -561,7 +561,6 @@ static int sound_control_init(void)
 	int sysfs_result;
 	int ret = 0;
 
-	snd_ctrl_hph_pa_gain = 0;
 	snd_ctrl_enabled = 0;
 
 	sound_control_kobj =
