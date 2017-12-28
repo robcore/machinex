@@ -572,6 +572,7 @@ static int sound_control_init(void)
 	int sysfs_result;
 	int ret = 0;
 
+	snd_ctrl_hph_pa_gain = 0;
 	snd_ctrl_enabled = 0;
 
 	sound_control_kobj =
