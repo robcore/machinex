@@ -33,7 +33,6 @@ unsigned int snd_ctrl_locked;
 unsigned int feedback_val = 125;
 unsigned int vib_feedback = 0;
 
-#define MAX_PA_GAIN 12
 int snd_ctrl_hph_pa_gain;
 
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
@@ -47,16 +46,6 @@ static int show_sound_value(int val);
 #define REG_SZ 5
 
 static unsigned int cached_regs[REG_SZ] = { 0, 0, 0, 0, 0 };
-
-static int invert_gain(int value)
-{
-	return MAX_PA_GAIN - value;
-}
-
-static int uninvert_gain(int value)
-{
-	return value + MAX_PA_GAIN;
-}
 
 static unsigned int *cache_select(unsigned int reg)
 {
@@ -312,7 +301,7 @@ static ssize_t headphone_pa_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
 	return sprintf(buf, "%d\n",
-			uninvert_gain(snd_ctrl_hph_pa_gain));
+			snd_ctrl_hph_pa_gain);
 }
 
 static ssize_t headphone_pa_gain_store(struct kobject *kobj,
@@ -326,17 +315,17 @@ static ssize_t headphone_pa_gain_store(struct kobject *kobj,
 	if (!snd_ctrl_enabled)
 		return count;
 
-	if (val == invert_gain(snd_ctrl_hph_pa_gain))
+	if (val == snd_ctrl_hph_pa_gain)
 		return count;
 
 	sanitize_min_max(val, 0, 12);
 
-	snd_ctrl_hph_pa_gain = invert_gain(val);
+	snd_ctrl_hph_pa_gain = val;
 
 	if (audio_is_playing) {
 		snd_ctrl_locked = 0;
-		snd_soc_update_bits(snd_engine_codec_ptr, TABLA_A_RX_HPH_L_GAIN, mask, snd_ctrl_hph_pa_gain);
-		snd_soc_update_bits(snd_engine_codec_ptr, TABLA_A_RX_HPH_R_GAIN, mask, snd_ctrl_hph_pa_gain);
+		snd_soc_update_bits(snd_engine_codec_ptr, TABLA_A_RX_HPH_L_GAIN, mask, (12 - snd_ctrl_hph_pa_gain));
+		snd_soc_update_bits(snd_engine_codec_ptr, TABLA_A_RX_HPH_R_GAIN, mask, (12 - snd_ctrl_hph_pa_gain));
 		snd_ctrl_locked = 1;
 	}
 

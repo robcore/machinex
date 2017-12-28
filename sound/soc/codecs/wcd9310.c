@@ -889,7 +889,7 @@ static int tabla_config_gain_compander(
 				TABLA_A_CDC_RX1_VOL_CTL_B2_CTL,
 				mask, event, &gain_offset, 0);
 		if (snd_ctrl_enabled && value != mask)
-			snd_soc_update_bits(codec, TABLA_A_RX_HPH_L_GAIN, mask, snd_ctrl_hph_pa_gain);
+			snd_soc_update_bits(codec, TABLA_A_RX_HPH_L_GAIN, mask, (12 - snd_ctrl_hph_pa_gain));
 		else
 			snd_soc_update_bits(codec, TABLA_A_RX_HPH_L_GAIN, mask, value);
 
@@ -904,7 +904,7 @@ static int tabla_config_gain_compander(
 				TABLA_A_CDC_RX2_VOL_CTL_B2_CTL,
 				mask, event, &gain_offset, 1);
 		if (snd_ctrl_enabled && value != mask)
-			snd_soc_update_bits(codec, TABLA_A_RX_HPH_R_GAIN, mask, snd_ctrl_hph_pa_gain);
+			snd_soc_update_bits(codec, TABLA_A_RX_HPH_R_GAIN, mask, (12 - snd_ctrl_hph_pa_gain));
 		else
 			snd_soc_update_bits(codec, TABLA_A_RX_HPH_R_GAIN, mask, value);
 		mxcodec_dbg("[%s] Compander Setting HPH R Gain to %d\n", __func__, value);
