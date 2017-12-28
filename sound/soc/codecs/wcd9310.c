@@ -58,7 +58,6 @@ do { 				\
 #ifdef CONFIG_SOUND_CONTROL
 struct snd_soc_codec *snd_engine_codec_ptr;
 EXPORT_SYMBOL(snd_engine_codec_ptr);
-bool audio_is_playing;
 #endif
 
 #define WCD9310_RATES (SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000 |\
@@ -875,24 +874,21 @@ static int tabla_config_gain_compander(
 		return -EINVAL;
 	}
 
+	if (snd_ctrl_enabled)
+		return 0;
+
 	if ((enable == 0) || SND_SOC_DAPM_EVENT_OFF(event)) {
-		audio_is_playing = false;
 		value = mask;
 		mxcodec_dbg("Compander: Turning PowerAmp Off\n");
 	} else {
-		audio_is_playing = true;
 		mxcodec_dbg("Compander: Turning PowerAmp On\n");
 	}
+
 	if (compander == COMPANDER_1) {
 		tabla_compander_gain_offset(codec, enable,
 				TABLA_A_RX_HPH_L_GAIN,
 				TABLA_A_CDC_RX1_VOL_CTL_B2_CTL,
 				mask, event, &gain_offset, 0);
-		if (snd_ctrl_enabled && value != mask)
-			snd_soc_update_bits(codec, TABLA_A_RX_HPH_L_GAIN, mask, (12 - snd_ctrl_hph_pa_gain));
-		else
-			snd_soc_update_bits(codec, TABLA_A_RX_HPH_L_GAIN, mask, value);
-
 		snd_soc_update_bits(codec, TABLA_A_RX_HPH_L_GAIN, mask, value);
 		mxcodec_dbg("[%s] Compander Setting HPH L Gain to %d\n", __func__, value);
 		snd_soc_update_bits(codec, TABLA_A_CDC_RX1_VOL_CTL_B2_CTL,
@@ -903,10 +899,7 @@ static int tabla_config_gain_compander(
 				TABLA_A_RX_HPH_R_GAIN,
 				TABLA_A_CDC_RX2_VOL_CTL_B2_CTL,
 				mask, event, &gain_offset, 1);
-		if (snd_ctrl_enabled && value != mask)
-			snd_soc_update_bits(codec, TABLA_A_RX_HPH_R_GAIN, mask, (12 - snd_ctrl_hph_pa_gain));
-		else
-			snd_soc_update_bits(codec, TABLA_A_RX_HPH_R_GAIN, mask, value);
+		snd_soc_update_bits(codec, TABLA_A_RX_HPH_R_GAIN, mask, value);
 		mxcodec_dbg("[%s] Compander Setting HPH R Gain to %d\n", __func__, value);
 		snd_soc_update_bits(codec, TABLA_A_CDC_RX2_VOL_CTL_B2_CTL,
 				    0xFF, gain_offset.whole_db_gain);
@@ -1224,10 +1217,12 @@ static const struct snd_kcontrol_new tabla_snd_controls[] = {
 	SOC_SINGLE_TLV("LINEOUT5 Volume", TABLA_A_RX_LINE_5_GAIN, 0, 12, 1,
 		line_gain),
 
+#ifndef CONFIG_SOUND_CONTROL
 	SOC_SINGLE_TLV("HPHL Volume", TABLA_A_RX_HPH_L_GAIN, 0, 12, 1,
 		line_gain),
 	SOC_SINGLE_TLV("HPHR Volume", TABLA_A_RX_HPH_R_GAIN, 0, 12, 1,
 		line_gain),
+#endif
 
 	SOC_SINGLE_S8_TLV("RX1 Digital Volume", TABLA_A_CDC_RX1_VOL_CTL_B2_CTL,
 		-84, 40, digital_gain),

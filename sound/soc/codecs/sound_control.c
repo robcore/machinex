@@ -33,7 +33,7 @@ unsigned int snd_ctrl_locked;
 unsigned int feedback_val = 125;
 unsigned int vib_feedback = 0;
 
-int snd_ctrl_hph_pa_gain = 12;
+int snd_ctrl_hph_pa_gain;
 
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
@@ -300,38 +300,23 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 static ssize_t headphone_pa_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%d\n",
-			snd_ctrl_hph_pa_gain);
+	return snprintf(buf, PAGE_SIZE, "%d\n",
+		snd_ctrl_hph_pa_gain & 0x1F);
 }
 
 static ssize_t headphone_pa_gain_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
-	int val;
-	int mask = 1 << 4;
+	unsigned int input;
 
-	sscanf(buf, "%d", &val);
+	sscanf(buf, "%d", &input);
 
-	if (!snd_ctrl_enabled)
-		return count;
+	sanitize_min_max(input, 0, 12)
 
-	if (val == snd_ctrl_hph_pa_gain)
-		return count;
+	snd_soc_update_bits(snd_engine_codec_ptr, TABLA_A_RX_HPH_L_GAIN, 0x1f, input);
+	snd_soc_update_bits(snd_engine_codec_ptr, TABLA_A_RX_HPH_R_GAIN, 0x1f, input);
 
-	sanitize_min_max(val, 0, 12);
-
-	snd_ctrl_hph_pa_gain = val;
-
-	if (audio_is_playing) {
-		snd_ctrl_locked = 0;
-		snd_soc_update_bits(snd_engine_codec_ptr, TABLA_A_RX_HPH_L_GAIN, mask, (12 - snd_ctrl_hph_pa_gain));
-		snd_soc_update_bits(snd_engine_codec_ptr, TABLA_A_RX_HPH_R_GAIN, mask, (12 - snd_ctrl_hph_pa_gain));
-		snd_ctrl_locked = 1;
-	}
-
-	if (vib_feedback && feedback_val)
-		machinex_vibrator(feedback_val);
-
+	snd_ctrl_hph_pa_gain = input;
 	return count;
 }
 
@@ -562,6 +547,7 @@ static int sound_control_init(void)
 	int ret = 0;
 
 	snd_ctrl_enabled = 0;
+	snd_ctrl_hph_pa_gain = snd_soc_read(snd_engine_codec_ptr, TABLA_A_RX_HPH_L_GAIN);
 
 	sound_control_kobj =
 		kobject_create_and_add("sound_control_3", kernel_kobj);
