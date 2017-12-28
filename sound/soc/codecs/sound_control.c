@@ -26,23 +26,37 @@
 #include "wcd9310.h"
 
 #define SOUND_CONTROL_MAJOR_VERSION	5
-#define SOUND_CONTROL_MINOR_VERSION	5
+#define SOUND_CONTROL_MINOR_VERSION	6
 
 unsigned int snd_ctrl_enabled = 0;
 unsigned int snd_ctrl_locked;
 unsigned int feedback_val = 125;
 unsigned int vib_feedback = 0;
 
+#define MAX_PA_GAIN 12
+int snd_ctrl_hph_pa_gain;
+
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
 		unsigned int value);
 static int show_sound_value(int val);
+
 #define simpleclamp(val) clamp_val(val, 0, 1)
 #define human_readable(regval) show_sound_value(tabla_read(snd_engine_codec_ptr, regval))
 #define read_reg(regval) tabla_read(snd_engine_codec_ptr, regval)
 #define REG_SZ 5
 
 static unsigned int cached_regs[REG_SZ] = { 0, 0, 0, 0, 0 };
+
+static int invert_gain(int value)
+{
+	return MAX_PA_GAIN - value;
+}
+
+static int uninvert_gain(int value)
+{
+	return value + MAX_PA_GAIN;
+}
 
 static unsigned int *cache_select(unsigned int reg)
 {
@@ -294,6 +308,44 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 	return count;
 }
 
+static ssize_t headphone_pa_gain_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n",
+			uninvert_gain(snd_ctrl_hph_pa_gain));
+}
+
+static ssize_t headphone_pa_gain_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int val;
+	int mask = 1 << 4;
+
+	sscanf(buf, "%d", &val);
+
+	if (!snd_ctrl_enabled)
+		return count;
+
+	if (val == invert_gain(snd_ctrl_hph_pa_gain))
+		return count;
+
+	sanitize_min_max(val, 0, 12);
+
+	snd_ctrl_hph_pa_gain = invert_gain(val);
+
+	if (audio_is_playing) {
+		snd_ctrl_locked = 0;
+		snd_soc_update_bits(snd_engine_codec_ptr, TABLA_A_RX_HPH_L_GAIN, mask, snd_ctrl_hph_pa_gain);
+		snd_soc_update_bits(snd_engine_codec_ptr, TABLA_A_RX_HPH_R_GAIN, mask, snd_ctrl_hph_pa_gain);
+		snd_ctrl_locked = 1;
+	}
+
+	if (vib_feedback && feedback_val)
+		machinex_vibrator(feedback_val);
+
+	return count;
+}
+
 static ssize_t cam_mic_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -459,6 +511,12 @@ static struct kobj_attribute headphone_gain_attribute =
 		headphone_gain_show,
 		headphone_gain_store);
 
+static struct kobj_attribute headphone_pa_gain_attribute =
+	__ATTR(gpl_headphone_pa_gain,
+		0664,
+		headphone_pa_gain_show,
+		headphone_pa_gain_store);
+
 static struct kobj_attribute speaker_gain_attribute =
 	__ATTR(gpl_speaker_gain,
 		0664,
@@ -493,6 +551,7 @@ static struct attribute *sound_control_attrs[] =
 	&sound_control_snd_vib_feedback_attribute.attr,
 	&sound_control_enabled_attribute.attr,
 	&headphone_gain_attribute.attr,
+	&headphone_pa_gain_attribute.attr,
 	&speaker_gain_attribute.attr,
 	&cam_mic_gain_attribute.attr,
 	&mic_gain_attribute.attr,

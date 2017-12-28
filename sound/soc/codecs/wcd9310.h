@@ -257,3 +257,5 @@ extern unsigned int snd_ctrl_enabled;
 extern int snd_reg_access(unsigned int);
 extern unsigned int snd_cache_read(unsigned int);
 extern void snd_cache_write(unsigned int, unsigned int);
+extern int snd_ctrl_hph_pa_gain;
+extern bool audio_is_playing;
