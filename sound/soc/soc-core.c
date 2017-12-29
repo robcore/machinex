@@ -2074,7 +2074,7 @@ EXPORT_SYMBOL_GPL(snd_soc_bulk_write_raw);
  *
  * Returns 1 for change, 0 for no change, or negative error code.
  */
-static unsigned int mx_audio_deep_debug = 1;
+static unsigned int mx_audio_deep_debug;
 module_param(mx_audio_deep_debug, uint, 0644);
 
 int snd_soc_update_bits(struct snd_soc_codec *codec, unsigned short reg,
