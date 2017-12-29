@@ -2074,12 +2074,23 @@ EXPORT_SYMBOL_GPL(snd_soc_bulk_write_raw);
  *
  * Returns 1 for change, 0 for no change, or negative error code.
  */
+static unsigned int mx_audio_deep_debug;
+module_param(mx_audio_deep_debug, uint, 0644);
+
 int snd_soc_update_bits(struct snd_soc_codec *codec, unsigned short reg,
 				unsigned int mask, unsigned int value)
 {
 	bool change;
 	unsigned int old, new;
 	int ret;
+
+	if (mx_audio_deep_debug) {
+		if (reg == 0x1ae || reg == 0x1b4) {
+			prfunction();
+			pr_info("[%s] Mask: %u Value: %u\n",
+				reg == 0x1ae ? "hph left" : "hph right", mask, value);
+		}
+	}
 
 	if (codec->using_regmap) {
 		ret = regmap_update_bits_check(codec->control_data, reg,
@@ -2091,6 +2102,10 @@ int snd_soc_update_bits(struct snd_soc_codec *codec, unsigned short reg,
 
 		old = ret;
 		new = (old & ~mask) | (value & mask);
+		if (mx_audio_deep_debug) {
+			if (reg == 0x1ae || reg == 0x1b4)
+				pr_info("old value: %u new value: %u\n", old, new);
+		}
 		change = old != new;
 		if (change)
 			ret = snd_soc_write(codec, reg, new);
