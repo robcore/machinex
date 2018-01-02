@@ -204,8 +204,6 @@ again:
 		mutex_unlock(&mx_mutex);
 		schedule();
 		mutex_lock(&mx_mutex);
-		if (clutch)
-			goto purge;
 	}
 
 	set_current_state(TASK_RUNNING);
