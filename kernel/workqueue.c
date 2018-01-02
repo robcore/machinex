@@ -3157,13 +3157,13 @@ struct workqueue_attrs *alloc_workqueue_attrs(gfp_t gfp_mask)
 	attrs = kzalloc(sizeof(*attrs), gfp_mask);
 	if (!attrs)
 		goto fail;
-	if (!alloc_cpumask_var(&attrs->cpumask, gfp_mask))
+	if (!alloc_cpumask_var(&attrs->cpumask, gfp_mask)) {
+		kfree(attrs);
 		goto fail;
-
+	}
 	cpumask_copy(attrs->cpumask, cpu_possible_mask);
 	return attrs;
 fail:
-	free_workqueue_attrs(attrs);
 	return NULL;
 }
 
