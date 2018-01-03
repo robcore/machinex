@@ -405,7 +405,7 @@ static ssize_t sound_reg_select_store(struct kobject *kobj,
 		return count;
 
 	sscanf(buf, "%u", &input);
-	if (selected_reg == 999999)
+	if (input == 999999)
 		selected_reg = 0xdeadbeef; /*reset*/
 	else
 		selected_reg = input;
