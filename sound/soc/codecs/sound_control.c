@@ -25,7 +25,7 @@
 #include <linux/timed_output.h>
 
 #define SOUND_CONTROL_MAJOR_VERSION	5
-#define SOUND_CONTROL_MINOR_VERSION	5
+#define SOUND_CONTROL_MINOR_VERSION	6
 
 extern struct snd_soc_codec *snd_engine_codec_ptr;
 
@@ -33,16 +33,17 @@ unsigned int snd_ctrl_enabled = 0;
 unsigned int snd_ctrl_locked;
 unsigned int feedback_val = 125;
 unsigned int vib_feedback = 0;
+static unsigned int selected_reg = 0xdeadbeef;
 
-unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
-int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
+extern unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
+extern int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
 		unsigned int value);
 static int show_sound_value(int val);
 #define simpleclamp(val) clamp_val(val, 0, 1)
 #define human_readable(regval) show_sound_value(tabla_read(snd_engine_codec_ptr, regval))
 #define read_reg(regval) tabla_read(snd_engine_codec_ptr, regval)
 #define REG_SZ 5
-
+#define tabla_err() pr_err("%s: failed to write to tabla driver\n", __func__)
 static unsigned int cached_regs[REG_SZ] = { 0, 0, 0, 0, 0 };
 
 static unsigned int *cache_select(unsigned int reg)
@@ -92,6 +93,9 @@ int snd_reg_access(unsigned int reg)
 {
 	int ret = 1;
 
+	if (!snd_ctrl_enabled || snd_ctrl_locked)
+		return ret;
+
 	switch (reg) {
 		/* Digital Headphones/Speaker Gain */
 		case TABLA_A_CDC_RX1_VOL_CTL_B2_CTL:
@@ -101,11 +105,9 @@ int snd_reg_access(unsigned int reg)
 		case TABLA_A_CDC_TX6_VOL_CTL_GAIN:
 		/* Camera MIC Gain */
 		case TABLA_A_CDC_TX7_VOL_CTL_GAIN:
-			if (snd_ctrl_enabled && snd_ctrl_locked)
-				ret = 0;
+			ret = 0;
 			break;
 		default:
-			return ret;
 			break;
 	}
 
@@ -200,8 +202,6 @@ static ssize_t sound_control_enabled_store(struct kobject *kobj,
     return count;
 }
 
-static unsigned int selected_reg = 0xdeadbeef;
-
 static ssize_t speaker_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -234,10 +234,12 @@ static ssize_t speaker_gain_store(struct kobject *kobj,
 	}
 
 	snd_ctrl_locked = 0;
-	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, lrval);
-	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, lrval);
+	if (tabla_write(snd_engine_codec_ptr,
+		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, lrval) < 0)
+		tabla_err();
+	if (tabla_write(snd_engine_codec_ptr,
+		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, lrval) < 0)
+		tabla_err();
 	snd_ctrl_locked = 1;
 
 	if (vib_feedback && feedback_val)
@@ -281,10 +283,12 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 	}
 
 	snd_ctrl_locked = 0;
-	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_RX1_VOL_CTL_B2_CTL, lrval);
-	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_RX2_VOL_CTL_B2_CTL, lrval);
+	if (tabla_write(snd_engine_codec_ptr,
+		TABLA_A_CDC_RX1_VOL_CTL_B2_CTL, lrval) < 0)
+		tabla_err();
+	if (tabla_write(snd_engine_codec_ptr,
+		TABLA_A_CDC_RX2_VOL_CTL_B2_CTL, lrval) < 0)
+		tabla_err();
 	snd_ctrl_locked = 1;
 
 	if (vib_feedback && feedback_val)
@@ -324,8 +328,9 @@ static ssize_t cam_mic_gain_store(struct kobject *kobj,
 		}
 
 	snd_ctrl_locked = 0;
-	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_TX6_VOL_CTL_GAIN, val);
+	if (tabla_write(snd_engine_codec_ptr,
+		TABLA_A_CDC_TX6_VOL_CTL_GAIN, val) < 0)
+		tabla_err();
 	snd_ctrl_locked = 1;
 
 	if (vib_feedback && feedback_val)
@@ -365,8 +370,9 @@ static ssize_t mic_gain_store(struct kobject *kobj,
 		}
 
 	snd_ctrl_locked = 0;
-	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_TX7_VOL_CTL_GAIN, val);
+	if (tabla_write(snd_engine_codec_ptr,
+		TABLA_A_CDC_TX7_VOL_CTL_GAIN, val) < 0)
+		tabla_err();
 	snd_ctrl_locked = 1;
 
 	if (vib_feedback && feedback_val)
@@ -374,6 +380,66 @@ static ssize_t mic_gain_store(struct kobject *kobj,
 
 	count = checksum;
 
+	return count;
+}
+
+static ssize_t sound_reg_select_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	if (!snd_ctrl_enabled)
+		return sprintf(buf, "%s\n",
+			"Disabled");
+	else if (selected_reg != 0xdeadbeef)
+		return sprintf(buf, "%u\n",
+			selected_reg);
+	else
+		return sprintf(buf, "%s\n",
+			"Nothing Selected");
+}
+
+static ssize_t sound_reg_select_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	if (!snd_ctrl_enabled)
+		return count;
+
+	sscanf(buf, "%u", &selected_reg);
+
+	return count;
+}
+
+static ssize_t sound_reg_read_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	if (!snd_ctrl_enabled)
+		return sprintf(buf, "%s\n",
+			"Disabled");
+	else if (selected_reg != 0xdeadbeef)
+		return sprintf(buf, "%u\n",
+			human_readable(selected_reg));
+	else
+		return sprintf(buf, "%s\n",
+			"Nothing Selected");
+}
+
+static ssize_t sound_reg_write_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	unsigned int out;
+
+	sscanf(buf, "%u", &out);
+
+	if (!snd_ctrl_enabled)
+		return count;
+
+	if (selected_reg != 0xdeadbeef) {
+		snd_ctrl_locked = 0;
+		if (tabla_write(snd_engine_codec_ptr,
+			selected_reg, out) < 0)
+			tabla_err();
+		snd_ctrl_locked = 1;
+		selected_reg = 0xdeadbeef; /*reset*/
+	}
 	return count;
 }
 
@@ -478,6 +544,18 @@ static struct kobj_attribute mic_gain_attribute =
 		mic_gain_show,
 		mic_gain_store);
 
+static struct kobj_attribute sound_reg_sel_attribute =
+	__ATTR(sound_reg_sel,
+		0644,
+		sound_reg_select_show,
+		sound_reg_select_store);
+
+static struct kobj_attribute sound_reg_rw_attribute =
+	__ATTR(sound_reg_rw,
+		0644,
+		sound_reg_read_show,
+		sound_reg_write_store);
+
 static struct kobj_attribute sound_control_version_attribute =
 	__ATTR(gpl_sound_control_version,
 		0444,
@@ -497,6 +575,7 @@ static struct attribute *sound_control_attrs[] =
 	&speaker_gain_attribute.attr,
 	&cam_mic_gain_attribute.attr,
 	&mic_gain_attribute.attr,
+	&sound_reg_rw_attribute.attr,
 	&sound_control_version_attribute.attr,
 	&sound_control_register_list_attribute.attr,
 	NULL,
@@ -513,8 +592,6 @@ static int sound_control_init(void)
 {
 	int sysfs_result;
 	int ret = 0;
-
-	snd_ctrl_enabled = 0;
 
 	sound_control_kobj =
 		kobject_create_and_add("sound_control_3", kernel_kobj);
