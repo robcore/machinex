@@ -93,8 +93,8 @@ int snd_reg_access(unsigned int reg)
 {
 	int ret = 1;
 
-	if (!snd_ctrl_enabled || snd_ctrl_locked)
-		return ret;
+	if (!snd_ctrl_enabled || !snd_ctrl_locked)
+		goto end;
 
 	switch (reg) {
 		/* Digital Headphones/Speaker Gain */
@@ -110,7 +110,7 @@ int snd_reg_access(unsigned int reg)
 		default:
 			break;
 	}
-
+end:
 	return ret;
 }
 EXPORT_SYMBOL(snd_reg_access);
