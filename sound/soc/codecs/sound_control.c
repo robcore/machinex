@@ -400,11 +400,15 @@ static ssize_t sound_reg_select_show(struct kobject *kobj,
 static ssize_t sound_reg_select_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
+	unsigned int input;
 	if (!snd_ctrl_enabled)
 		return count;
 
-	sscanf(buf, "%u", &selected_reg);
-
+	sscanf(buf, "%u", &input);
+	if (selected_reg == 999999)
+		selected_reg = 0xdeadbeef; /*reset*/
+	else
+		selected_reg = input;
 	return count;
 }
 
@@ -438,7 +442,6 @@ static ssize_t sound_reg_write_store(struct kobject *kobj,
 			selected_reg, out) < 0)
 			tabla_err();
 		snd_ctrl_locked = 1;
-		selected_reg = 0xdeadbeef; /*reset*/
 	}
 	return count;
 }
