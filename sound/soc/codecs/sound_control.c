@@ -93,7 +93,7 @@ int snd_reg_access(unsigned int reg)
 {
 	int ret = 1;
 
-	if (!snd_ctrl_enabled || !snd_ctrl_locked)
+	if (!snd_ctrl_locked)
 		goto end;
 
 	switch (reg) {
@@ -575,6 +575,7 @@ static struct attribute *sound_control_attrs[] =
 	&speaker_gain_attribute.attr,
 	&cam_mic_gain_attribute.attr,
 	&mic_gain_attribute.attr,
+	&sound_reg_sel_attribute.attr,
 	&sound_reg_rw_attribute.attr,
 	&sound_control_version_attribute.attr,
 	&sound_control_register_list_attribute.attr,
