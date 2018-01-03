@@ -4151,7 +4151,8 @@ int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
 		return wcd9xxx_reg_write(codec->control_data, reg, value);
 
 	if (!snd_reg_access(reg)) {
-		if (!((val = snd_cache_read(reg)) != -1))
+		val = snd_cache_read(reg);
+		if (val < 0)
 			val = wcd9xxx_reg_read_safe(codec->control_data, reg);
 	} else {
 		snd_cache_write(reg, value);
