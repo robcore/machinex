@@ -465,6 +465,17 @@ static ssize_t sound_control_register_list_show(struct kobject *kobj,
 			"RX4_Vol_B2_Ctrl reg:%u val:%u\n"
 			"RX6_Vol_B2_Ctrl reg:%u val:%u\n"
 			"RX7_Vol_B2_Ctrl reg:%u val:%u\n"
+			"RX1_Vol_B2_Ctrl reg:%u val:%u\n"
+			"RX2_Vol_B2_Ctrl reg:%u val:%u\n"
+			"RX3_Vol_B2_Ctrl reg:%u val:%u\n"
+			"RX4_Vol_B2_Ctrl reg:%u val:%u\n"
+			"RX5_Vol_B2_Ctrl reg:%u val:%u\n"
+			"RX6_Vol_B2_Ctrl reg:%u val:%u\n"
+			"RX7_Vol_B2_Ctrl reg:%u val:%u\n"
+			"RX3_Vol_B2_Ctrl reg:%u val:%u\n"
+			"RX4_Vol_B2_Ctrl reg:%u val:%u\n"
+			"RX6_Vol_B2_Ctrl reg:%u val:%u\n"
+			"RX7_Vol_B2_Ctrl reg:%u val:%u\n"
 			"HPH L Gain reg:%u val:%d raw: %d\n"
 			"HPH R Gain reg:%u val:%d raw: %d\n"
 			"Line 1 Gain reg:%u val:%u\n"
@@ -484,6 +495,17 @@ static ssize_t sound_control_register_list_show(struct kobject *kobj,
 			TABLA_A_CDC_RX5_VOL_CTL_B1_CTL, human_readable(TABLA_A_CDC_RX5_VOL_CTL_B1_CTL),
 			TABLA_A_CDC_RX6_VOL_CTL_B1_CTL, human_readable(TABLA_A_CDC_RX6_VOL_CTL_B1_CTL),
 			TABLA_A_CDC_RX7_VOL_CTL_B1_CTL, human_readable(TABLA_A_CDC_RX7_VOL_CTL_B1_CTL),
+			TABLA_A_CDC_RX3_VOL_CTL_B1_CTL, human_readable(TABLA_A_CDC_RX3_VOL_CTL_B1_CTL),
+			TABLA_A_CDC_RX4_VOL_CTL_B1_CTL, human_readable(TABLA_A_CDC_RX4_VOL_CTL_B1_CTL),
+			TABLA_A_CDC_RX6_VOL_CTL_B1_CTL, human_readable(TABLA_A_CDC_RX6_VOL_CTL_B1_CTL),
+			TABLA_A_CDC_RX7_VOL_CTL_B1_CTL, human_readable(TABLA_A_CDC_RX7_VOL_CTL_B1_CTL),
+			TABLA_A_CDC_RX1_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX1_VOL_CTL_B2_CTL),
+			TABLA_A_CDC_RX2_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX2_VOL_CTL_B2_CTL),
+			TABLA_A_CDC_RX3_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX3_VOL_CTL_B2_CTL),
+			TABLA_A_CDC_RX4_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX4_VOL_CTL_B2_CTL),
+			TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX5_VOL_CTL_B2_CTL),
+			TABLA_A_CDC_RX6_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX6_VOL_CTL_B2_CTL),
+			TABLA_A_CDC_RX7_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX7_VOL_CTL_B2_CTL),
 			TABLA_A_CDC_RX3_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX3_VOL_CTL_B2_CTL),
 			TABLA_A_CDC_RX4_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX4_VOL_CTL_B2_CTL),
 			TABLA_A_CDC_RX6_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX6_VOL_CTL_B2_CTL),
