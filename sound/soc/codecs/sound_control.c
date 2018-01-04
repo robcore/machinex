@@ -480,6 +480,10 @@ static ssize_t sound_control_register_list_show(struct kobject *kobj,
 			"Aux R Enable reg:%u val:%u\n"
 			"Aux L Gain reg:%u val:%u\n"
 			"Aux R Gain reg:%u val:%u\n"
+			"HPH L PA Ctl reg:%u val:%u\n"
+			"HPH R PA Ctl reg:%u val:%u\n"
+			"HPH L DAC Ctl reg:%u val:%u\n"
+			"HPH R DAC Ctl reg:%u val:%u\n"
 			"HPH L Gain reg:%u val:%d\n"
 			"HPH R Gain reg:%u val:%d\n"
 			"Line 1 Gain reg:%u val:%u\n"
@@ -487,13 +491,11 @@ static ssize_t sound_control_register_list_show(struct kobject *kobj,
 			"Line 3 Gain reg:%u val:%u\n"
 			"Line 4 Gain reg:%u val:%u\n"
 			"Line 5 Gain reg:%u val:%u\n",
-
 			TABLA_A_CDC_RX1_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX1_VOL_CTL_B2_CTL),
 			TABLA_A_CDC_RX2_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX2_VOL_CTL_B2_CTL),
 			TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX5_VOL_CTL_B2_CTL),
 			TABLA_A_CDC_TX6_VOL_CTL_GAIN, human_readable(TABLA_A_CDC_TX6_VOL_CTL_GAIN),
 			TABLA_A_CDC_TX7_VOL_CTL_GAIN, human_readable(TABLA_A_CDC_TX7_VOL_CTL_GAIN),
-
 			TABLA_A_CDC_RX1_VOL_CTL_B1_CTL, human_readable(TABLA_A_CDC_RX1_VOL_CTL_B1_CTL),
 			TABLA_A_CDC_RX2_VOL_CTL_B1_CTL, human_readable(TABLA_A_CDC_RX2_VOL_CTL_B1_CTL),
 			TABLA_A_CDC_RX3_VOL_CTL_B1_CTL, human_readable(TABLA_A_CDC_RX3_VOL_CTL_B1_CTL),
@@ -516,12 +518,14 @@ static ssize_t sound_control_register_list_show(struct kobject *kobj,
 			TABLA_A_CDC_RX4_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX4_VOL_CTL_B2_CTL),
 			TABLA_A_CDC_RX6_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX6_VOL_CTL_B2_CTL),
 			TABLA_A_CDC_RX7_VOL_CTL_B2_CTL, human_readable(TABLA_A_CDC_RX7_VOL_CTL_B2_CTL),
-
 			TABLA_A_AUX_L_EN, human_readable(TABLA_A_AUX_L_EN),
 			TABLA_A_AUX_R_EN, human_readable(TABLA_A_AUX_R_EN),
 			TABLA_A_AUX_L_GAIN, human_readable(TABLA_A_AUX_L_GAIN),
 			TABLA_A_AUX_R_GAIN, human_readable(TABLA_A_AUX_R_GAIN),
-
+			TABLA_A_RX_HPH_L_PA_CTL, human_readable(TABLA_A_RX_HPH_L_PA_CTL),
+			TABLA_A_RX_HPH_R_PA_CTL, human_readable(TABLA_A_RX_HPH_R_PA_CTL),
+			TABLA_A_RX_HPH_L_DAC_CTL, human_readable(TABLA_A_RX_HPH_L_DAC_CTL),
+			TABLA_A_RX_HPH_R_DAC_CTL, human_readable(TABLA_A_RX_HPH_R_DAC_CTL),
 			TABLA_A_RX_HPH_L_GAIN, human_readable(TABLA_A_RX_HPH_L_GAIN),
 			TABLA_A_RX_HPH_R_GAIN, human_readable(TABLA_A_RX_HPH_R_GAIN),
 			TABLA_A_RX_LINE_1_GAIN, human_readable(TABLA_A_RX_LINE_1_GAIN),
