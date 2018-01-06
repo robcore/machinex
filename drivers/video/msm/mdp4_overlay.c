@@ -3771,10 +3771,10 @@ int mdp4_overlay_set(struct fb_info *info, struct mdp_overlay *req)
 	if (req->src.format == MDP_FB_FORMAT)
 		req->src.format = mfd->fb_imgType;
 
-//	if (mutex_lock_interruptible(&mfd->dma->ov_mutex)) {
-	if (!mutex_trylock(&mfd->dma->ov_mutex)) {
+	if (mutex_lock_interruptible(&mfd->dma->ov_mutex)) {
+//	if (!mutex_trylock(&mfd->dma->ov_mutex)) {
 		pr_err("%s: mutex_trylock failed\n", __func__);
-		return -EBUSY;
+		return -EINTR;
 	}
 
 	ret = mdp4_calc_req_blt(mfd, req);
