@@ -3713,7 +3713,7 @@ int mdp4_overlay_blt(struct fb_info *info, struct msmfb_overlay_blt *req)
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
 
 	if (mfd == NULL)
-		return -ENOMEM;
+		return -ENODEV;
 
 	if (mutex_lock_interruptible(&mfd->dma->ov_mutex))
 		return -EINTR;
@@ -3755,11 +3755,11 @@ int mdp4_overlay_set(struct fb_info *info, struct mdp_overlay *req)
 	struct mdp4_overlay_pipe *pipe;
 
 	if (info == NULL || req == NULL)
-		return -ENOMEM;
+		return -ENODEV;
 
 	mfd = (struct msm_fb_data_type *)info->par;
 	if (mfd == NULL)
-		return -ENOMEM;
+		return -ENODEV;
 
 	if (info->node != 0 || mfd->cont_splash_done) {	/* primary */
 		if (!mfd->panel_power_on) {		/* suspended */
@@ -3771,9 +3771,10 @@ int mdp4_overlay_set(struct fb_info *info, struct mdp_overlay *req)
 	if (req->src.format == MDP_FB_FORMAT)
 		req->src.format = mfd->fb_imgType;
 
-	if (mutex_lock_interruptible(&mfd->dma->ov_mutex)) {
-		pr_err("%s: mutex_lock_interruptible, -EINTR\n", __func__);
-		return -EINTR;
+//	if (mutex_lock_interruptible(&mfd->dma->ov_mutex)) {
+	if (!mutex_trylock(&mfd->dma->ov_mutex)) {
+		pr_err("%s: mutex_trylock failed\n", __func__);
+		return -EBUSY;
 	}
 
 	ret = mdp4_calc_req_blt(mfd, req);
