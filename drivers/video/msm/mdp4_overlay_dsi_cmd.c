@@ -205,9 +205,6 @@ static void mdp4_dsi_cmd_do_blt(struct msm_fb_data_type *mfd, int enable)
 		vctrl->blt_free = 4;	/* 4 commits to free wb buf */
 	}
 
-	pr_debug("%s: changed=%d enable=%d ov_blt_addr=%x\n", __func__,
-		vctrl->blt_change, enable, (int)pipe->ov_blt_addr);
-
 	spin_unlock_irqrestore(&vctrl->spin_lock, flags);
 }
 

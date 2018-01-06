@@ -3713,7 +3713,7 @@ int mdp4_overlay_blt(struct fb_info *info, struct msmfb_overlay_blt *req)
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
 
 	if (mfd == NULL)
-		return -ENODEV;
+		return -ENOMEM;
 
 	if (mutex_lock_interruptible(&mfd->dma->ov_mutex))
 		return -EINTR;
@@ -3738,7 +3738,7 @@ int mdp4_overlay_get(struct fb_info *info, struct mdp_overlay *req)
 
 	pipe = mdp4_overlay_ndx2pipe(req->id);
 	if (pipe == NULL)
-		return -ENODEV;
+		return -ENOMEM;
 
 	*req = pipe->req_data;
 
@@ -3750,20 +3750,22 @@ int mdp4_overlay_get(struct fb_info *info, struct mdp_overlay *req)
 
 int mdp4_overlay_set(struct fb_info *info, struct mdp_overlay *req)
 {
-	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
+	struct msm_fb_data_type *mfd;
 	int ret, mixer;
 	struct mdp4_overlay_pipe *pipe;
 
-	if (mfd == NULL) {
-		return -ENODEV;
-	}
+	if (info == NULL || req == NULL)
+		return -ENOMEM;
 
-	if (info == NULL)
-		return -ENODEV;
+	mfd = (struct msm_fb_data_type *)info->par;
+	if (mfd == NULL)
+		return -ENOMEM;
 
 	if (info->node != 0 || mfd->cont_splash_done) {	/* primary */
-		if (!mfd->panel_power_on)		/* suspended */
+		if (!mfd->panel_power_on) {		/* suspended */
+			pr_err("%s: ERROR: Cannot set overlay when panel is off!\n", __func__);
 			return -EINVAL;
+		}
 	}
 
 	if (req->src.format == MDP_FB_FORMAT)
@@ -3774,21 +3776,18 @@ int mdp4_overlay_set(struct fb_info *info, struct mdp_overlay *req)
 		return -EINTR;
 	}
 
-	mixer = mfd->panel_info.pdest;	/* DISPLAY_1 or DISPLAY_2 */
-
 	ret = mdp4_calc_req_blt(mfd, req);
-
 	if (ret < 0) {
 		mutex_unlock(&mfd->dma->ov_mutex);
-		pr_debug("%s: blt mode is required! ret=%d\n", __func__, ret);
+		pr_err("%s: blt mode is required! Err=%d\n", __func__, ret);
 		return ret;
 	}
 
+	mixer = mfd->panel_info.pdest;	/* DISPLAY_1 or DISPLAY_2 */
 	ret = mdp4_overlay_req2pipe(req, mixer, &pipe, mfd);
-
 	if (ret < 0) {
 		mutex_unlock(&mfd->dma->ov_mutex);
-		pr_err("%s: mdp4_overlay_req2pipe, ret=%d\n", __func__, ret);
+		pr_err("%s: mdp4_overlay_req2pipe, Err=%d\n", __func__, ret);
 		return ret;
 	}
 
@@ -3800,6 +3799,7 @@ int mdp4_overlay_set(struct fb_info *info, struct mdp_overlay *req)
 		if (req->id == MSMFB_NEW_REQUEST)
 			mdp4_overlay_pipe_free(pipe, 1);//need_check
 		mutex_unlock(&mfd->dma->ov_mutex);
+		pr_err("%s: ERROR: blt mode should not be required in bypass mode!\n", __func__);
 		return -EINVAL;
 	}
 
@@ -3829,16 +3829,12 @@ int mdp4_overlay_set(struct fb_info *info, struct mdp_overlay *req)
 		if (pipe->pipe_num <= OVERLAY_PIPE_VG2)
 			memcpy(&pipe->pp_cfg, &req->overlay_pp_cfg,
 					sizeof(struct mdp_overlay_pp_params));
-		else
-			pr_debug("%s: RGB Pipes don't support CSC/QSEED\n",
-								__func__);
 	}
 
 	if (hdmi_prim_display)
 		fill_black_screen(FALSE, pipe->pipe_num, pipe->mixer_num);
 
 	mdp4_overlay_mdp_pipe_req(pipe, mfd);
-
 	mutex_unlock(&mfd->dma->ov_mutex);
 
 	return 0;
