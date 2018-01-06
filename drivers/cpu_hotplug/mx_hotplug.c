@@ -36,8 +36,8 @@
 #include <linux/omniboost.h>
 #include <linux/omniplug.h>
 
-#define MX_SAMPLE_RATE 750UL
-#define BOOST_LENGTH 350UL
+#define MX_SAMPLE_RATE 1000UL
+#define BOOST_LENGTH 300UL
 static unsigned int mx_hotplug_active;
 static DEFINE_RWLOCK(mxhp_lock);
 static DEFINE_MUTEX(mx_mutex);
