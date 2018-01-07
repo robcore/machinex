@@ -573,24 +573,31 @@ again:
 
 		if (kthread_should_stop())
 			return 0;
-	}
-
-	spin_lock_irqsave(&speedchange_cpumask_lock, flags);
-
-	if (cpumask_empty(&speedchange_cpumask)) {
-		spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
-		schedule();
-
-		if (kthread_should_stop())
-			return 0;
 
 		spin_lock_irqsave(&speedchange_cpumask_lock, flags);
+	} else {
+		spin_lock_irqsave(&speedchange_cpumask_lock, flags);
+		if (cpumask_empty(&speedchange_cpumask)) {
+			spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
+			schedule();
+
+			if (kthread_should_stop())
+				return 0;
+
+			spin_lock_irqsave(&speedchange_cpumask_lock, flags);
+		}
 	}
 
 	set_current_state(TASK_RUNNING);
-	tmp_mask = speedchange_cpumask;
-	cpumask_clear(&speedchange_cpumask);
-	spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
+
+	if (cpumask_empty(&speedchange_cpumask)) {
+		spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
+		goto again;
+	} else {
+		cpumask_copy(&tmp_mask, &speedchange_cpumask);
+		cpumask_clear(&speedchange_cpumask);
+		spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
+	}
 
 	for_each_cpu(cpu, &tmp_mask) {
 		struct interactive_cpu *icpu = &per_cpu(interactive_cpu, cpu);
@@ -610,6 +617,7 @@ again:
 
 		up_read(&icpu->enable_sem);
 	}
+	cpumask_clear(&tmp_mask);
 
 	goto again;
 }
