@@ -617,7 +617,9 @@ again:
 
 		up_read(&icpu->enable_sem);
 	}
+	spin_lock_irqsave(&speedchange_cpumask_lock, flags);
 	cpumask_clear(&tmp_mask);
+	spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
 
 	goto again;
 }
