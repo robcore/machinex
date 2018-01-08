@@ -529,8 +529,7 @@ static void cpufreq_interactive_get_policy_info(struct cpufreq_policy *policy,
 	*pfvt = fvt;
 }
 
-static void cpufreq_interactive_adjust_cpu(unsigned int cpu,
-					   struct cpufreq_policy *policy)
+static void cpufreq_interactive_adjust_cpu(struct cpufreq_policy *policy)
 {
 	struct interactive_cpu *icpu;
 	struct interactive_policy *ipolicy = policy->governor_data;
@@ -612,7 +611,7 @@ again:
 
 		if (likely(icpu->ipolicy)) {
 			policy = icpu->ipolicy->policy;
-			cpufreq_interactive_adjust_cpu(cpu, policy);
+			cpufreq_interactive_adjust_cpu(policy);
 		}
 
 		up_read(&icpu->enable_sem);
