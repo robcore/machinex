@@ -157,7 +157,7 @@ static int cpufreq_init_governor(struct cpufreq_policy *policy);
 static void cpufreq_exit_governor(struct cpufreq_policy *policy);
 static int cpufreq_start_governor(struct cpufreq_policy *policy);
 static void cpufreq_stop_governor(struct cpufreq_policy *policy);
-static void cpufreq_governor_limits(struct cpufreq_policy *policy);
+static void cpufreq_governor_limits(struct cpufreq_policy *policy, bool from_start);
 extern unsigned int mx_cpufreq_governor[NR_CPUS];
 
 /**
@@ -2490,8 +2490,7 @@ static int cpufreq_start_governor(struct cpufreq_policy *policy)
 			return ret;
 	}
 
-	if (policy->governor->limits)
-		policy->governor->limits(policy);
+	cpufreq_governor_limits(policy, true);
 
 	return 0;
 }
@@ -2507,12 +2506,12 @@ static void cpufreq_stop_governor(struct cpufreq_policy *policy)
 		policy->governor->stop(policy);
 }
 
-static void cpufreq_governor_limits(struct cpufreq_policy *policy)
+static void cpufreq_governor_limits(struct cpufreq_policy *policy, bool from_start)
 {
-	if (cpufreq_suspended || !policy->governor)
-		return;
-
-	pr_debug("%s: for CPU %u\n", __func__, policy->cpu);
+	if (!from_start) {
+		if (cpufreq_suspended || !policy->governor)
+			return;
+	}
 
 	if (policy->governor->limits)
 		policy->governor->limits(policy);
@@ -2653,7 +2652,7 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
 
 	if (new_policy->governor == policy->governor) {
 		pr_debug("cpufreq: governor limits update\n");
-		cpufreq_governor_limits(policy);
+		cpufreq_governor_limits(policy, false);
 		return 0;
 	}
 
@@ -2759,7 +2758,7 @@ static int cpufreq_boost_set_sw(int state)
 
 		down_write(&policy->rwsem);
 		policy->user_policy.max = policy->max;
-		cpufreq_governor_limits(policy);
+		cpufreq_governor_limits(policy, false);
 		up_write(&policy->rwsem);
 	}
 
