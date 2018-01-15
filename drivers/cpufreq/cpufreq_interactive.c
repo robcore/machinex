@@ -151,7 +151,7 @@ unsigned int iactive_raw_loadadjfreq[NR_CPUS];
 static unsigned int full_speed_load = 125;
 #define hlimit_hispeed(cpu) check_cpufreq_hardlimit(cpu, iactive_hispeed_freq[cpu]) 
 /* Target load. Lower values result in higher CPU speeds. */
-#define DEFAULT_TARGET_LOAD 85
+#define DEFAULT_TARGET_LOAD 90
 static unsigned int default_target_loads[] = {DEFAULT_TARGET_LOAD};
 
 static unsigned int default_above_hispeed_delay[] = {
