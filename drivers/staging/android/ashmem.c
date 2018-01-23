@@ -326,9 +326,7 @@ static ssize_t ashmem_read(struct file *file, char __user *buf,
 	 * be destroyed until all references to the file are dropped and
 	 * ashmem_release is called.
 	 */
-	mutex_unlock(&ashmem_mutex);
 	ret = asma->file->f_op->read(asma->file, buf, len, pos);
-	mutex_lock(&ashmem_mutex);
 	if (ret >= 0)
 		/** Update backing file pos, since f_ops->read() doesn't */
 		asma->file->f_pos = *pos;
@@ -863,12 +861,10 @@ static long ashmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		break;
 	case ASHMEM_SET_SIZE:
 		ret = -EINVAL;
-		mutex_lock(&ashmem_mutex);
 		if (!asma->file) {
 			ret = 0;
 			asma->size = (size_t)arg;
 		}
-		mutex_unlock(&ashmem_mutex);
 		break;
 	case ASHMEM_GET_SIZE:
 		ret = asma->size;
