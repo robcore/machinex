@@ -1,0 +1,21 @@
+#!/bin/bash
+
+find $(pwd)/arch/ -type f -exec grep -il 'SOUND_CONTROL' '{}' \;
+find $(pwd)/block/ -type f -exec grep -il 'SOUND_CONTROL' '{}' \;
+find $(pwd)/crypto/ -type f -exec grep -il 'SOUND_CONTROL' '{}' \;
+find $(pwd)/drivers/ -type f -exec grep -il 'SOUND_CONTROL' '{}' \;
+find $(pwd)/firmware/ -type f -exec grep -il 'SOUND_CONTROL' '{}' \;
+find $(pwd)/fs/ -type f -exec grep -il 'SOUND_CONTROL' '{}' \;
+find $(pwd)/include/ -type f -exec grep -il 'SOUND_CONTROL' '{}' \;
+find $(pwd)/init/ -type f -exec grep -il 'SOUND_CONTROL' '{}' \;
+find $(pwd)/ipc/ -type f -exec grep -il 'SOUND_CONTROL' '{}' \;
+find $(pwd)/kernel/ -type f -exec grep -il 'SOUND_CONTROL' '{}' \;
+find $(pwd)/lib/ -type f -exec grep -il 'SOUND_CONTROL' '{}' \;
+find $(pwd)/mm/ -type f -exec grep -il 'SOUND_CONTROL' '{}' \;
+find $(pwd)/net/ -type f -exec grep -il 'SOUND_CONTROL' '{}' \;
+find $(pwd)/scripts/ -type f -exec grep -il 'SOUND_CONTROL' '{}' \;
+find $(pwd)/security/ -type f -exec grep -il 'SOUND_CONTROL' '{}' \;
+find $(pwd)/sound/ -type f -exec grep -il 'SOUND_CONTROL' '{}' \;
+find $(pwd)/tools/ -type f -exec grep -il 'SOUND_CONTROL' '{}' \;
+find $(pwd)/usr/ -type f -exec grep -il 'SOUND_CONTROL' '{}' \;
+find $(pwd)/virt/ -type f -exec grep -il 'SOUND_CONTROL' '{}' \;

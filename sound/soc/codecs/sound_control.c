@@ -30,7 +30,7 @@
 extern struct snd_soc_codec *snd_engine_codec_ptr;
 
 unsigned int snd_ctrl_enabled = 0;
-unsigned int snd_ctrl_locked;
+unsigned int snd_ctrl_locked = 1;
 unsigned int feedback_val = 125;
 unsigned int vib_feedback = 0;
 static unsigned int selected_reg = 0xdeadbeef;

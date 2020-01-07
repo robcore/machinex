@@ -1,5 +1,5 @@
-#ifndef S_FUNCS_H
-#define S_FUNCS_H
+#ifndef _S_FUNCS_H
+#define _S_FUNCS_H
 
 #include <linux/string.h>
 #include <asm/setup.h>

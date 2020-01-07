@@ -522,8 +522,8 @@ static int taiko_get_iir_enable_audio_mixer(
 					kcontrol->private_value)->shift;
 
 	ucontrol->value.integer.value[0] =
-		snd_soc_read(codec, (TAIKO_A_CDC_IIR1_CTL + 16 * iir_idx)) &
-		(1 << band_idx);
+		(snd_soc_read(codec, (TAIKO_A_CDC_IIR1_CTL + 16 * iir_idx)) &
+		(1 << band_idx)) != 0;
 
 	pr_debug("%s: IIR #%d band #%d enable %d\n", __func__,
 		iir_idx, band_idx,
@@ -547,7 +547,9 @@ static int taiko_put_iir_enable_audio_mixer(
 		(1 << band_idx), (value << band_idx));
 
 	pr_debug("%s: IIR #%d band #%d enable %d\n", __func__,
-		iir_idx, band_idx, value);
+		iir_idx, band_idx,
+		((snd_soc_read(codec, (TAIKO_A_CDC_IIR1_CTL + 16 * iir_idx)) &
+		(1 << band_idx)) != 0));
 	return 0;
 }
 static uint32_t get_iir_band_coeff(struct snd_soc_codec *codec,
@@ -696,19 +698,30 @@ static int taiko_config_gain_compander(
 	if ((enable == 0) || SND_SOC_DAPM_EVENT_OFF(event))
 		value = 1 << 4;
 
+	pr_info("%s: Compander: %u\n", __func__, compander);
 	if (compander == COMPANDER_1) {
 		gain_offset = taiko_compander_gain_offset(codec, enable,
 				TAIKO_A_RX_HPH_L_GAIN, mask, event);
+
 		snd_soc_update_bits(codec, TAIKO_A_RX_HPH_L_GAIN, mask, value);
+
 		gain = snd_soc_read(codec, TAIKO_A_CDC_RX1_VOL_CTL_B2_CTL);
+
 		snd_soc_update_bits(codec, TAIKO_A_CDC_RX1_VOL_CTL_B2_CTL,
 				0xFF, gain - gain_offset);
+
 		gain_offset = taiko_compander_gain_offset(codec, enable,
 				TAIKO_A_RX_HPH_R_GAIN, mask, event);
 		snd_soc_update_bits(codec, TAIKO_A_RX_HPH_R_GAIN, mask, value);
 		gain = snd_soc_read(codec, TAIKO_A_CDC_RX2_VOL_CTL_B2_CTL);
 		snd_soc_update_bits(codec, TAIKO_A_CDC_RX2_VOL_CTL_B2_CTL,
 				0xFF, gain - gain_offset);
+
+		pr_info("%s: HPH_GAIN offset: %d\n", __func__, gain_offset);
+		pr_info("%s: HPH_GAIN: mask:%d value:%d \n", __func__, mask, value);
+		pr_info("%s: HPH_GAIN: gain:%d\n", __func__, gain);
+		pr_info("%s: HPH_GAIN: gain - gainoffset:%d\n", __func__,
+				(gain - gain_offset));
 	} else if (compander == COMPANDER_2) {
 		gain_offset = taiko_compander_gain_offset(codec, enable,
 				TAIKO_A_RX_LINE_1_GAIN, mask, event);
@@ -735,10 +748,11 @@ static int taiko_config_gain_compander(
 		snd_soc_update_bits(codec, TAIKO_A_CDC_RX6_VOL_CTL_B2_CTL,
 				0xFF, gain - gain_offset);
 	}
+
 	return 0;
 }
 static int taiko_get_compander(struct snd_kcontrol *kcontrol,
-					   struct snd_ctl_elem_value *ucontrol)
+			       struct snd_ctl_elem_value *ucontrol)
 {
 
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
@@ -1910,9 +1924,10 @@ static int taiko_codec_enable_lineout(struct snd_soc_dapm_widget *w,
 		snd_soc_update_bits(codec, lineout_gain_reg, 0x40, 0x40);
 		break;
 	case SND_SOC_DAPM_POST_PMU:
-		pr_debug("%s: sleeping 16 ms after %s PA turn on\n",
+		pr_info("%s: sleeping 5 ms after %s PA turn on\n",
 				__func__, w->name);
-		usleep_range(16000, 16000);
+		/* Wait for CnP time after PA enable */
+		usleep_range(5000, 5100);
 		break;
 	case SND_SOC_DAPM_POST_PMD:
 		snd_soc_update_bits(codec, lineout_gain_reg, 0x40, 0x00);
